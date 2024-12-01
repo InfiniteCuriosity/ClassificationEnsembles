@@ -1,5 +1,5 @@
 Package: ClassificationEnsembles
-Title: Automatically Builds 25 Classification Models (15 Individual and 10 Ensembles of Model) From Classification Data
+Title: Automatically Builds 25 Classification Models (15 Individual and 10 Ensembles of Models) from Classification Data
 Version: 0.0.0.9000
 Authors@R: 
     person("Russ", "Conte", , "russconte@mac.com", role = c("aut", "cre"))
@@ -37,6 +37,6 @@ Suggests:
     knitr,
     rmarkdown
 VignetteBuilder: knitr
-github: https://github.com/InfiniteCuriosity/ClassificationEnsembles
+Github: https://github.com/InfiniteCuriosity/ClassificationEnsembles
 URL: https://github.com/InfiniteCuriosity/ClassificationEnsembles
 BugReports: https://github.com/InfiniteCuriosity/ClassificationEnsembles/issues
