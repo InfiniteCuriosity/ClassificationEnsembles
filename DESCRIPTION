@@ -1,0 +1,40 @@
+Package: ClassificationEnsembles
+Title: Automatically Builds 25 Classification Models (15 Individual and 10 Ensembles of Model) From Classification Data
+Version: 0.0.0.9000
+Authors@R: 
+    person("Russ", "Conte", , "russconte@mac.com", role = c("aut", "cre"))
+Description: Automatically builds 25 classification models from data. The package returns 12 plots, 5 tables and a summary report.
+License: MIT + file LICENSE
+Depends:
+    C50,
+    class,
+    corrplot,
+    doParallel,
+    dplyr,
+    e1071,
+    ggplot2,
+    gt,
+    ipred,
+    klaR,
+    MachineShop,
+    magrittr,
+    MASS,
+    parallel,
+    purrr,
+    R (>= 2.10),
+    randomForest,
+    reactable,
+    reactablefmtr,
+    scales,
+    tidyr,
+    tree,
+    xgboost
+Encoding: UTF-8
+Roxygen: list(markdown = TRUE)
+RoxygenNote: 7.3.2
+LazyData: true
+Suggests: 
+    knitr,
+    rmarkdown
+VignetteBuilder: knitr
+github: https://github.com/InfiniteCuriosity/ClassificationEnsembles
