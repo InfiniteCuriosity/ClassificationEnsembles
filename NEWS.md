@@ -1,4 +1,4 @@
-# ClassificationEnsembles (development version)
+# ClassificationEnsembles 0.1.0
 
 * Initial CRAN submission.
 
