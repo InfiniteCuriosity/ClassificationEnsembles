@@ -13,40 +13,7 @@
 #'
 #' @returns a full analysis, including data visualizations, statistical summaries, and a full report on the results of 35 models on the data
 #' @export Classification
-#'
-#' @examples
-#' Classification(data = Carseats,
-#'   colnum = 7,
-#'   numresamples = 2,
-#'   do_you_have_new_data = "N",
-#'   how_to_handle_strings = 1,
-#'   save_all_trained_models = "N",
-#'   use_parallel = "N",
-#'   train_amount = 0.60,
-#'   test_amount = 0.20,
-#'   validation_amount = 0.20)
-#'
-#' Classification(data = dry_beans_small,
-#'   colnum = 17,
-#'   numresamples = 2,
-#'   do_you_have_new_data = "N",
-#'   how_to_handle_strings = 0,
-#'   save_all_trained_models = "N",
-#'   use_parallel = "N",
-#'   train_amount = 0.60,
-#'   test_amount = 0.20,
-#'   validation_amount = 0.20)
-#'
-#' Classification(data = Maternal_Health_Risk,
-#'   colnum = 7,
-#'   numresamples = 10,
-#'   do_you_have_new_data = "N",
-#'   how_to_handle_strings = 1,
-#'   save_all_trained_models = "N",
-#'   use_parallel = "N",
-#'   train_amount = 0.60,
-#'   test_amount = 0.20,
-#'   validation_amount = 0.20)
+
 
 #' @importFrom C50 C5.0
 #' @importFrom class knn
@@ -552,6 +519,9 @@ Classification <- function(data, colnum, numresamples, do_you_have_new_data = c(
   Model <- 0
   Overfitting <- 0
   Duration <- 0
+  Accuracy_Holdout_Std.Dev <- 0
+  Overfitting_St_Dev <- 0
+  Duration_St_Dev <- 0
 
 
   #### Barchart of the data against y ####
@@ -687,9 +657,11 @@ Classification <- function(data, colnum, numresamples, do_you_have_new_data = c(
 
     adabag_holdout[i] <- mean(c(adabag_test_accuracy_mean, adabag_validation_accuracy_mean))
     adabag_holdout_mean <- mean(adabag_holdout)
+    adabag_holdout_sd <- sd(adabag_holdout)
     adabag_overfitting[i] <- adabag_holdout_mean / adabag_train_accuracy_mean
     adabag_overfitting_mean <- mean(adabag_overfitting)
     adabag_overfitting_range <- range(adabag_overfitting)
+    adabag_overfitting_sd <- sd(adabag_overfitting)
 
     adabag_table <- adabag_test_table + adabag_validation_table
     adabag_table_total <- adabag_table_total + adabag_table
@@ -709,6 +681,7 @@ Classification <- function(data, colnum, numresamples, do_you_have_new_data = c(
     adabag_end <- Sys.time()
     adabag_duration[i] <- adabag_end - adabag_start
     adabag_duration_mean <- mean(adabag_duration)
+    adabag_duration_sd <- sd(adabag_duration)
 
 
     #### 3. Bagging ####
@@ -747,9 +720,11 @@ Classification <- function(data, colnum, numresamples, do_you_have_new_data = c(
 
     bagging_holdout[i] <- mean(c(bagging_test_accuracy_mean, bagging_validation_accuracy_mean))
     bagging_holdout_mean <- mean(bagging_holdout)
+    bagging_holdout_sd <- sd(bagging_holdout)
     bagging_overfitting[i] <- bagging_holdout_mean / bagging_train_accuracy_mean
     bagging_overfitting_mean <- mean(bagging_overfitting)
     bagging_overfitting_range <- range(bagging_overfitting)
+    bagging_overfitting_sd <- sd(bagging_overfitting)
 
     bagging_table <- bagging_test_table + bagging_validation_table
     bagging_table_total <- bagging_table_total + bagging_table
@@ -769,6 +744,7 @@ Classification <- function(data, colnum, numresamples, do_you_have_new_data = c(
     bagging_end <- Sys.time()
     bagging_duration[i] <- bagging_end - bagging_start
     bagging_duration_mean <- mean(bagging_duration)
+    bagging_duration_sd <- sd(bagging_duration)
 
     #### 4. Bagged Random Forest ####
     bag_rf_start <- Sys.time()
@@ -806,9 +782,11 @@ Classification <- function(data, colnum, numresamples, do_you_have_new_data = c(
 
     bag_rf_holdout[i] <- mean(c(bag_rf_test_accuracy_mean, bag_rf_validation_accuracy_mean))
     bag_rf_holdout_mean <- mean(bag_rf_holdout)
+    bag_rf_holdout_sd <- sd(bag_rf_holdout)
     bag_rf_overfitting[i] <- bag_rf_holdout_mean / bag_rf_train_accuracy_mean
     bag_rf_overfitting_mean <- mean(bag_rf_overfitting)
     bag_rf_overfitting_range <- range(bag_rf_overfitting)
+    bag_rf_overfitting_sd <- sd(bag_rf_overfitting)
 
     bag_rf_table <- bag_rf_test_table + bag_rf_validation_table
     bag_rf_table_total <- bag_rf_table_total + bag_rf_table
@@ -828,6 +806,7 @@ Classification <- function(data, colnum, numresamples, do_you_have_new_data = c(
     bag_rf_end <- Sys.time()
     bag_rf_duration[i] <- bag_rf_end - bag_rf_start
     bag_rf_duration_mean <- mean(bag_rf_duration)
+    bag_rf_duration_sd <- sd(bag_rf_duration)
 
     #### 5. C50 ####
     C50_start <- Sys.time()
@@ -862,9 +841,11 @@ Classification <- function(data, colnum, numresamples, do_you_have_new_data = c(
 
     C50_holdout[i] <- mean(c(C50_test_accuracy_mean, C50_validation_accuracy_mean))
     C50_holdout_mean <- mean(C50_holdout)
+    C50_holdout_sd <- sd(C50_holdout)
     C50_overfitting[i] <- C50_holdout_mean / C50_train_accuracy_mean
     C50_overfitting_mean <- mean(C50_overfitting)
     C50_overfitting_range <- range(C50_overfitting)
+    C50_overfitting_sd <- sd(C50_overfitting)
 
     C50_table <- C50_test_table + C50_validation_table
     C50_table_total <- C50_table_total + C50_table
@@ -884,6 +865,7 @@ Classification <- function(data, colnum, numresamples, do_you_have_new_data = c(
     C50_end <- Sys.time()
     C50_duration[i] <- C50_end - C50_start
     C50_duration_mean <- mean(C50_duration)
+    C50_duration_sd <- sd(C50_duration)
 
 
     #### 10. Linear Model ####
@@ -919,9 +901,11 @@ Classification <- function(data, colnum, numresamples, do_you_have_new_data = c(
 
     linear_holdout[i] <- mean(c(linear_test_accuracy_mean, linear_validation_accuracy_mean))
     linear_holdout_mean <- mean(linear_holdout)
+    linear_holdout_sd <- sd(linear_holdout)
     linear_overfitting[i] <- linear_holdout_mean / linear_train_accuracy_mean
     linear_overfitting_mean <- mean(linear_overfitting)
     linear_overfitting_range <- range(linear_overfitting)
+    linear_overfitting_sd <- sd(linear_overfitting)
 
     linear_table <- linear_test_table + linear_validation_table
     linear_table_total <- linear_table_total + linear_table
@@ -941,6 +925,7 @@ Classification <- function(data, colnum, numresamples, do_you_have_new_data = c(
     linear_end <- Sys.time()
     linear_duration[i] <- linear_end - linear_start
     linear_duration_mean <- mean(linear_duration)
+    linear_duration_sd <- sd(linear_duration)
 
 
     #### Naive Bayes ####
@@ -979,9 +964,11 @@ Classification <- function(data, colnum, numresamples, do_you_have_new_data = c(
 
     n_bayes_holdout[i] <- mean(c(n_bayes_test_accuracy_mean, n_bayes_validation_accuracy_mean))
     n_bayes_holdout_mean <- mean(n_bayes_holdout)
+    n_bayes_holdout_sd <- sd(n_bayes_holdout)
     n_bayes_overfitting[i] <- n_bayes_holdout_mean / n_bayes_train_accuracy_mean
     n_bayes_overfitting_mean <- mean(n_bayes_overfitting)
     n_bayes_overfitting_range <- range(n_bayes_overfitting)
+    n_bayes_overfitting_sd <- sd(n_bayes_overfitting)
 
     n_bayes_table <- n_bayes_test_table + n_bayes_validation_table
     n_bayes_table_total <- n_bayes_table_total + n_bayes_table
@@ -1001,6 +988,7 @@ Classification <- function(data, colnum, numresamples, do_you_have_new_data = c(
     n_bayes_end <- Sys.time()
     n_bayes_duration[i] <- n_bayes_end - n_bayes_start
     n_bayes_duration_mean <- mean(n_bayes_duration)
+    n_bayes_duration_sd <- sd(n_bayes_duration)
 
     #### 13. Partial Least Squares ####
     pls_start <- Sys.time()
@@ -1038,9 +1026,11 @@ Classification <- function(data, colnum, numresamples, do_you_have_new_data = c(
 
     pls_holdout[i] <- mean(c(pls_test_accuracy_mean, pls_validation_accuracy_mean))
     pls_holdout_mean <- mean(pls_holdout)
+    pls_holdout_sd <- sd(pls_holdout)
     pls_overfitting[i] <- pls_holdout_mean / pls_train_accuracy_mean
     pls_overfitting_mean <- mean(pls_overfitting)
     pls_overfitting_range <- range(pls_overfitting)
+    pls_overfitting_sd <- sd(pls_overfitting)
 
     pls_table <- pls_test_table + pls_validation_table
     pls_table_total <- pls_table_total + pls_table
@@ -1060,6 +1050,7 @@ Classification <- function(data, colnum, numresamples, do_you_have_new_data = c(
     pls_end <- Sys.time()
     pls_duration[i] <- pls_end - pls_start
     pls_duration_mean <- mean(pls_duration)
+    pls_duration_sd <- sd(pls_duration)
 
     #### 14. Penalized Discriminant Analysis Model ####
     pda_start <- Sys.time()
@@ -1097,9 +1088,11 @@ Classification <- function(data, colnum, numresamples, do_you_have_new_data = c(
 
     pda_holdout[i] <- mean(c(pda_test_accuracy_mean, pda_validation_accuracy_mean))
     pda_holdout_mean <- mean(pda_holdout)
+    pda_holdout_sd <- sd(pda_holdout)
     pda_overfitting[i] <- pda_holdout_mean / pda_train_accuracy_mean
     pda_overfitting_mean <- mean(pda_overfitting)
     pda_overfitting_range <- range(pda_overfitting)
+    pda_overfitting_sd <- sd(pda_overfitting)
 
     pda_table <- pda_test_table + pda_validation_table
     pda_table_total <- pda_table_total + pda_table
@@ -1119,6 +1112,7 @@ Classification <- function(data, colnum, numresamples, do_you_have_new_data = c(
     pda_end <- Sys.time()
     pda_duration[i] <- pda_end - pda_start
     pda_duration_mean <- mean(pda_duration)
+    pda_duration_sd <- sd(pda_duration)
 
     #### 15. Random Forest ####
     rf_start <- Sys.time()
@@ -1156,9 +1150,11 @@ Classification <- function(data, colnum, numresamples, do_you_have_new_data = c(
 
     rf_holdout[i] <- mean(c(rf_test_accuracy_mean, rf_validation_accuracy_mean))
     rf_holdout_mean <- mean(rf_holdout)
+    rf_holdout_sd <- sd(rf_holdout)
     rf_overfitting[i] <- rf_holdout_mean / rf_train_accuracy_mean
     rf_overfitting_mean <- mean(rf_overfitting)
     rf_overfitting_range <- range(rf_overfitting)
+    rf_overfitting_sd <- sd(rf_overfitting)
 
     rf_table <- rf_test_table + rf_validation_table
     rf_table_total <- rf_table_total + rf_table
@@ -1178,6 +1174,7 @@ Classification <- function(data, colnum, numresamples, do_you_have_new_data = c(
     rf_end <- Sys.time()
     rf_duration[i] <- rf_end - rf_start
     rf_duration_mean <- mean(rf_duration)
+    rf_duration_sd <- sd(rf_duration)
 
     #### 16. Ranger Model ####
     ranger_start <- Sys.time()
@@ -1215,9 +1212,11 @@ Classification <- function(data, colnum, numresamples, do_you_have_new_data = c(
 
     ranger_holdout[i] <- mean(c(ranger_test_accuracy_mean, ranger_validation_accuracy_mean))
     ranger_holdout_mean <- mean(ranger_holdout)
+    ranger_holdout_sd <- sd(ranger_holdout)
     ranger_overfitting[i] <- ranger_holdout_mean / ranger_train_accuracy_mean
     ranger_overfitting_mean <- mean(ranger_overfitting)
     ranger_overfitting_range <- range(ranger_overfitting)
+    ranger_overfitting_sd <- sd(ranger_overfitting)
 
     ranger_table <- ranger_test_table + ranger_validation_table
     ranger_table_total <- ranger_table_total + ranger_table
@@ -1237,6 +1236,7 @@ Classification <- function(data, colnum, numresamples, do_you_have_new_data = c(
     ranger_end <- Sys.time()
     ranger_duration[i] <- ranger_end - ranger_start
     ranger_duration_mean <- mean(ranger_duration)
+    ranger_duration_sd <- sd(ranger_duration)
 
     #### 17. Regularized discriminant analysis ####
     rda_start <- Sys.time()
@@ -1271,9 +1271,11 @@ Classification <- function(data, colnum, numresamples, do_you_have_new_data = c(
 
     rda_holdout[i] <- mean(c(rda_test_accuracy_mean, rda_validation_accuracy_mean))
     rda_holdout_mean <- mean(rda_holdout)
+    rda_holdout_sd <- sd(ranger_holdout)
     rda_overfitting[i] <- rda_holdout_mean / rda_train_accuracy_mean
     rda_overfitting_mean <- mean(rda_overfitting)
     rda_overfitting_range <- range(rda_overfitting)
+    rda_overfitting_sd <- sd(rda_overfitting)
 
     rda_table <- rda_test_table + rda_validation_table
     rda_table_total <- rda_table_total + rda_table
@@ -1293,6 +1295,7 @@ Classification <- function(data, colnum, numresamples, do_you_have_new_data = c(
     rda_end <- Sys.time()
     rda_duration[i] <- rda_end - rda_start
     rda_duration_mean <- mean(rda_duration)
+    rda_duration_sd <- sd(rda_duration)
 
     #### 18. RPart Model ####
     rpart_start <- Sys.time()
@@ -1330,9 +1333,11 @@ Classification <- function(data, colnum, numresamples, do_you_have_new_data = c(
 
     rpart_holdout[i] <- mean(c(rpart_test_accuracy_mean, rpart_validation_accuracy_mean))
     rpart_holdout_mean <- mean(rpart_holdout)
+    rpart_holdout_sd <- sd(rpart_holdout)
     rpart_overfitting[i] <- rpart_holdout_mean / rpart_train_accuracy_mean
     rpart_overfitting_mean <- mean(rpart_overfitting)
     rpart_overfitting_range <- range(rpart_overfitting)
+    rpart_overfitting_sd <- sd(rpart_overfitting)
 
     rpart_table <- rpart_test_table + rpart_validation_table
     rpart_table_total <- rpart_table_total + rpart_table
@@ -1352,6 +1357,7 @@ Classification <- function(data, colnum, numresamples, do_you_have_new_data = c(
     rpart_end <- Sys.time()
     rpart_duration[i] <- rpart_end - rpart_start
     rpart_duration_mean <- mean(rpart_duration)
+    rpart_duration_sd <- sd(rpart_duration)
 
 
     #### 19. Support Vector Machines ####
@@ -1389,9 +1395,11 @@ Classification <- function(data, colnum, numresamples, do_you_have_new_data = c(
     svm_validation_prop <- diag(prop.table(svm_validation_table, margin = 1))
     svm_holdout[i] <- mean(c(svm_test_accuracy_mean, svm_validation_accuracy_mean))
     svm_holdout_mean <- mean(svm_holdout)
+    svm_holdout_sd <- sd(svm_holdout)
     svm_overfitting[i] <- svm_holdout_mean / svm_train_accuracy_mean
     svm_overfitting_mean <- mean(svm_overfitting)
     svm_overfitting_range <- range(svm_overfitting)
+    svm_overfitting_sd <- sd(svm_overfitting)
 
     svm_table <- svm_test_table + svm_validation_table
     svm_table_total <- svm_table_total + svm_table
@@ -1411,6 +1419,7 @@ Classification <- function(data, colnum, numresamples, do_you_have_new_data = c(
     svm_end <- Sys.time()
     svm_duration[i] <- svm_end - svm_start
     svm_duration_mean <- mean(svm_duration)
+    svm_duration_sd <- sd(svm_duration)
 
 
     #### 20. Trees ####
@@ -1449,9 +1458,11 @@ Classification <- function(data, colnum, numresamples, do_you_have_new_data = c(
 
     tree_holdout[i] <- mean(c(tree_test_accuracy_mean, tree_validation_accuracy_mean))
     tree_holdout_mean <- mean(tree_holdout)
+    tree_holdout_sd <- sd(tree_holdout)
     tree_overfitting[i] <- tree_holdout_mean / tree_train_accuracy_mean
     tree_overfitting_mean <- mean(tree_overfitting)
     tree_overfitting_range <- range(tree_overfitting)
+    tree_overfitting_sd <- sd(tree_overfitting)
 
     tree_table <- tree_test_table + tree_validation_table
     tree_table_total <- tree_table_total + tree_table
@@ -1471,6 +1482,7 @@ Classification <- function(data, colnum, numresamples, do_you_have_new_data = c(
     tree_end <- Sys.time()
     tree_duration[i] <- tree_end - tree_start
     tree_duration_mean <- mean(tree_duration)
+    tree_duration_sd <- sd(tree_duration)
 
 
     #### XGBoost ####
@@ -1598,8 +1610,10 @@ Classification <- function(data, colnum, numresamples, do_you_have_new_data = c(
 
     xgb_holdout[i] <- mean(c(xgb_test_accuracy_mean, xgb_validation_accuracy_mean))
     xgb_holdout_mean <- mean(xgb_holdout)
+    xgb_holdout_sd <- sd(xgb_holdout)
     xgb_overfitting[i] <- xgb_holdout_mean / xgb_train_accuracy_mean
     xgb_overfitting_mean <- mean(xgb_overfitting)
+    xgb_overfitting_sd <- sd(xgb_overfitting)
 
     xgb_table <- xgb_test_table + xgb_validation_table
     xgb_table_total <- xgb_table_total + xgb_table
@@ -1619,6 +1633,7 @@ Classification <- function(data, colnum, numresamples, do_you_have_new_data = c(
     xgb_end <- Sys.time()
     xgb_duration[i] <- xgb_end - xgb_start
     xgb_duration_mean <- xgb_end - xgb_start
+    xgb_duration_sd <- sd(xgb_duration)
 
 
     #### Ensembles ####
@@ -1699,9 +1714,11 @@ Classification <- function(data, colnum, numresamples, do_you_have_new_data = c(
 
     ensemble_adabag_holdout[i] <- mean(c(ensemble_adabag_test_accuracy_mean, ensemble_adabag_validation_accuracy_mean))
     ensemble_adabag_holdout_mean <- mean(ensemble_adabag_holdout)
+    ensemble_adabag_holdout_sd <- sd(ensemble_adabag_holdout)
     ensemble_adabag_overfitting[i] <- ensemble_adabag_holdout_mean / ensemble_adabag_train_accuracy_mean
     ensemble_adabag_overfitting_mean <- mean(ensemble_adabag_overfitting)
     ensemble_adabag_overfitting_range <- range(ensemble_adabag_overfitting)
+    ensemble_adabag_overfitting_sd <- sd(ensemble_adabag_overfitting)
 
     ensemble_adabag_table <- ensemble_adabag_test_table + ensemble_adabag_validation_table
     ensemble_adabag_table_total <- ensemble_adabag_table_total + ensemble_adabag_table
@@ -1721,6 +1738,7 @@ Classification <- function(data, colnum, numresamples, do_you_have_new_data = c(
     ensemble_adabag_end <- Sys.time()
     ensemble_adabag_duration[i] <- ensemble_adabag_end - ensemble_adabag_start
     ensemble_adabag_duration_mean <- mean(ensemble_adabag_duration)
+    ensemble_adabag_duration_sd <- sd(ensemble_adabag_duration)
 
 
     #### 20. Ensemble Bagged CART ####
@@ -1756,9 +1774,11 @@ Classification <- function(data, colnum, numresamples, do_you_have_new_data = c(
 
     ensemble_bag_cart_holdout[i] <- mean(c(ensemble_bag_cart_test_accuracy_mean, ensemble_bag_cart_validation_accuracy_mean))
     ensemble_bag_cart_holdout_mean <- mean(ensemble_bag_cart_holdout)
+    ensemble_bag_cart_holdout_sd <- sd(ensemble_bag_cart_holdout)
     ensemble_bag_cart_overfitting[i] <- ensemble_bag_cart_holdout_mean / ensemble_bag_cart_train_accuracy_mean
     ensemble_bag_cart_overfitting_mean <- mean(ensemble_bag_cart_overfitting)
     ensemble_bag_cart_overfitting_range <- range(ensemble_bag_cart_overfitting)
+    ensemble_bag_cart_overfitting_sd <- sd(ensemble_bag_cart_overfitting)
 
     ensemble_bag_cart_table <- ensemble_bag_cart_test_table + ensemble_bag_cart_validation_table
     ensemble_bag_cart_table_total <- ensemble_bag_cart_table_total + ensemble_bag_cart_table
@@ -1778,6 +1798,7 @@ Classification <- function(data, colnum, numresamples, do_you_have_new_data = c(
     ensemble_bag_cart_end <- Sys.time()
     ensemble_bag_cart_duration[i] <- ensemble_bag_cart_end - ensemble_bag_cart_start
     ensemble_bag_cart_duration_mean <- mean(ensemble_bag_cart_duration)
+    ensemble_bag_cart_duration_sd <- sd(ensemble_bag_cart_duration)
 
     #### 21. Ensemble Bagged Random Forest ####
     ensemble_bag_rf_start <- Sys.time()
@@ -1815,9 +1836,11 @@ Classification <- function(data, colnum, numresamples, do_you_have_new_data = c(
 
     ensemble_bag_rf_holdout[i] <- mean(c(ensemble_bag_rf_test_accuracy_mean, ensemble_bag_rf_validation_accuracy_mean))
     ensemble_bag_rf_holdout_mean <- mean(ensemble_bag_rf_holdout)
+    ensemble_bag_rf_holdout_sd <- sd(ensemble_bag_rf_holdout)
     ensemble_bag_rf_overfitting[i] <- ensemble_bag_rf_holdout_mean / ensemble_bag_rf_train_accuracy_mean
     ensemble_bag_rf_overfitting_mean <- mean(ensemble_bag_rf_overfitting)
     ensemble_bag_rf_overfitting_range <- range(ensemble_bag_rf_overfitting)
+    ensemble_bag_rf_overfitting_sd <- sd(ensemble_bag_rf_overfitting)
 
     ensemble_bag_rf_table <- ensemble_bag_rf_test_table + ensemble_bag_rf_validation_table
     ensemble_bag_rf_table_total <- ensemble_bag_rf_table_total + ensemble_bag_rf_table
@@ -1837,6 +1860,7 @@ Classification <- function(data, colnum, numresamples, do_you_have_new_data = c(
     ensemble_bag_rf_end <- Sys.time()
     ensemble_bag_rf_duration[i] <- ensemble_bag_rf_end - ensemble_bag_rf_start
     ensemble_bag_rf_duration_mean <- mean(ensemble_bag_rf_duration)
+    ensemble_bag_rf_duration_sd <- sd(ensemble_bag_rf_duration)
 
     #### 22. Ensemble C50 ####
     ensemble_C50_start <- Sys.time()
@@ -1871,9 +1895,11 @@ Classification <- function(data, colnum, numresamples, do_you_have_new_data = c(
 
     ensemble_C50_holdout[i] <- mean(c(ensemble_C50_test_accuracy_mean, ensemble_C50_validation_accuracy_mean))
     ensemble_C50_holdout_mean <- mean(ensemble_C50_holdout)
+    ensemble_C50_holdout_sd <- sd(ensemble_C50_holdout)
     ensemble_C50_overfitting[i] <- ensemble_C50_holdout_mean / ensemble_C50_train_accuracy_mean
     ensemble_C50_overfitting_mean <- mean(ensemble_C50_overfitting)
     ensemble_C50_overfitting_range <- range(ensemble_C50_overfitting)
+    ensemble_C50_overfitting_sd <- sd(ensemble_C50_overfitting)
 
     ensemble_C50_table <- ensemble_C50_test_table + ensemble_C50_validation_table
     ensemble_C50_table_total <- ensemble_C50_table_total + ensemble_C50_table
@@ -1893,6 +1919,7 @@ Classification <- function(data, colnum, numresamples, do_you_have_new_data = c(
     ensemble_C50_end <- Sys.time()
     ensemble_C50_duration[i] <- ensemble_C50_end - ensemble_C50_start
     ensemble_C50_duration_mean <- mean(ensemble_C50_duration)
+    ensemble_C50_duration_sd <- sd(ensemble_C50_duration)
 
 
     #### 25. Ensemble Naive Bayes ####
@@ -1933,9 +1960,11 @@ Classification <- function(data, colnum, numresamples, do_you_have_new_data = c(
 
     ensemble_n_bayes_holdout[i] <- mean(c(ensemble_n_bayes_test_accuracy_mean, ensemble_n_bayes_validation_accuracy_mean))
     ensemble_n_bayes_holdout_mean <- mean(ensemble_n_bayes_holdout)
+    ensemble_n_bayes_holdout_sd <- sd(ensemble_n_bayes_holdout)
     ensemble_n_bayes_overfitting[i] <- ensemble_n_bayes_holdout_mean / ensemble_n_bayes_train_accuracy_mean
     ensemble_n_bayes_overfitting_mean <- mean(ensemble_n_bayes_overfitting)
     ensemble_n_bayes_overfitting_range <- range(ensemble_n_bayes_overfitting)
+    ensemble_n_bayes_overfitting_sd <- sd(ensemble_n_bayes_overfitting)
 
     ensemble_n_bayes_table <- ensemble_n_bayes_test_table + ensemble_n_bayes_validation_table
     ensemble_n_bayes_table_total <- ensemble_n_bayes_table_total + ensemble_n_bayes_table
@@ -1955,6 +1984,7 @@ Classification <- function(data, colnum, numresamples, do_you_have_new_data = c(
     ensemble_n_bayes_end <- Sys.time()
     ensemble_n_bayes_duration[i] <- ensemble_n_bayes_end - ensemble_n_bayes_start
     ensemble_n_bayes_duration_mean <- mean(ensemble_n_bayes_duration)
+    ensemble_n_bayes_duration_sd <- sd(ensemble_n_bayes_duration)
 
 
     #### 26. Ensemble Ranger Model #####
@@ -1995,9 +2025,11 @@ Classification <- function(data, colnum, numresamples, do_you_have_new_data = c(
 
     ensemble_ranger_holdout[i] <- mean(c(ensemble_ranger_test_accuracy_mean, ensemble_ranger_validation_accuracy_mean))
     ensemble_ranger_holdout_mean <- mean(ensemble_ranger_holdout)
+    ensemble_ranger_holdout_sd <- sd(ensemble_ranger_holdout)
     ensemble_ranger_overfitting[i] <- ensemble_ranger_holdout_mean / ensemble_ranger_train_accuracy_mean
     ensemble_ranger_overfitting_mean <- mean(ensemble_ranger_overfitting)
     ensemble_ranger_overfitting_range <- range(ensemble_ranger_overfitting)
+    ensemble_ranger_overfitting_sd <- sd(ensemble_ranger_overfitting)
 
     ensemble_ranger_table <- ensemble_ranger_test_table + ensemble_ranger_validation_table
     ensemble_ranger_table_total <- ensemble_ranger_table_total + ensemble_ranger_table
@@ -2017,6 +2049,7 @@ Classification <- function(data, colnum, numresamples, do_you_have_new_data = c(
     ensemble_ranger_end <- Sys.time()
     ensemble_ranger_duration[i] <- ensemble_ranger_end - ensemble_ranger_start
     ensemble_ranger_duration_mean <- mean(ensemble_ranger_duration)
+    ensemble_ranger_duration_sd <- sd(ensemble_ranger_duration)
 
     #### 27. Ensemble Random Forest ####
     ensemble_rf_start <- Sys.time()
@@ -2054,9 +2087,11 @@ Classification <- function(data, colnum, numresamples, do_you_have_new_data = c(
 
     ensemble_rf_holdout[i] <- mean(c(ensemble_rf_test_accuracy_mean, ensemble_rf_validation_accuracy_mean))
     ensemble_rf_holdout_mean <- mean(ensemble_rf_holdout)
+    ensemble_rf_holdout_sd <- sd(ensemble_rf_holdout)
     ensemble_rf_overfitting[i] <- ensemble_rf_holdout_mean / ensemble_rf_train_accuracy_mean
     ensemble_rf_overfitting_mean <- mean(ensemble_rf_overfitting)
     ensemble_rf_overfitting_range <- range(ensemble_rf_overfitting)
+    ensemble_rf_overfitting_sd <- sd(ensemble_rf_overfitting)
 
     ensemble_rf_table <- ensemble_rf_test_table + ensemble_rf_validation_table
     ensemble_rf_table_total <- ensemble_rf_table_total + ensemble_rf_table
@@ -2076,6 +2111,7 @@ Classification <- function(data, colnum, numresamples, do_you_have_new_data = c(
     ensemble_rf_end <- Sys.time()
     ensemble_rf_duration[i] <- ensemble_rf_end - ensemble_rf_start
     ensemble_rf_duration_mean <- mean(ensemble_rf_duration)
+    ensemble_rf_duration_sd <- sd(ensemble_rf_duration)
 
     #### 28. Regularized discriminant analysis ####
     ensemble_rda_start <- Sys.time()
@@ -2110,9 +2146,11 @@ Classification <- function(data, colnum, numresamples, do_you_have_new_data = c(
 
     ensemble_rda_holdout[i] <- mean(c(ensemble_rda_test_accuracy_mean, ensemble_rda_validation_accuracy_mean))
     ensemble_rda_holdout_mean <- mean(ensemble_rda_holdout)
+    ensemble_rda_holdout_sd <- sd(ensemble_rda_holdout)
     ensemble_rda_overfitting[i] <- ensemble_rda_holdout_mean / ensemble_rda_train_accuracy_mean
     ensemble_rda_overfitting_mean <- mean(ensemble_rda_overfitting)
     ensemble_rda_overfitting_range <- range(ensemble_rda_overfitting)
+    ensemble_rda_overfitting_sd <- sd(ensemble_rda_overfitting)
 
     ensemble_rda_table <- ensemble_rda_test_table + ensemble_rda_validation_table
     ensemble_rda_table_total <- ensemble_rda_table_total + ensemble_rda_table
@@ -2132,6 +2170,7 @@ Classification <- function(data, colnum, numresamples, do_you_have_new_data = c(
     ensemble_rda_end <- Sys.time()
     ensemble_rda_duration[i] <- ensemble_rda_end - ensemble_rda_start
     ensemble_rda_duration_mean <- mean(ensemble_rda_duration)
+    ensemble_rda_duration_sd <- sd(ensemble_rda_duration)
 
 
     #### 29. Ensemble Support Vector Machines ####
@@ -2172,9 +2211,11 @@ Classification <- function(data, colnum, numresamples, do_you_have_new_data = c(
 
     ensemble_svm_holdout[i] <- mean(c(ensemble_svm_test_accuracy_mean, ensemble_svm_validation_accuracy_mean))
     ensemble_svm_holdout_mean <- mean(ensemble_svm_holdout)
+    ensemble_svm_holdout_sd <- sd(ensemble_svm_holdout)
     ensemble_svm_overfitting[i] <- ensemble_svm_holdout_mean / ensemble_svm_train_accuracy_mean
     ensemble_svm_overfitting_mean <- mean(ensemble_svm_overfitting)
     ensemble_svm_overfitting_range <- range(ensemble_svm_overfitting)
+    ensemble_svm_overfitting_sd <- sd(ensemble_svm_overfitting)
 
     ensemble_svm_table <- ensemble_svm_test_table + ensemble_svm_validation_table
     ensemble_svm_table_total <- ensemble_svm_table_total + ensemble_svm_table
@@ -2194,6 +2235,7 @@ Classification <- function(data, colnum, numresamples, do_you_have_new_data = c(
     ensemble_svm_end <- Sys.time()
     ensemble_svm_duration[i] <- ensemble_svm_end - ensemble_svm_start
     ensemble_svm_duration_mean <- mean(ensemble_svm_duration)
+    ensemble_svm_duration_sd <- sd(ensemble_svm_duration)
 
     #### 30. Ensemble Trees ####
     ensemble_tree_start <- Sys.time()
@@ -2231,9 +2273,11 @@ Classification <- function(data, colnum, numresamples, do_you_have_new_data = c(
 
     ensemble_tree_holdout[i] <- mean(c(ensemble_tree_test_accuracy_mean, ensemble_tree_validation_accuracy_mean))
     ensemble_tree_holdout_mean <- mean(ensemble_tree_holdout)
+    ensemble_tree_holdout_sd <- sd(ensemble_tree_holdout)
     ensemble_tree_overfitting[i] <- ensemble_tree_holdout_mean / ensemble_tree_train_accuracy_mean
     ensemble_tree_overfitting_mean <- mean(ensemble_tree_overfitting)
     ensemble_tree_overfitting_range <- range(ensemble_tree_overfitting)
+    ensemble_tree_overfitting_sd <- sd(ensemble_tree_overfitting)
 
     ensemble_tree_table <- ensemble_tree_test_table + ensemble_tree_validation_table
     ensemble_tree_table_total <- ensemble_tree_table_total + ensemble_tree_table
@@ -2253,6 +2297,7 @@ Classification <- function(data, colnum, numresamples, do_you_have_new_data = c(
     ensemble_tree_end <- Sys.time()
     ensemble_tree_duration[i] <- ensemble_tree_end - ensemble_tree_start
     ensemble_tree_duration_mean <- mean(ensemble_tree_duration)
+    ensemble_tree_duration_sd <- sd(ensemble_tree_duration)
   }
 
   Results <- data.frame(
@@ -2274,6 +2319,15 @@ Classification <- function(data, colnum, numresamples, do_you_have_new_data = c(
       ensemble_n_bayes_holdout_mean, ensemble_ranger_holdout_mean, ensemble_rf_holdout_mean, ensemble_rda_holdout_mean, ensemble_svm_holdout_mean,
       ensemble_tree_holdout_mean
     ), 4),
+    "Accuracy_Holdout_Std.Dev" = round(c(
+      adabag_holdout_sd, bagging_holdout_sd, bag_rf_holdout_sd,
+      C50_holdout_sd, linear_holdout_sd,
+      n_bayes_holdout_sd, pls_holdout_sd, pda_holdout_sd, rf_holdout_sd, ranger_holdout_sd,
+      rda_holdout_sd, rpart_holdout_sd, svm_holdout_sd, tree_holdout_sd, xgb_holdout_sd,
+      ensemble_adabag_holdout_sd, ensemble_bag_cart_holdout_sd, ensemble_bag_rf_holdout_sd, ensemble_C50_holdout_sd,
+      ensemble_n_bayes_holdout_sd, ensemble_ranger_holdout_sd, ensemble_rf_holdout_sd, ensemble_rda_holdout_sd, ensemble_svm_holdout_sd,
+      ensemble_tree_holdout_sd
+    ), 4),
     "Duration" = round(c(
       adabag_duration_mean, bagging_duration_mean, bag_rf_duration_mean,
       C50_duration_mean, linear_duration_mean,
@@ -2282,6 +2336,15 @@ Classification <- function(data, colnum, numresamples, do_you_have_new_data = c(
       ensemble_adabag_duration_mean, ensemble_bag_cart_duration_mean, ensemble_bag_rf_duration_mean, ensemble_C50_duration_mean,
       ensemble_n_bayes_duration_mean, ensemble_ranger_duration_mean, ensemble_rf_duration_mean, ensemble_rda_duration_mean, ensemble_svm_duration_mean,
       ensemble_tree_duration_mean
+    ), 4),
+    "Duration_St_Dev" = round(c(
+      adabag_duration_sd, bagging_duration_sd, bag_rf_duration_sd,
+      C50_duration_sd, linear_duration_sd,
+      n_bayes_duration_sd, pls_duration_sd, pda_duration_sd, rf_duration_sd, ranger_duration_sd,
+      rda_duration_sd, rpart_duration_sd, svm_duration_sd, tree_duration_sd, xgb_duration_sd,
+      ensemble_adabag_duration_sd, ensemble_bag_cart_duration_sd, ensemble_bag_rf_duration_sd, ensemble_C50_duration_sd,
+      ensemble_n_bayes_duration_sd, ensemble_ranger_duration_sd, ensemble_rf_duration_sd, ensemble_rda_duration_sd, ensemble_svm_duration_sd,
+      ensemble_tree_duration_sd
     ), 4),
     "True_Positive_Rate" = round(c(
       adabag_true_positive_rate_mean, bagging_true_positive_rate_mean, bag_rf_true_positive_rate_mean,
@@ -2364,6 +2427,15 @@ Classification <- function(data, colnum, numresamples, do_you_have_new_data = c(
       ensemble_adabag_overfitting_mean, ensemble_bag_cart_overfitting_mean, ensemble_bag_rf_overfitting_mean, ensemble_C50_overfitting_mean,
       ensemble_n_bayes_overfitting_mean, ensemble_ranger_overfitting_mean, ensemble_rf_overfitting_mean,
       ensemble_rda_overfitting_mean, ensemble_svm_overfitting_mean, ensemble_tree_overfitting_mean
+    ), 4),
+    "Overfitting_St_Dev" = round(c(
+      adabag_overfitting_sd, bagging_overfitting_sd, bag_rf_overfitting_sd,
+      C50_overfitting_sd, linear_overfitting_sd,
+      n_bayes_overfitting_sd, pls_overfitting_sd, pda_overfitting_sd, rf_overfitting_sd, ranger_overfitting_sd, rda_overfitting_sd,
+      rpart_overfitting_sd, svm_overfitting_sd, tree_overfitting_sd, xgb_overfitting_sd,
+      ensemble_adabag_overfitting_sd, ensemble_bag_cart_overfitting_sd, ensemble_bag_rf_overfitting_sd, ensemble_C50_overfitting_sd,
+      ensemble_n_bayes_overfitting_sd, ensemble_ranger_overfitting_sd, ensemble_rf_overfitting_sd,
+      ensemble_rda_overfitting_sd, ensemble_svm_overfitting_sd, ensemble_tree_overfitting_sd
     ), 4),
     "Diagonal_Sum" = round(c(
       adabag_table_sum_diag, bagging_table_sum_diag, bag_rf_table_sum_diag,
@@ -2551,21 +2623,25 @@ Classification <- function(data, colnum, numresamples, do_you_have_new_data = c(
     ggplot2::theme(axis.text.x = ggplot2::element_text(angle = 90, vjust = 1, hjust=1)) +
     ggplot2::labs(x = "Model", y = "Mean Accuracy", title = "Model accuracy, closer to one is better") +
     ggplot2::geom_text(aes(label = Mean_Holdout_Accuracy), vjust = -0.5, hjust = -0.5, angle = 90) +
-    ggplot2::ylim(0, max(Results$Mean_Holdout_Accuracy) + 1)
+    ggplot2::ylim(0, max(Results$Mean_Holdout_Accuracy) + 1) +
+    ggplot2::geom_errorbar(aes(x = Model, ymin = Mean_Holdout_Accuracy - Accuracy_Holdout_Std.Dev,
+                               ymax =  Mean_Holdout_Accuracy + Accuracy_Holdout_Std.Dev))
 
   overfitting_barchart <- ggplot2::ggplot(Results, aes(x = reorder(Model, Overfitting), y = Overfitting)) +
     ggplot2::geom_col(width = 0.5)+
     ggplot2::theme(axis.text.x = ggplot2::element_text(angle = 90, vjust = 1, hjust=1)) +
     ggplot2::labs(x = "Model", y = "Over or Under Fitting Mean", title = "Over or Under Fitting, closer to 1 is better") +
     ggplot2::geom_text(aes(label = Overfitting), vjust = 0,hjust = -0.5, angle = 90) +
-    ggplot2::ylim(0, max(Results$Overfitting) +2)
+    ggplot2::ylim(0, max(Results$Overfitting) +2) +
+    ggplot2::geom_errorbar(aes(x = Model, ymin = Overfitting - Overfitting_St_Dev, ymax = Overfitting + Overfitting_St_Dev))
 
   duration_barchart <- ggplot2::ggplot(Results, aes(x = reorder(Model, Duration), y = Duration)) +
     ggplot2::geom_col(width = 0.5)+
     ggplot2::theme(axis.text.x = ggplot2::element_text(angle = 90, vjust = 1, hjust=1)) +
     ggplot2::labs(x = "Model", y = "Duration", title = "Duration, shorter is better") +
     ggplot2::geom_text(aes(label = Duration), vjust = 0,hjust = -0.5, angle = 90) +
-    ggplot2::ylim(0, max(Results$Duration) + 2)
+    ggplot2::ylim(0, max(Results$Duration) + 2) +
+    ggplot2::geom_errorbar(aes(x = Model, ymin = Duration - Duration_St_Dev, ymax = Duration + Duration_St_Dev))
 
 
   if (do_you_have_new_data == "Y") {

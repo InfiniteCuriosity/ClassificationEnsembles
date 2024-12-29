@@ -150,10 +150,6 @@ Over or underfitting barchart
 
 <br>
 
-Pairwise scatterplots of the numeric data
-
-![Pairwise scatterplots](Pairwise_scatterplot.png){width="700"}
-
 <br>
 
 Target vs each feature

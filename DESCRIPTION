@@ -40,6 +40,5 @@ Suggests:
     knitr,
     rmarkdown
 VignetteBuilder: knitr
-Github: https://github.com/InfiniteCuriosity/ClassificationEnsembles
 URL: https://github.com/InfiniteCuriosity/ClassificationEnsembles
 BugReports: https://github.com/InfiniteCuriosity/ClassificationEnsembles/issues
