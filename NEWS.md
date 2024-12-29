@@ -1,3 +1,5 @@
+# ClassificationEnsembles 0.2.0
+
 # ClassificationEnsembles 0.1.0
 
 * Initial CRAN submission.

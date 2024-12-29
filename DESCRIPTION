@@ -1,6 +1,6 @@
 Package: ClassificationEnsembles
 Title: Automatically Builds 25 Classification Models (15 Individual and 10 Ensembles of Models) from Classification Data
-Version: 0.1.0
+Version: 0.2.0
 Authors@R: 
     person("Russ", "Conte", , "russconte@mac.com", role = c("aut", "cre"))
 Description: Automatically builds 25 classification models from data. The package returns 12 plots, 5 tables and a summary report.
