@@ -25,7 +25,6 @@
 #' @importFrom graphics hist pairs panel.smooth par rect
 #' @importFrom gt gt
 #' @importFrom ipred bagging
-#' @importFrom klaR rda
 #' @importFrom MachineShop fit
 #' @importFrom magrittr %>%
 #' @importFrom MASS lda
@@ -42,7 +41,6 @@
 #' @importFrom tidyr gather pivot_longer
 #' @importFrom tree tree cv.tree prune.misclass
 #' @importFrom utils head read.csv str
-#' @importFrom xgboost xgb.DMatrix xgb.train
 
 
 Classification <- function(data, colnum, numresamples, do_you_have_new_data = c("Y", "N"), how_to_handle_strings = c(0("No strings"), 1("Strings as factors")), save_all_trained_models = c("Y", "N"),
@@ -255,21 +253,6 @@ Classification <- function(data, colnum, numresamples, do_you_have_new_data = c(
   ranger_F1_score <- 0
   ranger_table_total <- 0
 
-  rda_train_accuracy <- 0
-  rda_test_accuracy <- 0
-  rda_test_accuracy_mean <- 0
-  rda_validation_accuracy <- 0
-  rda_validation_accuracy_mean <- 0
-  rda_overfitting <- 0
-  rda_holdout <- 0
-  rda_duration <- 0
-  rda_true_positive_rate <- 0
-  rda_true_negative_rate <- 0
-  rda_false_positive_rate <- 0
-  rda_false_negative_rate <- 0
-  rda_F1_score <- 0
-  rda_table_total <- 0
-
   rpart_train_accuracy <- 0
   rpart_test_accuracy <- 0
   rpart_test_accuracy_mean <- 0
@@ -314,22 +297,6 @@ Classification <- function(data, colnum, numresamples, do_you_have_new_data = c(
   tree_false_negative_rate <- 0
   tree_F1_score <- 0
   tree_table_total <- 0
-
-  xgb_train_accuracy <- 0
-  xgb_test_accuracy <- 0
-  xgb_validation_accuracy <- 0
-  xgb_test_accuracy_mean <- 0
-  xgb_validation_accuracy_mean <- 0
-  xgb_overfitting <- 0
-  xgb_holdout <- 0
-  xgb_holdout_mean <- 0
-  xgb_duration <- 0
-  xgb_true_positive_rate <- 0
-  xgb_true_negative_rate <- 0
-  xgb_false_positive_rate <- 0
-  xgb_false_negative_rate <- 0
-  xgb_F1_score <- 0
-  xgb_table_total <- 0
 
   ensemble_adabag_train_accuracy <- 0
   ensemble_adabag_train_accuracy_mean <- 0
@@ -458,22 +425,6 @@ Classification <- function(data, colnum, numresamples, do_you_have_new_data = c(
   ensemble_rf_false_negative_rate <- 0
   ensemble_rf_F1_score <- 0
   ensemble_rf_table_total <- 0
-
-  ensemble_rda_train_accuracy <- 0
-  ensemble_rda_train_accuracy_mean <- 0
-  ensemble_rda_test_accuracy <- 0
-  ensemble_rda_test_accuracy_mean <- 0
-  ensemble_rda_validation_accuracy <- 0
-  ensemble_rda_validation_accuracy_mean <- 0
-  ensemble_rda_overfitting <- 0
-  ensemble_rda_holdout <- 0
-  ensemble_rda_duration <- 0
-  ensemble_rda_true_positive_rate <- 0
-  ensemble_rda_true_negative_rate <- 0
-  ensemble_rda_false_positive_rate <- 0
-  ensemble_rda_false_negative_rate <- 0
-  ensemble_rda_F1_score <- 0
-  ensemble_rda_table_total <- 0
 
   ensemble_svm_train_accuracy <- 0
   ensemble_svm_train_accuracy_mean <- 0
@@ -1238,65 +1189,6 @@ Classification <- function(data, colnum, numresamples, do_you_have_new_data = c(
     ranger_duration_mean <- mean(ranger_duration)
     ranger_duration_sd <- sd(ranger_duration)
 
-    #### 17. Regularized discriminant analysis ####
-    rda_start <- Sys.time()
-    print("Working on Regularized Discriminant analysis")
-    rda_train_fit <- klaR::rda(y_train ~ ., data = train)
-    rda_train_pred <- predict(object = rda_train_fit, newdata = train)
-    rda_train_table <- table(rda_train_pred$class, y_train)
-    rda_train_accuracy[i] <- sum(diag(rda_train_table)) / sum(rda_train_table)
-    rda_train_accuracy_mean <- mean(rda_train_accuracy)
-    rda_train_mean <- mean(diag(rda_train_table)) / mean(rda_train_table)
-    rda_train_sd <- sd(diag(rda_train_table)) / sd(rda_train_table)
-    sum_diag_train_rda <- sum(diag(rda_train_table))
-    rda_train_prop <- diag(prop.table(rda_train_table, margin = 1))
-
-    rda_test_pred <- predict(object = rda_train_fit, newdata = test)
-    rda_test_table <- table(rda_test_pred$class, y_test)
-    rda_test_accuracy[i] <- sum(diag(rda_test_table)) / sum(rda_test_table)
-    rda_test_accuracy_mean <- mean(rda_test_accuracy)
-    rda_test_mean <- mean(diag(rda_test_table)) / mean(rda_test_table)
-    rda_test_sd <- sd(diag(rda_test_table)) / sd(rda_test_table)
-    sum_diag_test_rda <- sum(diag(rda_test_table))
-    rda_test_prop <- diag(prop.table(rda_test_table, margin = 1))
-
-    rda_validation_pred <- predict(object = rda_train_fit, newdata = validation)
-    rda_validation_table <- table(rda_validation_pred$class, y_validation)
-    rda_validation_accuracy[i] <- sum(diag(rda_validation_table)) / sum(rda_validation_table)
-    rda_validation_accuracy_mean <- mean(rda_validation_accuracy)
-    rda_validation_mean <- mean(diag(rda_validation_table)) / mean(rda_validation_table)
-    rda_validation_sd <- sd(diag(rda_validation_table)) / sd(rda_validation_table)
-    sum_diag_validation_rda <- sum(diag(rda_validation_table))
-    rda_validation_prop <- diag(prop.table(rda_validation_table, margin = 1))
-
-    rda_holdout[i] <- mean(c(rda_test_accuracy_mean, rda_validation_accuracy_mean))
-    rda_holdout_mean <- mean(rda_holdout)
-    rda_holdout_sd <- sd(ranger_holdout)
-    rda_overfitting[i] <- rda_holdout_mean / rda_train_accuracy_mean
-    rda_overfitting_mean <- mean(rda_overfitting)
-    rda_overfitting_range <- range(rda_overfitting)
-    rda_overfitting_sd <- sd(rda_overfitting)
-
-    rda_table <- rda_test_table + rda_validation_table
-    rda_table_total <- rda_table_total + rda_table
-    rda_table_sum_diag <- sum(diag(rda_table))
-
-    rda_true_positive_rate[i] <- sum(diag(rda_table_total)) / sum(rda_table_total)
-    rda_true_positive_rate_mean <- mean(rda_true_positive_rate[i])
-    rda_true_negative_rate[i] <- 0.5 * (sum(diag(rda_table_total))) / sum(rda_table_total)
-    rda_true_negative_rate_mean <- mean(rda_true_negative_rate)
-    rda_false_negative_rate[i] <- 1 - rda_true_positive_rate[i]
-    rda_false_negative_rate_mean <- mean(rda_false_negative_rate)
-    rda_false_positive_rate[i] <- 1 - rda_true_negative_rate[i]
-    rda_false_positive_rate_mean <- mean(rda_false_positive_rate)
-    rda_F1_score[i] <- 2 * rda_true_positive_rate[i] / (2 * rda_true_positive_rate[i] + rda_false_positive_rate[i] + rda_false_negative_rate[i])
-    rda_F1_score_mean <- mean(rda_F1_score[i])
-
-    rda_end <- Sys.time()
-    rda_duration[i] <- rda_end - rda_start
-    rda_duration_mean <- mean(rda_duration)
-    rda_duration_sd <- sd(rda_duration)
-
     #### 18. RPart Model ####
     rpart_start <- Sys.time()
     print("Working on RPart analysis")
@@ -1485,156 +1377,6 @@ Classification <- function(data, colnum, numresamples, do_you_have_new_data = c(
     tree_duration_sd <- sd(tree_duration)
 
 
-    #### XGBoost ####
-    # Train on the train set, check on the train set
-    xgb_start <- Sys.time()
-    print("Working on XGBoost analysis")
-
-    y_train <- as.integer(train01$y) - 1
-    y_test <- as.integer(test01$y) - 1
-    X_train <- train %>% dplyr::select(dplyr::where(is.numeric))
-    X_test <- test %>% dplyr::select(dplyr::where(is.numeric))
-
-    xgb_train <- xgboost::xgb.DMatrix(data = as.matrix(X_train), label = y_train)
-    xgb_test <- xgboost::xgb.DMatrix(data = as.matrix(X_test), label = y_test)
-    xgb_params <- list(
-      booster = "gbtree",
-      eta = 0.01,
-      max_depth = 8,
-      gamma = 4,
-      subsample = 0.75,
-      colsample_bytree = 1,
-      objective = "multi:softprob",
-      eval_metric = "mlogloss",
-      num_class = length(levels(df$y))
-    )
-    xgb_model <- xgboost::xgb.train(
-      params = xgb_params,
-      data = xgb_train,
-      nrounds = 5000,
-      verbose = 1
-    )
-
-    xgb_preds <- predict(xgb_model, as.matrix(X_train), reshape = TRUE)
-    xgb_preds <- as.data.frame(xgb_preds)
-    colnames(xgb_preds) <- levels(df$y)
-
-    xgb_preds$PredictedClass <- apply(xgb_preds, 1, function(y) colnames(xgb_preds)[which.max(y)])
-    xgb_preds$ActualClass <- levels(df$y)[y_train + 1]
-    xgb_train_table <- table(xgb_preds$PredictedClass, xgb_preds$ActualClass)
-    xgb_train_accuracy[i] <- sum(diag(xgb_train_table)) / sum(xgb_train_table)
-    xgb_train_accuracy_mean <- mean(xgb_train_accuracy)
-    xgb_train_pred <- as.factor(xgb_preds$PredictedClass)
-    xgb_train_sd <- sd(diag(xgb_train_table)) / sd(xgb_train_table)
-    sum_diag_train_xgb <- sum(diag(xgb_train_table))
-
-
-    # Train on the train set, check on the test set
-    y_train <- as.integer(train01$y) - 1
-    y_test <- as.integer(test01$y) - 1
-    X_train <- train %>% dplyr::select(dplyr::where(is.numeric))
-    X_test <- test %>% dplyr::select(dplyr::where(is.numeric))
-
-    xgb_train <- xgboost::xgb.DMatrix(data = as.matrix(X_train), label = y_train)
-    xgb_test <- xgboost::xgb.DMatrix(data = as.matrix(X_test), label = y_test)
-    xgb_params <- list(
-      booster = "gbtree",
-      eta = 0.01,
-      max_depth = 8,
-      gamma = 4,
-      subsample = 0.75,
-      colsample_bytree = 1,
-      objective = "multi:softprob",
-      eval_metric = "mlogloss",
-      num_class = length(levels(df$y))
-    )
-    xgb_model <- xgboost::xgb.train(
-      params = xgb_params,
-      data = xgb_train,
-      nrounds = 5000,
-      verbose = 1
-    )
-
-    xgb_preds <- predict(xgb_model, as.matrix(X_test), reshape = TRUE)
-    xgb_preds <- as.data.frame(xgb_preds)
-    colnames(xgb_preds) <- levels(df$y)
-
-    xgb_preds$PredictedClass <- apply(xgb_preds, 1, function(y) colnames(xgb_preds)[which.max(y)])
-    xgb_preds$ActualClass <- levels(df$y)[y_test + 1]
-    xgb_test_table <- table(xgb_preds$PredictedClass, xgb_preds$ActualClass)
-    xgb_test_accuracy[i] <- sum(diag(xgb_test_table)) / sum(xgb_test_table)
-    xgb_test_accuracy_mean <- mean(xgb_test_accuracy)
-    xgb_test_pred <- as.factor(xgb_preds$PredictedClass)
-    xgb_test_sd <- sd(diag(xgb_test_table)) / sd(xgb_test_table)
-    sum_diag_test_xgb <- sum(diag(xgb_test_table))
-
-    #### Start analysis using the validation data
-
-    y_train <- as.integer(train01$y) - 1
-    y_validation <- as.integer(validation01$y) - 1
-    X_train <- train %>% dplyr::select(dplyr::where(is.numeric))
-    X_validation <- validation %>% dplyr::select(dplyr::where(is.numeric))
-
-    xgb_train <- xgboost::xgb.DMatrix(data = as.matrix(X_train), label = y_train)
-    xgb_validation <- xgboost::xgb.DMatrix(data = as.matrix(X_validation), label = y_validation)
-    xgb_params <- list(
-      booster = "gbtree",
-      eta = 0.01,
-      max_depth = 8,
-      gamma = 4,
-      subsample = 0.75,
-      colsample_bytree = 1,
-      objective = "multi:softprob",
-      eval_metric = "mlogloss",
-      num_class = length(levels(df$y))
-    )
-    xgb_model <- xgboost::xgb.train(
-      params = xgb_params,
-      data = xgb_train,
-      nrounds = 5000,
-      verbose = 1
-    )
-
-    xgb_preds <- predict(xgb_model, as.matrix(X_validation), reshape = TRUE)
-    xgb_preds <- as.data.frame(xgb_preds)
-    colnames(xgb_preds) <- levels(df$y)
-
-    xgb_preds$PredictedClass <- apply(xgb_preds, 1, function(y) colnames(xgb_preds)[which.max(y)])
-    xgb_preds$ActualClass <- levels(df$y)[y_validation + 1]
-    xgb_validation_table <- table(xgb_preds$PredictedClass, xgb_preds$ActualClass)
-    xgb_validation_accuracy[i] <- sum(diag(xgb_validation_table)) / sum(xgb_validation_table)
-    xgb_validation_accuracy_mean <- mean(xgb_validation_accuracy)
-    xgb_validation_pred <- as.factor(xgb_preds$PredictedClass)
-    xgb_validation_sd <- sd(diag(xgb_validation_table)) / sd(xgb_validation_table)
-    sum_diag_validation_xgb <- sum(diag(xgb_validation_table))
-
-    xgb_holdout[i] <- mean(c(xgb_test_accuracy_mean, xgb_validation_accuracy_mean))
-    xgb_holdout_mean <- mean(xgb_holdout)
-    xgb_holdout_sd <- sd(xgb_holdout)
-    xgb_overfitting[i] <- xgb_holdout_mean / xgb_train_accuracy_mean
-    xgb_overfitting_mean <- mean(xgb_overfitting)
-    xgb_overfitting_sd <- sd(xgb_overfitting)
-
-    xgb_table <- xgb_test_table + xgb_validation_table
-    xgb_table_total <- xgb_table_total + xgb_table
-    xgb_table_sum_diag <- sum(diag(xgb_table))
-
-    xgb_true_positive_rate[i] <- sum(diag(xgb_table_total)) / sum(xgb_table_total)
-    xgb_true_positive_rate_mean <- mean(xgb_true_positive_rate[i])
-    xgb_true_negative_rate[i] <- 0.5 * (sum(diag(xgb_table_total))) / sum(xgb_table_total)
-    xgb_true_negative_rate_mean <- mean(xgb_true_negative_rate)
-    xgb_false_negative_rate[i] <- 1 - xgb_true_positive_rate[i]
-    xgb_false_negative_rate_mean <- mean(xgb_false_negative_rate)
-    xgb_false_positive_rate[i] <- 1 - xgb_true_negative_rate[i]
-    xgb_false_positive_rate_mean <- mean(xgb_false_positive_rate)
-    xgb_F1_score[i] <- 2 * xgb_true_positive_rate[i] / (2 * xgb_true_positive_rate[i] + xgb_false_positive_rate[i] + xgb_false_negative_rate[i])
-    xgb_F1_score_mean <- mean(xgb_F1_score[i])
-
-    xgb_end <- Sys.time()
-    xgb_duration[i] <- xgb_end - xgb_start
-    xgb_duration_mean <- xgb_end - xgb_start
-    xgb_duration_sd <- sd(xgb_duration)
-
 
     #### Ensembles ####
     ensemble1 <- data.frame(
@@ -1648,11 +1390,9 @@ Classification <- function(data, colnum, numresamples, do_you_have_new_data = c(
       "Penalized_Discriminant_Analysis" = c(pda_test_pred, pda_validation_pred),
       "Random_Forest" = c(rf_test_pred, rf_validation_pred),
       "Ranger" = c(ranger_test_pred, ranger_validation_pred),
-      "Regularized_Discriminant_Analysis" = c(rda_test_pred$class, rda_validation_pred$class),
       "RPart" = c(rpart_test_pred, rpart_validation_pred),
       "Support_Vector_Machines" = c(svm_test_pred, svm_validation_pred),
-      "Trees" = c(tree_test_pred, tree_validation_pred),
-      "XGBoost" = c(xgb_test_pred, xgb_validation_pred)
+      "Trees" = c(tree_test_pred, tree_validation_pred)
     )
 
     ensemble_row_numbers <- as.numeric(row.names(ensemble1))
@@ -2113,66 +1853,6 @@ Classification <- function(data, colnum, numresamples, do_you_have_new_data = c(
     ensemble_rf_duration_mean <- mean(ensemble_rf_duration)
     ensemble_rf_duration_sd <- sd(ensemble_rf_duration)
 
-    #### 28. Regularized discriminant analysis ####
-    ensemble_rda_start <- Sys.time()
-    print("Working on Ensembles using Regularized Discriminant analysis")
-    ensemble_rda_train_fit <- klaR::rda(ensemble_y_train ~ ., data = ensemble_train)
-    ensemble_rda_train_pred <- predict(object = ensemble_rda_train_fit, newdata = ensemble_train)
-    ensemble_rda_train_table <- table(ensemble_rda_train_pred$class, ensemble_y_train)
-    ensemble_rda_train_accuracy[i] <- sum(diag(ensemble_rda_train_table)) / sum(ensemble_rda_train_table)
-    ensemble_rda_train_accuracy_mean <- mean(ensemble_rda_train_accuracy)
-    ensemble_rda_train_mean <- mean(diag(ensemble_rda_train_table)) / mean(ensemble_rda_train_table)
-    ensemble_rda_train_sd <- sd(diag(ensemble_rda_train_table)) / sd(ensemble_rda_train_table)
-    ensemble_sum_diag_train_rda <- sum(diag(ensemble_rda_train_table))
-    ensemble_rda_train_prop <- diag(prop.table(ensemble_rda_train_table, margin = 1))
-
-    ensemble_rda_test_pred <- predict(object = ensemble_rda_train_fit, newdata = ensemble_test)
-    ensemble_rda_test_table <- table(ensemble_rda_test_pred$class, ensemble_y_test)
-    ensemble_rda_test_accuracy[i] <- sum(diag(ensemble_rda_test_table)) / sum(ensemble_rda_test_table)
-    ensemble_rda_test_accuracy_mean <- mean(ensemble_rda_test_accuracy)
-    ensemble_rda_test_mean <- mean(diag(ensemble_rda_test_table)) / mean(ensemble_rda_test_table)
-    ensemble_rda_test_sd <- sd(diag(ensemble_rda_test_table)) / sd(ensemble_rda_test_table)
-    ensemble_sum_diag_test_rda <- sum(diag(ensemble_rda_test_table))
-    ensemble_rda_test_prop <- diag(prop.table(ensemble_rda_test_table, margin = 1))
-
-    ensemble_rda_validation_pred <- predict(object = ensemble_rda_train_fit, newdata = ensemble_validation)
-    ensemble_rda_validation_table <- table(ensemble_rda_validation_pred$class, ensemble_y_validation)
-    ensemble_rda_validation_accuracy[i] <- sum(diag(ensemble_rda_validation_table)) / sum(ensemble_rda_validation_table)
-    ensemble_rda_validation_accuracy_mean <- mean(ensemble_rda_validation_accuracy)
-    ensemble_rda_validation_mean <- mean(diag(ensemble_rda_validation_table)) / mean(ensemble_rda_validation_table)
-    ensemble_rda_validation_sd <- sd(diag(ensemble_rda_validation_table)) / sd(ensemble_rda_validation_table)
-    ensemble_sum_diag_validation_rda <- sum(diag(ensemble_rda_validation_table))
-    ensemble_rda_validation_prop <- diag(prop.table(ensemble_rda_validation_table, margin = 1))
-
-    ensemble_rda_holdout[i] <- mean(c(ensemble_rda_test_accuracy_mean, ensemble_rda_validation_accuracy_mean))
-    ensemble_rda_holdout_mean <- mean(ensemble_rda_holdout)
-    ensemble_rda_holdout_sd <- sd(ensemble_rda_holdout)
-    ensemble_rda_overfitting[i] <- ensemble_rda_holdout_mean / ensemble_rda_train_accuracy_mean
-    ensemble_rda_overfitting_mean <- mean(ensemble_rda_overfitting)
-    ensemble_rda_overfitting_range <- range(ensemble_rda_overfitting)
-    ensemble_rda_overfitting_sd <- sd(ensemble_rda_overfitting)
-
-    ensemble_rda_table <- ensemble_rda_test_table + ensemble_rda_validation_table
-    ensemble_rda_table_total <- ensemble_rda_table_total + ensemble_rda_table
-    ensemble_rda_table_sum_diag <- sum(diag(ensemble_rda_table))
-
-    ensemble_rda_true_positive_rate[i] <- sum(diag(ensemble_rda_table_total)) / sum(ensemble_rda_table_total)
-    ensemble_rda_true_positive_rate_mean <- mean(ensemble_rda_true_positive_rate[i])
-    ensemble_rda_true_negative_rate[i] <- 0.5 * (sum(diag(ensemble_rda_table_total))) / sum(ensemble_rda_table_total)
-    ensemble_rda_true_negative_rate_mean <- mean(ensemble_rda_true_negative_rate)
-    ensemble_rda_false_negative_rate[i] <- 1 - ensemble_rda_true_positive_rate[i]
-    ensemble_rda_false_negative_rate_mean <- mean(ensemble_rda_false_negative_rate)
-    ensemble_rda_false_positive_rate[i] <- 1 - ensemble_rda_true_negative_rate[i]
-    ensemble_rda_false_positive_rate_mean <- mean(ensemble_rda_false_positive_rate)
-    ensemble_rda_F1_score[i] <- 2 * ensemble_rda_true_positive_rate[i] / (2 * ensemble_rda_true_positive_rate[i] + ensemble_rda_false_positive_rate[i] + ensemble_rda_false_negative_rate[i])
-    ensemble_rda_F1_score_mean <- mean(ensemble_rda_F1_score[i])
-
-    ensemble_rda_end <- Sys.time()
-    ensemble_rda_duration[i] <- ensemble_rda_end - ensemble_rda_start
-    ensemble_rda_duration_mean <- mean(ensemble_rda_duration)
-    ensemble_rda_duration_sd <- sd(ensemble_rda_duration)
-
-
     #### 29. Ensemble Support Vector Machines ####
     ensemble_svm_start <- Sys.time()
     print("Working on Ensembles using Support Vector Machines analysis")
@@ -2304,146 +1984,146 @@ Classification <- function(data, colnum, numresamples, do_you_have_new_data = c(
     "Model" = c(
       "Ada bag", "Bagging", "Bagged Random Forest", "C50",
       "Linear", "Naive Bayes",
-      "Partial Least Squares", "Penalized Discriminant Analysis", "Random Forest", "Ranger", "Regularized Discriminant Analysis",
-      "RPart", "Support Vector Machines", "Trees", "XGBoost",
+      "Partial Least Squares", "Penalized Discriminant Analysis", "Random Forest", "Ranger",
+      "RPart", "Support Vector Machines", "Trees",
       "Ensemble ADA Bag", "Ensemble Bagged Cart", "Ensemble Bagged Random Forest", "Ensemble C50",
-      "Ensemble Naive Bayes", "Ensemble Ranger", "Ensemble Random Forest", "Ensemble Regularized Discriminant Analysis", "Ensemble Support Vector Machines",
+      "Ensemble Naive Bayes", "Ensemble Ranger", "Ensemble Random Forest", "Ensemble Support Vector Machines",
       "Ensemble Trees"
     ),
     "Mean_Holdout_Accuracy" = round(c(
       adabag_holdout_mean, bagging_holdout_mean, bag_rf_holdout_mean,
       C50_holdout_mean, linear_holdout_mean,
       n_bayes_holdout_mean, pls_holdout_mean, pda_holdout_mean, rf_holdout_mean, ranger_holdout_mean,
-      rda_holdout_mean, rpart_holdout_mean, svm_holdout_mean, tree_holdout_mean, xgb_holdout_mean,
+      rpart_holdout_mean, svm_holdout_mean, tree_holdout_mean,
       ensemble_adabag_holdout_mean, ensemble_bag_cart_holdout_mean, ensemble_bag_rf_holdout_mean, ensemble_C50_holdout_mean,
-      ensemble_n_bayes_holdout_mean, ensemble_ranger_holdout_mean, ensemble_rf_holdout_mean, ensemble_rda_holdout_mean, ensemble_svm_holdout_mean,
+      ensemble_n_bayes_holdout_mean, ensemble_ranger_holdout_mean, ensemble_rf_holdout_mean, ensemble_svm_holdout_mean,
       ensemble_tree_holdout_mean
     ), 4),
     "Accuracy_Holdout_Std.Dev" = round(c(
       adabag_holdout_sd, bagging_holdout_sd, bag_rf_holdout_sd,
       C50_holdout_sd, linear_holdout_sd,
       n_bayes_holdout_sd, pls_holdout_sd, pda_holdout_sd, rf_holdout_sd, ranger_holdout_sd,
-      rda_holdout_sd, rpart_holdout_sd, svm_holdout_sd, tree_holdout_sd, xgb_holdout_sd,
+      rpart_holdout_sd, svm_holdout_sd, tree_holdout_sd,
       ensemble_adabag_holdout_sd, ensemble_bag_cart_holdout_sd, ensemble_bag_rf_holdout_sd, ensemble_C50_holdout_sd,
-      ensemble_n_bayes_holdout_sd, ensemble_ranger_holdout_sd, ensemble_rf_holdout_sd, ensemble_rda_holdout_sd, ensemble_svm_holdout_sd,
+      ensemble_n_bayes_holdout_sd, ensemble_ranger_holdout_sd, ensemble_rf_holdout_sd, ensemble_svm_holdout_sd,
       ensemble_tree_holdout_sd
     ), 4),
     "Duration" = round(c(
       adabag_duration_mean, bagging_duration_mean, bag_rf_duration_mean,
       C50_duration_mean, linear_duration_mean,
       n_bayes_duration_mean, pls_duration_mean, pda_duration_mean, rf_duration_mean, ranger_duration_mean,
-      rda_duration_mean, rpart_duration_mean, svm_duration_mean, tree_duration_mean, xgb_duration_mean,
+      rpart_duration_mean, svm_duration_mean, tree_duration_mean,
       ensemble_adabag_duration_mean, ensemble_bag_cart_duration_mean, ensemble_bag_rf_duration_mean, ensemble_C50_duration_mean,
-      ensemble_n_bayes_duration_mean, ensemble_ranger_duration_mean, ensemble_rf_duration_mean, ensemble_rda_duration_mean, ensemble_svm_duration_mean,
+      ensemble_n_bayes_duration_mean, ensemble_ranger_duration_mean, ensemble_rf_duration_mean, ensemble_svm_duration_mean,
       ensemble_tree_duration_mean
     ), 4),
     "Duration_St_Dev" = round(c(
       adabag_duration_sd, bagging_duration_sd, bag_rf_duration_sd,
       C50_duration_sd, linear_duration_sd,
       n_bayes_duration_sd, pls_duration_sd, pda_duration_sd, rf_duration_sd, ranger_duration_sd,
-      rda_duration_sd, rpart_duration_sd, svm_duration_sd, tree_duration_sd, xgb_duration_sd,
+      rpart_duration_sd, svm_duration_sd, tree_duration_sd,
       ensemble_adabag_duration_sd, ensemble_bag_cart_duration_sd, ensemble_bag_rf_duration_sd, ensemble_C50_duration_sd,
-      ensemble_n_bayes_duration_sd, ensemble_ranger_duration_sd, ensemble_rf_duration_sd, ensemble_rda_duration_sd, ensemble_svm_duration_sd,
+      ensemble_n_bayes_duration_sd, ensemble_ranger_duration_sd, ensemble_rf_duration_sd, ensemble_svm_duration_sd,
       ensemble_tree_duration_sd
     ), 4),
     "True_Positive_Rate" = round(c(
       adabag_true_positive_rate_mean, bagging_true_positive_rate_mean, bag_rf_true_positive_rate_mean,
       C50_true_positive_rate_mean, linear_true_positive_rate_mean,
       n_bayes_true_positive_rate_mean, pls_true_positive_rate_mean, pda_true_positive_rate_mean, rf_true_positive_rate_mean, ranger_true_positive_rate_mean,
-      rda_true_positive_rate_mean, rpart_true_positive_rate_mean, svm_true_positive_rate_mean, tree_true_positive_rate_mean, xgb_true_positive_rate_mean,
+      rpart_true_positive_rate_mean, svm_true_positive_rate_mean, tree_true_positive_rate_mean,
       ensemble_adabag_true_positive_rate_mean, ensemble_bag_cart_true_positive_rate_mean, ensemble_bag_rf_true_positive_rate_mean, ensemble_C50_true_positive_rate_mean,
-      ensemble_n_bayes_true_positive_rate_mean, ensemble_ranger_true_positive_rate_mean, ensemble_rf_true_positive_rate_mean, ensemble_rda_true_positive_rate_mean, ensemble_svm_true_positive_rate_mean,
+      ensemble_n_bayes_true_positive_rate_mean, ensemble_ranger_true_positive_rate_mean, ensemble_rf_true_positive_rate_mean, ensemble_svm_true_positive_rate_mean,
       ensemble_tree_true_positive_rate_mean
     ), 4),
     "True_Negative_Rate" = round(c(
       adabag_true_negative_rate_mean, bagging_true_negative_rate_mean, bag_rf_true_negative_rate_mean,
       C50_true_negative_rate_mean, linear_true_negative_rate_mean,
       n_bayes_true_negative_rate_mean, pls_true_negative_rate_mean, pda_true_negative_rate_mean, rf_true_negative_rate_mean, ranger_true_negative_rate_mean,
-      rda_true_negative_rate_mean, rpart_true_negative_rate_mean, svm_true_negative_rate_mean, tree_true_negative_rate_mean, xgb_true_negative_rate_mean,
+      rpart_true_negative_rate_mean, svm_true_negative_rate_mean, tree_true_negative_rate_mean,
       ensemble_adabag_true_negative_rate_mean, ensemble_bag_cart_true_negative_rate_mean, ensemble_bag_rf_true_negative_rate_mean, ensemble_C50_true_negative_rate_mean,
-      ensemble_n_bayes_true_negative_rate_mean, ensemble_ranger_true_negative_rate_mean, ensemble_rf_true_negative_rate_mean, ensemble_rda_true_negative_rate_mean, ensemble_svm_true_negative_rate_mean,
+      ensemble_n_bayes_true_negative_rate_mean, ensemble_ranger_true_negative_rate_mean, ensemble_rf_true_negative_rate_mean, ensemble_svm_true_negative_rate_mean,
       ensemble_tree_true_negative_rate_mean
     ), 4),
     "False_Positive_Rate" = round(c(
       adabag_false_positive_rate_mean, bagging_false_positive_rate_mean, bag_rf_false_positive_rate_mean,
       C50_false_positive_rate_mean, linear_false_positive_rate_mean,
       n_bayes_false_positive_rate_mean, pls_false_positive_rate_mean, pda_false_positive_rate_mean, rf_false_positive_rate_mean, ranger_false_positive_rate_mean,
-      rda_false_positive_rate_mean, rpart_false_positive_rate_mean, svm_false_positive_rate_mean, tree_false_positive_rate_mean, xgb_false_positive_rate_mean,
+      rpart_false_positive_rate_mean, svm_false_positive_rate_mean, tree_false_positive_rate_mean,
       ensemble_adabag_false_positive_rate_mean, ensemble_bag_cart_false_positive_rate_mean, ensemble_bag_rf_false_positive_rate_mean, ensemble_C50_false_positive_rate_mean,
-      ensemble_n_bayes_false_positive_rate_mean, ensemble_ranger_false_positive_rate_mean, ensemble_rf_false_positive_rate_mean, ensemble_rda_false_positive_rate_mean, ensemble_svm_false_positive_rate_mean,
+      ensemble_n_bayes_false_positive_rate_mean, ensemble_ranger_false_positive_rate_mean, ensemble_rf_false_positive_rate_mean, ensemble_svm_false_positive_rate_mean,
       ensemble_tree_false_positive_rate_mean
     ), 4),
     "False_Negative_Rate" = round(c(
       adabag_false_negative_rate_mean, bagging_false_negative_rate_mean, bag_rf_false_negative_rate_mean,
       C50_false_negative_rate_mean, linear_false_negative_rate_mean,
       n_bayes_false_negative_rate_mean, pls_false_negative_rate_mean, pda_false_negative_rate_mean, rf_false_negative_rate_mean, ranger_false_negative_rate_mean,
-      rda_false_negative_rate_mean, rpart_false_negative_rate_mean, svm_false_negative_rate_mean, tree_false_negative_rate_mean, xgb_false_negative_rate_mean,
+      rpart_false_negative_rate_mean, svm_false_negative_rate_mean, tree_false_negative_rate_mean,
       ensemble_adabag_false_negative_rate_mean, ensemble_bag_cart_false_negative_rate_mean, ensemble_bag_rf_false_negative_rate_mean, ensemble_C50_false_negative_rate_mean,
-      ensemble_n_bayes_false_negative_rate_mean, ensemble_ranger_false_negative_rate_mean, ensemble_rf_false_negative_rate_mean, ensemble_rda_false_negative_rate_mean, ensemble_svm_false_negative_rate_mean,
+      ensemble_n_bayes_false_negative_rate_mean, ensemble_ranger_false_negative_rate_mean, ensemble_rf_false_negative_rate_mean, ensemble_svm_false_negative_rate_mean,
       ensemble_tree_false_negative_rate_mean
     ), 4),
     "F1_Score" = round(c(
       adabag_F1_score_mean, bagging_F1_score_mean, bag_rf_F1_score_mean,
       C50_F1_score_mean, linear_F1_score_mean,
       n_bayes_F1_score_mean, pls_F1_score_mean, pda_F1_score_mean, rf_F1_score_mean, ranger_F1_score_mean,
-      rda_F1_score_mean, rpart_F1_score_mean, svm_F1_score_mean, tree_F1_score_mean, xgb_F1_score_mean,
+      rpart_F1_score_mean, svm_F1_score_mean, tree_F1_score_mean,
       ensemble_adabag_F1_score_mean, ensemble_bag_cart_F1_score_mean, ensemble_bag_rf_F1_score_mean, ensemble_C50_F1_score_mean,
-      ensemble_n_bayes_F1_score_mean, ensemble_ranger_F1_score_mean, ensemble_rf_F1_score_mean, ensemble_rda_F1_score_mean, ensemble_svm_F1_score_mean,
+      ensemble_n_bayes_F1_score_mean, ensemble_ranger_F1_score_mean, ensemble_rf_F1_score_mean, ensemble_svm_F1_score_mean,
       ensemble_tree_F1_score_mean
     ), 4),
     "Train_Accuracy" = round(c(
       adabag_train_accuracy_mean, bagging_train_accuracy_mean, bag_rf_train_accuracy_mean,
       C50_train_accuracy_mean, linear_train_accuracy_mean,
       n_bayes_train_accuracy_mean, pls_train_accuracy_mean, pda_train_accuracy_mean, rf_train_accuracy_mean, ranger_train_accuracy_mean,
-      rda_train_accuracy_mean, rpart_train_accuracy_mean, svm_train_accuracy_mean, tree_train_accuracy_mean, xgb_train_accuracy_mean,
+      rpart_train_accuracy_mean, svm_train_accuracy_mean, tree_train_accuracy_mean,
       ensemble_adabag_train_accuracy_mean, ensemble_bag_cart_train_accuracy_mean, ensemble_bag_rf_train_accuracy_mean,
       ensemble_C50_train_accuracy_mean, ensemble_n_bayes_train_accuracy_mean,
-      ensemble_ranger_train_accuracy_mean, ensemble_rf_train_accuracy_mean, ensemble_rda_train_accuracy_mean, ensemble_svm_train_accuracy_mean, ensemble_tree_train_accuracy_mean
+      ensemble_ranger_train_accuracy_mean, ensemble_rf_train_accuracy_mean, ensemble_svm_train_accuracy_mean, ensemble_tree_train_accuracy_mean
     ), 4),
     "Test_Accuracy" = round(c(
       adabag_test_accuracy_mean, bagging_test_accuracy_mean, bag_rf_test_accuracy_mean,
       C50_test_accuracy_mean, linear_test_accuracy_mean,
       n_bayes_test_accuracy_mean, pls_test_accuracy_mean, pda_test_accuracy_mean, rf_test_accuracy_mean, ranger_test_accuracy_mean,
-      rda_test_accuracy_mean, rpart_test_accuracy_mean, svm_test_accuracy_mean, tree_test_accuracy_mean, xgb_test_accuracy_mean,
+      rpart_test_accuracy_mean, svm_test_accuracy_mean, tree_test_accuracy_mean,
       ensemble_adabag_test_accuracy_mean, ensemble_bag_cart_test_accuracy_mean, ensemble_bag_rf_test_accuracy_mean,
       ensemble_C50_test_accuracy_mean, ensemble_n_bayes_test_accuracy_mean,
-      ensemble_ranger_test_accuracy_mean, ensemble_rf_test_accuracy_mean, ensemble_rda_test_accuracy_mean, ensemble_svm_test_accuracy_mean, ensemble_tree_test_accuracy_mean
+      ensemble_ranger_test_accuracy_mean, ensemble_rf_test_accuracy_mean, ensemble_svm_test_accuracy_mean, ensemble_tree_test_accuracy_mean
     ), 4),
     "Validation_Accuracy" = round(c(
       adabag_validation_accuracy_mean, bagging_validation_accuracy_mean, bag_rf_validation_accuracy_mean,
       C50_validation_accuracy_mean,
       linear_validation_accuracy_mean, n_bayes_validation_accuracy_mean, pls_validation_accuracy_mean,
-      pda_validation_accuracy_mean, rf_validation_accuracy_mean, ranger_validation_accuracy_mean, rda_validation_accuracy_mean, rpart_validation_accuracy_mean,
-      svm_validation_accuracy_mean, tree_validation_accuracy_mean, xgb_validation_accuracy_mean,
+      pda_validation_accuracy_mean, rf_validation_accuracy_mean, ranger_validation_accuracy_mean, rpart_validation_accuracy_mean,
+      svm_validation_accuracy_mean, tree_validation_accuracy_mean,
       ensemble_adabag_validation_accuracy_mean, ensemble_bag_cart_validation_accuracy_mean, ensemble_bag_rf_validation_accuracy_mean, ensemble_C50_validation_accuracy_mean,
       ensemble_n_bayes_validation_accuracy_mean, ensemble_ranger_validation_accuracy_mean,
-      ensemble_rf_validation_accuracy_mean, ensemble_rda_validation_accuracy_mean, ensemble_svm_validation_accuracy_mean, ensemble_tree_validation_accuracy_mean
+      ensemble_rf_validation_accuracy_mean, ensemble_svm_validation_accuracy_mean, ensemble_tree_validation_accuracy_mean
     ), 4),
     "Overfitting" = round(c(
       adabag_overfitting_mean, bagging_overfitting_mean, bag_rf_overfitting_mean,
       C50_overfitting_mean, linear_overfitting_mean,
-      n_bayes_overfitting_mean, pls_overfitting_mean, pda_overfitting_mean, rf_overfitting_mean, ranger_overfitting_mean, rda_overfitting_mean,
-      rpart_overfitting_mean, svm_overfitting_mean, tree_overfitting_mean, xgb_overfitting_mean,
+      n_bayes_overfitting_mean, pls_overfitting_mean, pda_overfitting_mean, rf_overfitting_mean, ranger_overfitting_mean,
+      rpart_overfitting_mean, svm_overfitting_mean, tree_overfitting_mean,
       ensemble_adabag_overfitting_mean, ensemble_bag_cart_overfitting_mean, ensemble_bag_rf_overfitting_mean, ensemble_C50_overfitting_mean,
       ensemble_n_bayes_overfitting_mean, ensemble_ranger_overfitting_mean, ensemble_rf_overfitting_mean,
-      ensemble_rda_overfitting_mean, ensemble_svm_overfitting_mean, ensemble_tree_overfitting_mean
+      ensemble_svm_overfitting_mean, ensemble_tree_overfitting_mean
     ), 4),
     "Overfitting_St_Dev" = round(c(
       adabag_overfitting_sd, bagging_overfitting_sd, bag_rf_overfitting_sd,
       C50_overfitting_sd, linear_overfitting_sd,
-      n_bayes_overfitting_sd, pls_overfitting_sd, pda_overfitting_sd, rf_overfitting_sd, ranger_overfitting_sd, rda_overfitting_sd,
-      rpart_overfitting_sd, svm_overfitting_sd, tree_overfitting_sd, xgb_overfitting_sd,
+      n_bayes_overfitting_sd, pls_overfitting_sd, pda_overfitting_sd, rf_overfitting_sd, ranger_overfitting_sd,
+      rpart_overfitting_sd, svm_overfitting_sd, tree_overfitting_sd,
       ensemble_adabag_overfitting_sd, ensemble_bag_cart_overfitting_sd, ensemble_bag_rf_overfitting_sd, ensemble_C50_overfitting_sd,
       ensemble_n_bayes_overfitting_sd, ensemble_ranger_overfitting_sd, ensemble_rf_overfitting_sd,
-      ensemble_rda_overfitting_sd, ensemble_svm_overfitting_sd, ensemble_tree_overfitting_sd
+      ensemble_svm_overfitting_sd, ensemble_tree_overfitting_sd
     ), 4),
     "Diagonal_Sum" = round(c(
       adabag_table_sum_diag, bagging_table_sum_diag, bag_rf_table_sum_diag,
       C50_table_sum_diag, linear_table_sum_diag,
-      n_bayes_table_sum_diag, pls_table_sum_diag, pda_table_sum_diag, rf_table_sum_diag, ranger_table_sum_diag, rda_table_sum_diag,
-      rpart_table_sum_diag, svm_table_sum_diag, tree_table_sum_diag, xgb_table_sum_diag,
+      n_bayes_table_sum_diag, pls_table_sum_diag, pda_table_sum_diag, rf_table_sum_diag, ranger_table_sum_diag,
+      rpart_table_sum_diag, svm_table_sum_diag, tree_table_sum_diag,
       ensemble_adabag_table_sum_diag, ensemble_bag_cart_table_sum_diag, ensemble_bag_rf_table_sum_diag, ensemble_C50_table_sum_diag,
-      ensemble_n_bayes_table_sum_diag, ensemble_ranger_table_sum_diag, ensemble_rf_table_sum_diag, ensemble_rda_table_sum_diag,
+      ensemble_n_bayes_table_sum_diag, ensemble_ranger_table_sum_diag, ensemble_rf_table_sum_diag,
       ensemble_svm_table_sum_diag, ensemble_tree_table_sum_diag
     ), 4)
   )
@@ -2460,12 +2140,12 @@ Classification <- function(data, colnum, numresamples, do_you_have_new_data = c(
     "ADABag" = adabag_table_total, "Bagging" = bagging_table_total, "Bagged Random Forest" = bag_rf_table_total, "C50" = C50_table_total,
     "Linear" = linear_table_total, "Naive Bayes" = n_bayes_table_total,
     "Partial Least Sqaures" = pls_table_total, "Penalized Discriminant Ananysis" = pda_table_total, "Random Forest" = rf_table_total,
-    "Ranger" = ranger_table_total, "Regularized Discriminant Analysis" = rda_table_total, "RPart" = rpart_table_total, "Support Vector Machines" = svm_table_total,
-    "Trees" = tree_table_total, "XGBoost" = xgb_table_total,
+    "Ranger" = ranger_table_total, "RPart" = rpart_table_total, "Support Vector Machines" = svm_table_total,
+    "Trees" = tree_table_total,
     "Ensemble ADABag" = ensemble_adabag_table_total, "Ensemble Bagged Cart" = ensemble_bag_cart_table_total,
     "Ensemble Bagged Random Forest" = ensemble_bag_rf_table_total, "Ensemble C50" = ensemble_C50_table_total, "Ensemble Naive Bayes" = ensemble_n_bayes_table_total,
     "Ensemble Ranger" = ensemble_ranger_table_total, "Ensemble Random Forest" = ensemble_rf_table_total,
-    "Ensemble Regularized Discriminant Analysis" = ensemble_rda_table_total, "Ensemble Support Vector Machines" = ensemble_svm_table_total, "Ensemble Trees" = ensemble_tree_table_total
+    "Ensemble Support Vector Machines" = ensemble_svm_table_total, "Ensemble Trees" = ensemble_tree_table_total
   )
 
   accuracy_data <- data.frame(
@@ -2474,28 +2154,28 @@ Classification <- function(data, colnum, numresamples, do_you_have_new_data = c(
       rep("ADA Bag", numresamples), rep("Bagging", numresamples), rep("Bagged Random Forest", numresamples),
       rep("C50", numresamples), rep("Linear", numresamples),
       rep("Naive Bayes", numresamples), rep("Partial Least Squares", numresamples),
-      rep("Penalized Discriminant Analysis", numresamples), rep("Random Forest", numresamples), rep("Ranger", numresamples), rep("Regularized Discriminant Analysis", numresamples),
-      rep("RPart", numresamples), rep("Support Vector Machines", numresamples), rep("Trees", numresamples), rep("XGBoost", numresamples),
+      rep("Penalized Discriminant Analysis", numresamples), rep("Random Forest", numresamples), rep("Ranger", numresamples),
+      rep("RPart", numresamples), rep("Support Vector Machines", numresamples), rep("Trees", numresamples),
       rep("Ensemble ADA Bag", numresamples), rep("Ensemble Bagged Cart", numresamples), rep("Ensemble Bagged Random Forest", numresamples),
       rep("Ensemble C50", numresamples),
       rep("Ensemble Naive Bayes", numresamples), rep("Ensemble Ranger", numresamples), rep("Ensemble Random Forest", numresamples),
-      rep("Ensemble Regularized Discriminant Analysis", numresamples), rep("Ensemble Support Vector Machines", numresamples),
+      rep("Ensemble Support Vector Machines", numresamples),
       rep("Ensemble Trees", numresamples)
     ),
     "data" = c(
       adabag_holdout, bagging_holdout, bag_rf_holdout, C50_holdout, linear_holdout,
-      n_bayes_holdout, pls_holdout, pda_holdout, rf_holdout, ranger_holdout, rda_holdout, rpart_holdout, svm_holdout, tree_holdout, xgb_holdout,
+      n_bayes_holdout, pls_holdout, pda_holdout, rf_holdout, ranger_holdout, rpart_holdout, svm_holdout, tree_holdout,
       ensemble_adabag_holdout, ensemble_bag_cart_holdout, ensemble_bag_rf_holdout, ensemble_C50_holdout,
       ensemble_n_bayes_holdout,
-      ensemble_ranger_holdout, ensemble_rf_holdout, ensemble_rda_holdout, ensemble_svm_holdout, ensemble_tree_holdout
+      ensemble_ranger_holdout, ensemble_rf_holdout, ensemble_svm_holdout, ensemble_tree_holdout
     ),
     "mean" = rep(c(
       adabag_holdout_mean, bagging_holdout_mean, bag_rf_holdout_mean, C50_holdout_mean,
       linear_holdout_mean, n_bayes_holdout_mean, pls_holdout_mean,
-      pda_holdout_mean, rf_holdout_mean, ranger_holdout_mean, rda_holdout_mean, rpart_holdout_mean, svm_holdout_mean, tree_holdout_mean, xgb_holdout_mean,
+      pda_holdout_mean, rf_holdout_mean, ranger_holdout_mean, rpart_holdout_mean, svm_holdout_mean, tree_holdout_mean,
       ensemble_adabag_holdout_mean,
       ensemble_bag_cart_holdout_mean, ensemble_bag_rf_holdout_mean, ensemble_C50_holdout_mean,
-      ensemble_n_bayes_holdout_mean, ensemble_ranger_holdout_mean, ensemble_rf_holdout_mean, ensemble_rda_holdout_mean, ensemble_svm_holdout_mean,
+      ensemble_n_bayes_holdout_mean, ensemble_ranger_holdout_mean, ensemble_rf_holdout_mean, ensemble_svm_holdout_mean,
       ensemble_tree_holdout_mean
     ), each = numresamples)
   )
@@ -2517,28 +2197,28 @@ Classification <- function(data, colnum, numresamples, do_you_have_new_data = c(
       rep("ADA Bag", numresamples), rep("Bagging", numresamples), rep("Bagged Random Forest", numresamples),
       rep("C50", numresamples), rep("Linear", numresamples),
       rep("Naive Bayes", numresamples), rep("Partial Least Squares", numresamples),
-      rep("Penalized Discriminant Analysis", numresamples), rep("Random Forest", numresamples), rep("Ranger", numresamples), rep("Regularized Discriminant Analysis", numresamples),
-      rep("RPart", numresamples), rep("Support Vector Machines", numresamples), rep("Trees", numresamples), rep("XGBoost", numresamples),
+      rep("Penalized Discriminant Analysis", numresamples), rep("Random Forest", numresamples), rep("Ranger", numresamples),
+      rep("RPart", numresamples), rep("Support Vector Machines", numresamples), rep("Trees", numresamples),
       rep("Ensemble ADA Bag", numresamples), rep("Ensemble Bagged Cart", numresamples), rep("Ensemble Bagged Random Forest", numresamples),
       rep("Ensemble C50", numresamples),
       rep("Ensemble Naive Bayes", numresamples), rep("Ensemble Ranger", numresamples), rep("Ensemble Random Forest", numresamples),
-      rep("Ensemble Regularized Discriminant Analysis", numresamples), rep("Ensemble Support Vector Machines", numresamples),
+      rep("Ensemble Support Vector Machines", numresamples),
       rep("Ensemble Trees", numresamples)
     ),
     "data" = c(
       adabag_overfitting, bagging_overfitting, bag_rf_overfitting, C50_overfitting, linear_overfitting,
-      n_bayes_overfitting, pls_overfitting, pda_overfitting, rf_overfitting, ranger_overfitting, rda_overfitting, rpart_overfitting, svm_overfitting, tree_overfitting, xgb_overfitting,
+      n_bayes_overfitting, pls_overfitting, pda_overfitting, rf_overfitting, ranger_overfitting, rpart_overfitting, svm_overfitting, tree_overfitting,
       ensemble_adabag_overfitting, ensemble_bag_cart_overfitting, ensemble_bag_rf_overfitting, ensemble_C50_overfitting,
       ensemble_n_bayes_overfitting,
-      ensemble_ranger_overfitting, ensemble_rf_overfitting, ensemble_rda_overfitting, ensemble_svm_overfitting, ensemble_tree_overfitting
+      ensemble_ranger_overfitting, ensemble_rf_overfitting, ensemble_svm_overfitting, ensemble_tree_overfitting
     ),
     "mean" = rep(c(
       adabag_overfitting_mean, bagging_overfitting_mean, bag_rf_overfitting_mean, C50_overfitting_mean,
       linear_overfitting_mean, n_bayes_overfitting_mean, pls_overfitting_mean,
-      pda_overfitting_mean, rf_overfitting_mean, ranger_overfitting_mean, rda_overfitting_mean, rpart_overfitting_mean, svm_overfitting_mean, tree_overfitting_mean, xgb_overfitting_mean,
+      pda_overfitting_mean, rf_overfitting_mean, ranger_overfitting_mean, rpart_overfitting_mean, svm_overfitting_mean, tree_overfitting_mean,
       ensemble_adabag_overfitting_mean,
       ensemble_bag_cart_overfitting_mean, ensemble_bag_rf_overfitting_mean, ensemble_C50_overfitting_mean,
-      ensemble_n_bayes_overfitting_mean, ensemble_ranger_overfitting_mean, ensemble_rf_overfitting_mean, ensemble_rda_overfitting_mean, ensemble_svm_overfitting_mean,
+      ensemble_n_bayes_overfitting_mean, ensemble_ranger_overfitting_mean, ensemble_rf_overfitting_mean, ensemble_svm_overfitting_mean,
       ensemble_tree_overfitting_mean
     ), each = numresamples)
   )
@@ -2567,41 +2247,41 @@ Classification <- function(data, colnum, numresamples, do_you_have_new_data = c(
       rep("ADA Bag", numresamples), rep("Bagging", numresamples), rep("Bagged Random Forest", numresamples),
       rep("C50", numresamples), rep("Linear", numresamples),
       rep("Naive Bayes", numresamples), rep("Partial Least Squares", numresamples),
-      rep("Penalized Discriminant Analysis", numresamples), rep("Random Forest", numresamples), rep("Ranger", numresamples), rep("Regularized Discriminant Analysis", numresamples),
-      rep("RPart", numresamples), rep("Support Vector Machines", numresamples), rep("Trees", numresamples), rep("XGBoost", numresamples),
+      rep("Penalized Discriminant Analysis", numresamples), rep("Random Forest", numresamples), rep("Ranger", numresamples),
+      rep("RPart", numresamples), rep("Support Vector Machines", numresamples), rep("Trees", numresamples),
       rep("Ensemble ADA Bag", numresamples), rep("Ensemble Bagged Cart", numresamples), rep("Ensemble Bagged Random Forest", numresamples),
       rep("Ensemble C50", numresamples),
       rep("Ensemble Naive Bayes", numresamples), rep("Ensemble Ranger", numresamples), rep("Ensemble Random Forest", numresamples),
-      rep("Ensemble Regularized Discriminant Analysis", numresamples), rep("Ensemble Support Vector Machines", numresamples),
+      rep("Ensemble Support Vector Machines", numresamples),
       rep("Ensemble Trees", numresamples)
     ),
     "train" = c(
       adabag_train_accuracy, bagging_train_accuracy, bag_rf_train_accuracy, C50_train_accuracy,  linear_train_accuracy,
-      n_bayes_train_accuracy, pls_train_accuracy, pda_train_accuracy, rf_train_accuracy, ranger_train_accuracy, rda_train_accuracy, rpart_train_accuracy, svm_train_accuracy, tree_train_accuracy, xgb_train_accuracy,
+      n_bayes_train_accuracy, pls_train_accuracy, pda_train_accuracy, rf_train_accuracy, ranger_train_accuracy, rpart_train_accuracy, svm_train_accuracy, tree_train_accuracy,
       ensemble_adabag_train_accuracy, ensemble_bag_cart_train_accuracy, ensemble_bag_rf_train_accuracy, ensemble_C50_train_accuracy,
       ensemble_n_bayes_train_accuracy,
-      ensemble_ranger_train_accuracy, ensemble_rf_train_accuracy, ensemble_rda_train_accuracy, ensemble_svm_train_accuracy, ensemble_tree_train_accuracy
+      ensemble_ranger_train_accuracy, ensemble_rf_train_accuracy, ensemble_svm_train_accuracy, ensemble_tree_train_accuracy
     ),
     "test" = c(
       adabag_test_accuracy, bagging_test_accuracy, bag_rf_test_accuracy, C50_test_accuracy, linear_test_accuracy,
-      n_bayes_test_accuracy, pls_test_accuracy, pda_test_accuracy, rf_test_accuracy, ranger_test_accuracy, rda_test_accuracy, rpart_test_accuracy, svm_test_accuracy, tree_test_accuracy, xgb_test_accuracy,
+      n_bayes_test_accuracy, pls_test_accuracy, pda_test_accuracy, rf_test_accuracy, ranger_test_accuracy, rpart_test_accuracy, svm_test_accuracy, tree_test_accuracy,
       ensemble_adabag_test_accuracy, ensemble_bag_cart_test_accuracy, ensemble_bag_rf_test_accuracy, ensemble_C50_test_accuracy,
       ensemble_n_bayes_test_accuracy,
-      ensemble_ranger_test_accuracy, ensemble_rf_test_accuracy, ensemble_rda_test_accuracy, ensemble_svm_test_accuracy, ensemble_tree_test_accuracy
+      ensemble_ranger_test_accuracy, ensemble_rf_test_accuracy, ensemble_svm_test_accuracy, ensemble_tree_test_accuracy
     ),
     "validation" = c(
       adabag_validation_accuracy, bagging_validation_accuracy, bag_rf_validation_accuracy, C50_validation_accuracy, linear_validation_accuracy,
-      n_bayes_validation_accuracy, pls_validation_accuracy, pda_validation_accuracy, rf_validation_accuracy, ranger_validation_accuracy, rda_validation_accuracy, rpart_validation_accuracy, svm_validation_accuracy, tree_validation_accuracy, xgb_validation_accuracy,
+      n_bayes_validation_accuracy, pls_validation_accuracy, pda_validation_accuracy, rf_validation_accuracy, ranger_validation_accuracy, rpart_validation_accuracy, svm_validation_accuracy, tree_validation_accuracy,
       ensemble_adabag_validation_accuracy, ensemble_bag_cart_validation_accuracy, ensemble_bag_rf_validation_accuracy, ensemble_C50_validation_accuracy,
       ensemble_n_bayes_validation_accuracy,
-      ensemble_ranger_validation_accuracy, ensemble_rf_validation_accuracy, ensemble_rda_validation_accuracy, ensemble_svm_validation_accuracy, ensemble_tree_validation_accuracy
+      ensemble_ranger_validation_accuracy, ensemble_rf_validation_accuracy, ensemble_svm_validation_accuracy, ensemble_tree_validation_accuracy
     ),
     "holdout" = c(
       adabag_holdout, bagging_holdout, bag_rf_holdout, C50_holdout, linear_holdout,
-      n_bayes_holdout, pls_holdout, pda_holdout, rf_holdout, ranger_holdout, rda_holdout, rpart_holdout, svm_holdout, tree_holdout, xgb_holdout,
+      n_bayes_holdout, pls_holdout, pda_holdout, rf_holdout, ranger_holdout, rpart_holdout, svm_holdout, tree_holdout,
       ensemble_adabag_holdout, ensemble_bag_cart_holdout, ensemble_bag_rf_holdout, ensemble_C50_holdout,
       ensemble_n_bayes_holdout,
-      ensemble_ranger_holdout, ensemble_rf_holdout, ensemble_rda_holdout, ensemble_svm_holdout, ensemble_tree_holdout)
+      ensemble_ranger_holdout, ensemble_rf_holdout, ensemble_svm_holdout, ensemble_tree_holdout)
   )
 
   total_plot <- ggplot2::ggplot(data = total_data, mapping = ggplot2::aes(x = count, y = data, color = model)) +
@@ -2658,15 +2338,9 @@ Classification <- function(data, colnum, numresamples, do_you_have_new_data = c(
     Penalized_Discriminant_Analysis <- predict(object = pda_train_fit, newdata = new_data)
     Random_Forest <- predict(object = rf_train_fit, newdata = new_data)
     Ranger <- predict(object = ranger_train_fit, newdata = new_data)
-    Regularized_Discriminant_Analysis <- predict(object = rda_train_fit, newdata = new_data)$class
     RPart <- predict(object = rpart_train_fit, newdata = new_data)
     Support_Vector_Machines <- predict(object = svm_train_fit, newdata = new_data)
     Trees <- predict(tree_train_fit, new_data, type = "class")
-
-    new_xgb_preds <- predict(xgb_model, as.matrix(new_data[, 1:8]), reshape = TRUE)
-    new_xgb_preds <- as.data.frame(new_xgb_preds)
-    colnames(new_xgb_preds) <- levels(new_data$y)
-    XGBoost <- new_xgb_preds$PredictedClass <- as.factor(apply(new_xgb_preds, 1, function(y) colnames(new_xgb_preds)[which.max(y)]))
 
     new_ensemble <- data.frame(
       ADA_bag,
@@ -2679,11 +2353,9 @@ Classification <- function(data, colnum, numresamples, do_you_have_new_data = c(
       Penalized_Discriminant_Analysis,
       Random_Forest,
       Ranger,
-      Regularized_Discriminant_Analysis,
       RPart,
       Support_Vector_Machines,
-      Trees,
-      XGBoost
+      Trees
     )
 
     new_ensemble_row_numbers <- as.numeric(row.names(new_data))
@@ -2695,7 +2367,6 @@ Classification <- function(data, colnum, numresamples, do_you_have_new_data = c(
     new_ensemble_C50 <- predict(object = ensemble_C50_train_fit, newdata = new_ensemble)
     new_ensemble_n_bayes <- predict(object = ensemble_n_bayes_train_fit, newdata = new_ensemble)
     new_ensemble_rf <- predict(object = ensemble_train_rf_fit, newdata = new_ensemble)
-    new_ensemble_rda <- predict(object = ensemble_rda_train_fit, newdata = new_ensemble)$class
     new_ensemble_svm <- predict(object = ensemble_svm_train_fit, newdata = new_ensemble)
     new_ensemble_trees <- predict(object = ensemble_tree_train_fit, newdata = new_ensemble)
 
@@ -2711,18 +2382,15 @@ Classification <- function(data, colnum, numresamples, do_you_have_new_data = c(
       "Penalized_Discriminant_Analysis" = Penalized_Discriminant_Analysis,
       "Random_Forest" = Random_Forest,
       "Ranger" = Ranger,
-      "Reguarlized_Discriminant_Analysis" = Regularized_Discriminant_Analysis,
       "RPart" = RPart,
       "Support_Vector_Machines" = Support_Vector_Machines,
       "Trees" = Trees,
-      "XGBoost" = XGBoost,
       "Ensemble_ADA_Bag" = new_ensemble_adabag,
       "Ensemble_Bagged_Cart" = new_ensemble_bagged_cart,
       "Ensemble_Bagged_Random_Forest" = new_ensemble_bag_rf,
       "Ensemble_C50" = new_ensemble_C50,
       "Ensemble_Naive_Bayes" = new_ensemble_n_bayes,
       "Ensemble_Random_Forest" = new_ensemble_rf,
-      "Ensemble_Regularized_Discrmininat_Analysis" = new_ensemble_rda,
       "Ensemble_Support_Vector_Machines" = new_ensemble_svm
     )
 
@@ -2744,11 +2412,9 @@ Classification <- function(data, colnum, numresamples, do_you_have_new_data = c(
       pda_train_fit <<- pda_train_fit
       rf_train_fit <<- rf_train_fit
       ranger_train_fit <<- ranger_train_fit
-      rda_train_fit <<- rda_train_fit
       rpart_train_fit <<- rpart_train_fit
       svm_train_fit <<- svm_train_fit
       tree_train_fit <<- tree_train_fit
-      xgb_model <<- xgb_model
 
       ensemble_adabag_train_fit <<- ensemble_adabag_train_fit
       ensemble_bag_cart_train_fit <<- ensemble_bag_cart_train_fit
@@ -2757,7 +2423,6 @@ Classification <- function(data, colnum, numresamples, do_you_have_new_data = c(
       ensemble_n_bayes_train_fit <<- ensemble_n_bayes_train_fit
       ensemble_ranger_train_fit <<- ensemble_ranger_train_fit
       ensemble_train_rf_fit <<- ensemble_train_rf_fit
-      ensemble_rda_train_fit <<- ensemble_rda_train_fit
       ensemble_svm_train_fit <<- ensemble_svm_train_fit
       ensemble_tree_train_fit <<- ensemble_tree_train_fit
     }
@@ -2780,7 +2445,6 @@ Classification <- function(data, colnum, numresamples, do_you_have_new_data = c(
     pls_train_fit <<- pls_train_fit
     rf_train_fit <<- rf_train_fit
     ranger_train_fit <<- ranger_train_fit
-    rda_train_fit <<- rda_train_fit
     rpart_train_fit <<- rpart_train_fit
     svm_train_fit <<- svm_train_fit
     tree_train_fit <<- tree_train_fit
@@ -2792,7 +2456,6 @@ Classification <- function(data, colnum, numresamples, do_you_have_new_data = c(
     ensemble_n_bayes_train_fit <<- ensemble_n_bayes_train_fit
     ensemble_ranger_train_fit <<- ensemble_ranger_train_fit
     ensemble_train_rf_fit <<- ensemble_train_rf_fit
-    ensemble_rda_train_fit <<- ensemble_rda_train_fit
     ensemble_svm_train_fit <<- ensemble_svm_train_fit
     ensemble_tree_train_fit <<- ensemble_tree_train_fit
   }

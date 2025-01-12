@@ -15,7 +15,6 @@ Depends:
     ggplot2,
     gt,
     ipred,
-    klaR,
     MachineShop,
     magrittr,
     MASS,
@@ -30,8 +29,7 @@ Depends:
     reactablefmtr,
     scales,
     tidyr,
-    tree,
-    xgboost
+    tree
 Encoding: UTF-8
 Roxygen: list(markdown = TRUE)
 RoxygenNote: 7.3.2
