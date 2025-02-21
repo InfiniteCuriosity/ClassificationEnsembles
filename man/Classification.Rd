@@ -9,10 +9,11 @@ Classification(
   colnum,
   numresamples,
   predict_on_new_data = c("Y", "N"),
+  remove_VIF_above,
+  scale_all_numeric_predictors_in_data,
   how_to_handle_strings = c(0("No strings"), 1("Strings as factors")),
   save_all_trained_models = c("Y", "N"),
-  save_all_plots = c("Y", "N"),
-  scale_all_numeric_predictors_in_data = c("Y", "N"),
+  save_all_plots,
   use_parallel = c("Y", "N"),
   train_amount,
   test_amount,
@@ -26,15 +27,17 @@ Classification(
 
 \item{numresamples}{the number of times to resample the analysis}
 
-\item{predict_on_new_data}{asks if the user has new data to be analyzed using the trained models that were just developed}
+\item{predict_on_new_data}{Gives the user the opportunity to use the trained models to predict on new and untrained data}
+
+\item{remove_VIF_above}{Removes columns with Variance Inflaction Factors above the level chosen by the user}
+
+\item{scale_all_numeric_predictors_in_data}{Scales all numeric predictors in the original data}
 
 \item{how_to_handle_strings}{Converts strings to factor levels}
 
 \item{save_all_trained_models}{Gives the user the option to save all trained models in the Environment}
 
-\item{save_all_plots}{Allows user to save all plots and reports}
-
-\item{scale_all_numeric_predictors_in_data}{Allows user to scale all numeric predictors in the data set}
+\item{save_all_plots}{Saves all plots in the user's chosen format}
 
 \item{use_parallel}{"Y" or "N" for parallel processing}
 
