@@ -7,7 +7,8 @@ Description: Automatically builds 25 classification models from data. The packag
 License: MIT + file LICENSE
 Depends:
     C50,
-    class,
+    car,
+    caret,
     corrplot,
     doParallel,
     dplyr,
