@@ -1,9 +1,12 @@
 Package: ClassificationEnsembles
-Title: Automatically Builds 25 Classification Models (15 Individual and 10 Ensembles of Models) from Classification Data
+Title: Automatically Builds 20 Classification Models (12 Individual and 8 Ensembles of Models) from Classification Data
 Version: 0.3.0
 Authors@R: 
     person("Russ", "Conte", , "russconte@mac.com", role = c("aut", "cre", "cph"))
-Description: Automatically builds 25 classification models from data. The package returns 12 plots, 5 tables and a summary report.
+Description: Automatically builds 20 classification models from data. The package returns 26 plots, 5 tables and a summary report.
+    The package automatically builds 12 individual classification models, including error (RMSE) and predictions. That data is used to create an ensemble, which is then modeled using 8 methods.
+    The process is repeated as many times as the user requests. The mean of the results are presented in a summary table. 
+    The package returns the confusion matrices for all 20 models, tables of the correlation of the numeric data, the results of the VIF process, the head of the ensemble and the head of the data frame.
 License: MIT + file LICENSE
 Depends:
     C50,
