@@ -9,7 +9,7 @@ vignette: >
 
 Welcome to ClassificationEnsembles! The goal of ClassificationEnsembles is to automatically conduct a thorough analysis of classification data. The user only needs to provide the data, answer a few questions, and the package does all the rest for you!.
 
-ClassificationEnsembles automatically fits 15 individual models, to the training data, and also makes predictions and checks accuracy on the test and validation data sets.It also builds 10 ensembles of models, fits each ensembles model to the training ensemble data, makes predictions and checks accuracy on the test and validation data. The package automatically returns 11 plots, and four summary tables. The summary report shows the most accurate results at the top of the report.
+ClassificationEnsembles automatically fits 12 individual models, to the training data, and also makes predictions and checks accuracy on the test and validation data sets.It also builds 8 ensembles of models, fits each ensembles model to the training ensemble data, makes predictions and checks accuracy on the test and validation data. The package automatically returns 26 plots, and five summary tables. The summary report shows the most accurate results at the top of the report.
 
 The function will automatically work with any number of levels. In this example the data has three levels. Note that the function will automatically figure out the three levels, and build the models from there.
 
@@ -24,16 +24,20 @@ devtools::install_github("InfiniteCuriosity/ClassificationEnsembles")
 # Example
 
 ```         
+library(ClassificationEnsembles)
 Classification(data = ISLR::Carseats,
-  colnum = 7,
-  numresamples = 2,
-  do_you_have_new_data = "N",
-  how_to_handle_strings = 1,
-  save_all_trained_models = "N",
-  use_parallel = "N",
-  train_amount = 0.60,
-  test_amount = 0.20,
-  validation_amount = 0.20)
+               colnum = 7,
+               remove_VIF_above = 5.00,
+               numresamples = 25,
+               predict_on_new_data = "N",
+               how_to_handle_strings = 1,
+               save_all_trained_models = "N",
+               save_all_plots = "N",
+               scale_all_numeric_predictors_in_data = "N",
+               use_parallel = "Y",
+               train_amount = 0.60,
+               test_amount = 0.20,
+               validation_amount = 0.20)
 ```
 
 ClassificationEnsembles will automatically build 25 models to predict the location of carseats (Bad, Medium, Good). The data is available as part of the ISLR package.
@@ -42,73 +46,61 @@ This is the head of the data set. We will be modeling the ShelveLoc column:
 
 ![Head of carseats data set, the example will model the 7th column, ShelveLoc](head_carseats.png){width="700"}
 
-**The 15 individual classification models are:**
+**The 12 individual classification models are:**
 
-Adabag
+1 Bagging
 
-Bagging
+2 Bagged Random Forest
 
-Bagged Random Forest
+3 C50
 
-C50
+4 Linear
 
-Linear
+5 Naive Bayes
 
-Naive Bayes
+6 Partial Least Squares
 
-Partial Least Squares
+7 Penalized Discriminant Analysis
 
-Penalized Discriminant Analysis
+8 Random Forest
 
-Random Forest
+9 Ranger
 
-Ranger
+10 RPart
 
-Regularized Discriminant Analysis
+11 Support Vector Machines
 
-RPart
-
-Support Vector Machines
-
-Trees
-
-XGBoost
+12 Trees
 
 <br>
 
-**The 10 ensembles are:**
+**The 8 ensembles are:**
 
-Ensemble ADA Bag
+1 Ensemble Bagged Cart
 
-Ensemble Bagged Cart
+2 Ensemble Bagged Random Forest
 
-Ensemble Bagged Random Forest
+3 Ensemble C50
 
-Ensemble C50
+4 Ensemble Naive Bayes
 
-Ensemble Naive Bayes
+5 Ensemble Random Forest
 
-Ensemble Ranger
+6 Ensemble Ranger
 
-Ensemble Random Forest
+7 Ensemble Support Vector Machines
 
-Ensemble Regularized Discriminant Analysis
-
-Ensemble Support Vector Machines
+8 Ensemble Trees
 
 <br>
 
-**The 11 plots automatically created (these are close-up views)**
+**A few of the 26 plots automatically created (these are close-up views)**
 
 Accuracy by model and resample
 
 ![**Closeup of accuracy by model and resample. Note that Ensemble Bagged Random Forest had 100% accuracy 25 times in a row on the holdout data.**](Close_up_of_.accuracy_by_model.png){width="700"}
 
 <br>
-
-Accuracy including train and holdout
-
-![**Closeup of accuracy by train and holdout, by resample**](closeup_of_accuracy_by_train_and_holdout.png){width="700"}
 
 Note that Ensemble Bagged Random Forest had 100% accuracy on the holdout data, 25 times in a row.
 
@@ -138,17 +130,9 @@ Histograms of the numeric columns
 
 <br>
 
-Model accuracy barchart
+![](Model_accuracy.png)
 
-![Closeup of model accuracy barchart. Three models had 100% accuracy, all three are ensembles of models.](closeup_of_accuracy_barchart.png){width="700"}
-
-<br>
-
-Over or underfitting barchart
-
-![Over or underfitting barchart](Over_or_underfitting_barchart.png){width="700"}
-
-<br>
+Model accuracy barchart closeup
 
 <br>
 
@@ -160,7 +144,7 @@ Target vs each feature
 
 **Summary report example:**
 
-![Summary report](Summary_report.png){width="700"}
+![Summary report](Summary_report.jpg)
 
 The summary report provides the following for each classification model:
 
@@ -205,8 +189,6 @@ Diagonal Sum
 **Summary tables for all models (top three shown in the graphic)**
 
 The package also provides summary tables for all models. Here are the summary tables for the models with the highest accuracy:
-
-![Closeup of summary tables](closeup_of_best_summary_tables.png){width="700"}
 
 # Grand summary
 
