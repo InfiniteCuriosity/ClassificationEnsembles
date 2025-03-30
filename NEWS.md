@@ -1,3 +1,5 @@
+# ClassificationEnsembles 0.5.0
+
 # ClassificationEnsembles 0.4.0
 
 # ClassificationEnsembles 0.3.0
