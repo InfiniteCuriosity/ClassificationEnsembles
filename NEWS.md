@@ -1,3 +1,7 @@
+# ClassificationEnsembles 0.6.0
+* Fixed issues in the vignette
+* Added functions so set.seed works
+
 # ClassificationEnsembles 0.5.0
 
 # ClassificationEnsembles 0.4.0
