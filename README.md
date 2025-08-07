@@ -18,20 +18,23 @@ devtools::install_github("InfiniteCuriosity/ClassificationEnsembles")
 
 ClassificationEnsembles will model the location of a car seat (Good, Medium or Bad) based on the other features in the Carseats data set
 
-
-
 ``` r
 library(ClassificationEnsembles)
-Classification(data = Carseats,
-  colnum = 7,
-  numresamples = 2,
-  do_you_have_new_data = "N",
-  how_to_handle_strings = 1,
-  save_all_trained_models = "N",
-  use_parallel = "N",
-  train_amount = 0.60,
-  test_amount = 0.20,
-  validation_amount = 0.20)
+Classification(data = ISLR::Carseats,
+               colnum = 7,
+               numresamples = 25,
+               predict_on_new_data = "N",
+               set_seed = "N",
+               remove_VIF_above = 5.00,
+               scale_all_numeric_predictors_in_data = "N",
+               how_to_handle_strings = 1,
+               save_all_trained_models = "N",
+               save_all_plots = "N",
+               use_parallel = "Y",
+               train_amount = 0.60,
+               test_amount = 0.20,
+               validation_amount = 0.20)
+)
 
 ```
 
