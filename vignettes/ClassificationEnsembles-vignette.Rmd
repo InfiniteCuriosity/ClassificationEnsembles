@@ -43,7 +43,23 @@ Classification(data = ISLR::Carseats,
                validation_amount = 0.20)
 ```
 
-ClassificationEnsembles will automatically build 25 models to predict the location of carseats (Bad, Medium, Good). The data is available as part of the ISLR package.
+Note: ALL 14 fields must be filled in (data, colnum, numresamples, etc.). An error will be returned if any of the 14 fields are not filled in. For example, this returns an error:
+
+```         
+library(ClassificationEnsembles)
+Classification(data = ISLR::Carseats,
+               colnum = 7,
+               numresamples = 25,
+               use_parallel = "Y",
+               train_amount = 0.60,
+               test_amount = 0.20,
+               validation_amount = 0.20) # Returns an error
+# Error in if (set_seed == "Y") { : the condition has length > 1
+```
+
+## Working example:
+
+ClassificationEnsembles will automatically build 20 models to predict the location of carseats (Bad, Medium, Good). The data is available as part of the ISLR package.
 
 This is the head of the data set. We will be modeling the ShelveLoc column:
 
@@ -99,29 +115,31 @@ This is the head of the data set. We will be modeling the ShelveLoc column:
 
 **A few of the 26 plots automatically created (these are close-up views)**
 
-Accuracy by model and resample
+Automatic plot of Accuracy by model and resample. Accuracy is the y-axis, each resample is the x-axis. The best possible accuracy is 1.00:
 
 ![**Closeup of accuracy by model and resample. Note that Ensemble Bagged Random Forest had 100% accuracy 25 times in a row on the holdout data.**](Close_up_of_.accuracy_by_model.png){width="700"}
 
 <br>
 
-Boxplots of the numeric data
+Automatic Boxplots of the numeric data:
 
 ![**Boxplots of the numeric data**](Boxplots_of_numeric_data.png){width="700"}
 
 <br>
 
-Duration barchart
+Automatic Duration barchart:
 
-![Duration barchart. The large bar at the end is XGBoost.](Duration_barchart.png){width="700"}
+![Duration barchart with one standard deviation error bars.](Duration_barchart.png){width="700"}
 
 <br>
 
-Histograms of the numeric columns
+Automatic Histograms of the numeric columns:
 
 ![Histograms of the numeric columns](Histograms_of_numeric_data.png){width="700"}
 
 <br>
+
+Automatic barchart of mean model accuracy, in descending order.
 
 ![](Model_accuracy.png)
 
@@ -129,7 +147,7 @@ Model accuracy barchart closeup
 
 <br>
 
-Target vs each feature
+Automatic Target vs each feature
 
 ![Target vs each feature in the original data set.](Target_vs_each_feature.png){width="700"}
 
@@ -137,9 +155,9 @@ Target vs each feature
 
 **Summary report example:**
 
-![Summary report](Summary_report.jpg)
+![Automatic Summary report](Summary_report.jpg)
 
-The summary report provides the following for each classification model:
+The summary report provides the following for each classification model (these are each column in the report):
 
 Model name
 
@@ -171,12 +189,10 @@ Diagonal Sum
 
 ![Closeup of best summary tables](closeup_of_best_summary_tables.jpg)
 
-![Accuracy by train and holdout](Accuracy_including_train_and_holdout.png)
-
-The package also provides summary tables for all models. Here are the summary tables for the models with the highest accuracy:
+![Automatic Accuracy by train and holdout](Accuracy_including_train_and_holdout.png)
 
 # Grand summary
 
-The ClassificationEnsembles package was able to build 25 classification models from the Carseats data. Three of the ensembles had 100% accuracy 25 times in a row on the holdout data.
+The ClassificationEnsembles package was able to build 20 classification models from the Carseats data. Three of the ensembles had 100% accuracy 25 times in a row on the holdout data.
 
 The package also automatically provided 11 plots, three tables, a summary report, and summary tables all the models.
