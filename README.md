@@ -4,7 +4,7 @@
 <!-- badges: start -->
 <!-- badges: end -->
 
-The goal of ClassificationEnsembles is to automatically conduct a thorough analysis of data that includes classification data. The user only needs to provide the data and answer a few questions (such as which column to analyze). ClassificationEnsembles fits 25 models (15 individual models and 10 ensembles of models). The package also returns 13 plots, five tables and a summary report sorted by accuracy (highest to lowest)
+The goal of ClassificationEnsembles is to automatically conduct a thorough analysis of data that includes classification data. The user only needs to provide the data and answer a few questions (such as which column to analyze). ClassificationEnsembles fits 12 models (6 individual models and 6 ensembles of models). The package also returns 13 plots, five tables and a summary report sorted by accuracy (highest to lowest)
 
 ## Installation
 
@@ -38,32 +38,24 @@ Classification(data = ISLR::Carseats,
 
 ```
 
-The 20 models which are build automatically are:
+The 12 classification models which are built automatically are:
 
-1. Bagged Random Forest
-2. Bagging
-3. C50
-4. Ensemble BaggedCart
-5. Ensemble Bagged Random Forest
-6. Ensemble C50
-7. Ensemble NaiveBayes
-8. Ensemble Random Forest
-9. Ensemble Ranger
-10. Ensemble Support Vector Machines
-11. Ensemble Trees
-12. Linear
-13. Naive Bayes
-14. Partial Least Squares
-15. Penalized Discrmininant Analysis
-16. Random Forest
-17. Ranger
-18. RPart
-19. Support Vector Machines
-20. Trees
+1. C50
+2. Ensemble Bagged Cart
+3. Ensemble Bagged Random Forest
+4. Ensemble C50
+5. Ensemble Naive Bayes
+6. Ensemble Support Vector Machines
+7. Ensemble Trees
+8. Linear
+9. Partial Least Squares
+10. Penalized Discrmininant Analysis
+11. RPart
+12. Trees
 
 
 The 26 plots it returns automatically are:<br>
-1. Holdout accuracy / train accurcy by model, fixed scales
+1. Holdout accuracy / train accurcay by model, fixed scales
 2. Residuals by model, free scales
 3. Residuals by model, fixed scales
 4. Classification error, free scales
