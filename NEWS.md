@@ -1,3 +1,9 @@
+# ClassificationEnsembles 0.7.0
+* Removed models which took a long time to run, so the process is completed much faster
+* Updated documentation to reflect fewer number of models
+* Updated vignette example
+* Added a template for a report
+
 # ClassificationEnsembles 0.6.0
 * Fixed issues in the vignette
 * Added functions so set.seed works
