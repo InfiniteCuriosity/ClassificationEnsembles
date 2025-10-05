@@ -112,7 +112,8 @@ barchart <- df %>%
                      vjust = -.5) +
   ggplot2::theme(axis.text.x = ggplot2::element_text(angle = 90, vjust = 1, hjust=1)) +
   ggplot2::facet_wrap(~ name, scales = "free") +
-  ggplot2::scale_y_continuous(expand = ggplot2::expansion(mult = c(0.1, 0.25)))
+  ggplot2::scale_y_continuous(expand = ggplot2::expansion(mult = c(0.1, 0.25))) +
+  ggplot2::ggtitle("Each feature vs. target")
 
 barchart2 <- df %>%
   dplyr::mutate(dplyr::across(-y, as.numeric)) %>%
@@ -125,7 +126,8 @@ barchart2 <- df %>%
                          vjust = -0.5)) +
   ggplot2::facet_wrap(~ name, scales = "free") +
   ggplot2::theme(axis.text.x = ggplot2::element_text(angle = 90, vjust = 1, hjust=1)) +
-  ggplot2::scale_y_continuous(expand = ggplot2::expansion(mult = c(0.1, 0.25)))
+  ggplot2::scale_y_continuous(expand = ggplot2::expansion(mult = c(0.1, 0.25))) +
+  ggplot2::ggtitle("Each feature vs. target")
 
 
 if(save_all_plots == "Y" && device == "eps"){
@@ -625,7 +627,7 @@ for (i in 1:numresamples) {
   # validation <- df[index == 3, ] %>% dplyr::select(-y)
 
 
-  #### 3. C50 ####
+  #### 1. C50 ####
   C50_start <- Sys.time()
   message("Working on C50 analysis")
   if(set_seed == "Y"){
@@ -707,7 +709,7 @@ for (i in 1:numresamples) {
   C50_duration_mean <- mean(C50_duration)
   C50_duration_sd <- sd(C50_duration)
 
-  #### 4. Linear Model ####
+  #### 2. Linear Model ####
   linear_start <- Sys.time()
   message("Working on Linear analysis")
   if(set_seed == "Y"){
@@ -790,7 +792,7 @@ for (i in 1:numresamples) {
   linear_duration_sd <- sd(linear_duration)
 
 
-  #### 6. Partial Least Squares ####
+  #### 3. Partial Least Squares ####
   pls_start <- Sys.time()
   message("Working on Partial Least Squares analysis")
   if(set_seed == "Y"){
@@ -875,7 +877,7 @@ for (i in 1:numresamples) {
   pls_duration_mean <- mean(pls_duration)
   pls_duration_sd <- sd(pls_duration)
 
-  #### 7. Penalized Discriminant Analysis Model ####
+  #### 4. Penalized Discriminant Analysis Model ####
   pda_start <- Sys.time()
   message("Working on Penalized Discriminant analysis")
   if(set_seed == "Y"){
@@ -961,7 +963,7 @@ for (i in 1:numresamples) {
   pda_duration_sd <- sd(pda_duration)
 
 
-  #### 10. RPart Model ####
+  #### 5. RPart Model ####
   rpart_start <- Sys.time()
   message("Working on RPart analysis")
   if(set_seed == "Y"){
@@ -1047,7 +1049,7 @@ for (i in 1:numresamples) {
   rpart_duration_sd <- sd(rpart_duration)
 
 
-  #### 12. Trees ####
+  #### 6. Trees ####
   tree_start <- Sys.time()
   message("Working on Trees analysis")
   if(set_seed == "Y"){
@@ -1167,7 +1169,7 @@ for (i in 1:numresamples) {
   message("Working on the Ensembles section")
   message(noquote(""))
 
-  #### 13. Ensemble Bagged CART ####
+  #### 7. Ensemble Bagged CART ####
   ensemble_bag_cart_start <- Sys.time()
   message("Working on Ensemble Bagged CART analysis")
   if(set_seed == "Y"){
@@ -1249,7 +1251,7 @@ for (i in 1:numresamples) {
   ensemble_bag_cart_duration_mean <- mean(ensemble_bag_cart_duration)
   ensemble_bag_cart_duration_sd <- sd(ensemble_bag_cart_duration)
 
-  #### 14. Ensemble Bagged Random Forest ####
+  #### 8. Ensemble Bagged Random Forest ####
   ensemble_bag_rf_start <- Sys.time()
   message("Working on Ensemble Bagged Random Forest analysis")
   if(set_seed == "Y"){
@@ -1335,7 +1337,7 @@ for (i in 1:numresamples) {
   ensemble_bag_rf_duration_mean <- mean(ensemble_bag_rf_duration)
   ensemble_bag_rf_duration_sd <- sd(ensemble_bag_rf_duration)
 
-  #### 15. Ensemble C50 ####
+  #### 9. Ensemble C50 ####
   ensemble_C50_start <- Sys.time()
   message("Working on Ensemble C50 analysis")
   if(set_seed == "Y"){
@@ -1418,7 +1420,7 @@ for (i in 1:numresamples) {
   ensemble_C50_duration_sd <- sd(ensemble_C50_duration)
 
 
-  #### 16. Ensemble Naive Bayes ####
+  #### 10. Ensemble Naive Bayes ####
   ensemble_n_bayes_start <- Sys.time()
   message("Working on Ensembles using Naive Bayes analysis")
   if(set_seed == "Y"){
@@ -1506,7 +1508,7 @@ for (i in 1:numresamples) {
   ensemble_n_bayes_duration_sd <- sd(ensemble_n_bayes_duration)
 
 
-  #### 19. Ensemble Support Vector Machines ####
+  #### 11. Ensemble Support Vector Machines ####
   ensemble_svm_start <- Sys.time()
   message("Working on Ensembles using Support Vector Machines analysis")
   if(set_seed == "Y"){
@@ -1593,7 +1595,7 @@ for (i in 1:numresamples) {
   ensemble_svm_duration_mean <- mean(ensemble_svm_duration)
   ensemble_svm_duration_sd <- sd(ensemble_svm_duration)
 
-  #### 20. Ensemble Trees ####
+  #### 12. Ensemble Trees ####
   ensemble_tree_start <- Sys.time()
   message("Working on Ensembles using Trees analysis")
   if(set_seed == "Y"){
@@ -3082,16 +3084,16 @@ if (save_all_trained_models == "Y") {
 
 
 return(list(
-  'Final_results' = Final_results, 'Barchart' = barchart, 'Barchart2' = barchart2, "Accuracy_Barchart" = accuracy_barchart, "holdout_vs_train_barchart" = holdout_vs_train_barchart,
-  'True_positive_rate1' = true_positive_rate_plot, 'True_positive_rate2' = true_positive_rate_plot2,
-  'True_negative_rate1' = true_negative_rate_plot, 'True_negative_rate2' = true_negative_rate_plot2,
-  'False_positive_rate1' = false_positive_rate_plot, 'False_positive_rate2' = false_positive_rate_plot2,
-  'False_negative_rate1' = false_negative_rate_plot, 'False_negative_rate2' = false_negative_rate_plot2,
-  "Duration_barchart" = duration_barchart,  'Data_summary' = data_summary, 'Correlation_matrix' = correlation_marix, 'VIF' = VIF,
-  'Boxplots' = boxplots, 'Histograms' = histograms, 'Head_of_data' = head_df, 'Head_of_ensemble' = head_ensemble,
-  'Summary_tables' = summary_tables, 'Accuracy_plot' = accuracy_plot, 'Accuracy_plot2' = accuracy_plot2,  'Total_plot' = total_plot, "Total_plot2" = total_plot2,
-  'Classification_error1' = classification_error_plot, 'Classification_error2' = classification_error_plot2,
-  'Residuals' = residuals_plot, 'Residuals2' = residuals_plot2, "Holdout_vs_train_plot" = holdout_vs_train_plot
+  'Final results' = Final_results, 'Each Feature vs Target (numeric)' = barchart, 'Each feature vs target (%)' = barchart2, "Accuracy_Barchart" = accuracy_barchart, "holdout_vs_train_barchart" = holdout_vs_train_barchart,
+  'True positive rate (fixed scales)' = true_positive_rate_plot, 'True positive rate (free scales)' = true_positive_rate_plot2,
+  'True negative rate (fixed scales)' = true_negative_rate_plot, 'True negative rate (free scales)' = true_negative_rate_plot2,
+  'False positive rate (fixed scales)' = false_positive_rate_plot, 'False positive rate (free scales)' = false_positive_rate_plot2,
+  'False negative rate (fixed scales)' = false_negative_rate_plot, 'False negative rate (free scales)' = false_negative_rate_plot2,
+  "Duration barchart" = duration_barchart,  'Data summary' = data_summary, 'Correlation matrix' = correlation_marix, 'VIF' = VIF,
+  'Boxplots' = boxplots, 'Histograms' = histograms, 'Head of data' = head_df, 'Head of ensemble' = head_ensemble,
+  'Summary tables' = summary_tables, 'Accuracy plot (fixed scales)' = accuracy_plot, 'Accuracy plot (free scales)' = accuracy_plot2,  'Total plot (fixed scales)' = total_plot, "Total plot (fixed scales)" = total_plot2,
+  'Classification error (fixed scales)' = classification_error_plot, 'Classification error (free scales)' = classification_error_plot2,
+  'Residuals (fixed scales)' = residuals_plot, 'Residuals (free scales)' = residuals_plot2, "Holdout vs train" = holdout_vs_train_plot
 )
 )
 }
