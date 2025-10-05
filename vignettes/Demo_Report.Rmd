@@ -1,0 +1,255 @@
+---
+title: "Report on (data set)"
+output: rmarkdown::html_vignette
+vignette: >
+  %\VignetteIndexEntry{Template}
+  %\VignetteEncoding{UTF-8}
+  %\VignetteEngine{knitr::rmarkdown}
+editor_options: 
+  markdown: 
+    wrap: 72
+---
+
+# Abstract here
+
+# Introduction
+
+# Statement of the problem from the customer's perspective
+
+# Literature review/summary, history of previous results
+
+# The goal of this investigation
+
+# Exploratory Data Analysis
+
+1.  Head of data frame (put report here)
+
+2.  Data summary (in Console)
+
+3.  Variance Inflation Factor report
+
+4.  Correlation of the data (table)
+
+5.  Histograms of each numeric column
+
+6.  Boxplots of the numeric data
+
+7.  Each feature vs target (by percent)
+
+8.  Each feature vs target (by number)
+
+9.  Correlation plot of the numeric data (as circles and colors)
+
+10. Correlation plot of the numeric data (as numbers and colors)
+
+11. Correlation of the data (report)
+
+# Model building
+
+### Function call (replace with your function call):
+
+```         
+library(ClassificationEnsembles)
+
+Classification(data = ISLR::Carseats,
+               colnum = 7,
+               numresamples = 25,
+               predict_on_new_data = "N",
+               save_all_plots = "N",
+               set_seed = "N",
+               how_to_handle_strings = 1,
+               remove_VIF_above <- 5.00,
+               save_all_trained_models = "N",
+               scale_all_numeric_predictors_in_data = "N",
+               use_parallel = "N",
+               train_amount = 0.50,
+               test_amount = 0.25,
+               validation_amount = 0.25)
+```
+
+Discussion of function call here. (For example, the code above randomly
+resamples the data 25 times, and sets train = 0.50, test = 0.25,
+validation = 0.25, you might want to discuss other aspects of the
+function call. For example, the function call does not set a seed, so
+the results are random.)
+
+### **List of models (individual models first):**
+
+**C50:**
+
+```         
+C50_train_fit <- C50::C5.0(as.factor(y_train) ~ ., data = train)
+```
+
+**Linear:**
+
+```         
+linear_train_fit <- MachineShop::fit(y ~ ., data = train01, model = "LMModel")
+```
+
+**Partial Least Squares:**
+
+```         
+pls_train_fit <- MachineShop::fit(y ~ ., data = train01, model = "PLSModel")
+```
+
+**Penalized Discriminant Analysis**
+
+```         
+pda_train_fit <- MachineShop::fit(y ~ ., data = train01, model = "PDAModel")
+```
+
+**RPart:**
+
+```         
+rpart_train_fit <- MachineShop::fit(y ~ ., data = train01, model = "RPartModel")
+```
+
+**Trees:**
+
+```         
+tree_train_fit <- tree::tree(y_train ~ ., data = train)
+```
+
+**How the ensemble is made:**
+
+```         
+ensemble1 <- data.frame(
+    "C50" = c(C50_test_pred, C50_validation_pred),
+    "Linear" = c(linear_test_pred, linear_validation_pred),
+    "Partial_Least_Squares" = c(pls_test_pred, pls_validation_pred),
+    "Penalized_Discriminant_Analysis" = c(pda_test_pred, pda_validation_pred),
+    "RPart" = c(rpart_test_pred, rpart_validation_pred),
+    "Trees" = c(tree_test_pred, tree_validation_pred)
+  )
+
+ensemble_row_numbers <- as.numeric(row.names(ensemble1))
+ensemble1$y <- df[ensemble_row_numbers, "y"]
+
+ensemble1 <- ensemble1[complete.cases(ensemble1), ]
+```
+
+**Ensemble Bagged Cart:**
+
+```         
+ensemble_bag_cart_train_fit <- ipred::bagging(y ~ ., data = ensemble_train)
+```
+
+**Ensemble Bagged Random Forest:**
+
+```         
+ensemble_bag_train_rf <- randomForest::randomForest(ensemble_y_train ~ ., data = ensemble_train, mtry = ncol(ensemble_train) - 1)
+```
+
+**Ensemble C50:**
+
+```         
+ensemble_C50_train_fit <- C50::C5.0(ensemble_y_train ~ ., data = ensemble_train)
+```
+
+**Ensemble Naive Bayes:**
+
+```         
+ensemble_n_bayes_train_fit <- e1071::naiveBayes(ensemble_y_train ~ ., data = ensemble_train)
+```
+
+**Ensemble Support Vector Machines:**
+
+```         
+ensemble_svm_train_fit <- e1071::svm(ensemble_y_train ~ ., data = ensemble_train, kernel = "radial", gamma = 1, cost = 1)
+```
+
+**Ensemble Trees:**
+
+```         
+ensemble_tree_train_fit <- tree::tree(y ~ ., data = ensemble_train)
+```
+
+# Model evaluations
+
+1.  Model accuracy (put model accuracy barchart here)
+
+2.  All confusion matrices (in console)
+
+3.  Over or underfitting barchart
+
+4.  True positive rate by model and resample (choose fixed scales or
+    free scales)
+
+5.  True negative rate by model and resample (choose fixed or free
+    scales)
+
+6.  False positive rate by model and resample (choose fixed or free
+    scales)
+
+7.  False negative rate by model and resample (choose fixed or free
+    scales)
+
+8.  Duration barchart
+
+9.  Accuracy by model and resampling (chose fixed or free scales)
+
+10. Accuracy data, including train and holdout (choose fixed or free
+    scales)
+
+11. Classification error by model and resample (choose fixed or free
+    scales)
+
+12. Residuals by model and resample (choose fixed or free scales)
+
+13. Holdout accuracy / train accuracy by model and resample (choose
+    fixed or free scales)
+
+14. Head of ensemble (report)
+
+15. Variance Inflation Factor report
+
+# Final Model Selection
+
+1.  Most accurate model:
+
+2.  Mean Holdout Accuracy
+
+3.  Standard deviation of mean holdout accuracy
+
+4.  Classification error mean
+
+5.  Duration (mean)
+
+6.  True positive rate (mean)
+
+7.  True negative rate (mean)
+
+8.  False positive rate (mean)
+
+9.  False negative rate (mean)
+
+10. Positive predictive value (mean)
+
+11. Negative predictive value (mean)
+
+12. Prevalence (mean)
+
+13. Detection rate (mean)
+
+14. Detection prevalence (mean)
+
+15. F1 Score
+
+16. Train accuracy (mean)
+
+17. Test accuracy (mean)
+
+18. Validation accuracy (mean)
+
+19. Holdout vs train (mean)
+
+20. Holdout vs train standard deviation
+
+# Strongest evidence based recommendations with margins of error(s)
+
+# Comparison of current results vs previous results
+
+# Future goals with this data set
+
+# References
