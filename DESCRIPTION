@@ -1,5 +1,5 @@
 Package: ClassificationEnsembles
-Title: Automatically Builds 20 Classification Models
+Title: Automatically Builds 12 Classification Models.
 Version: 0.7.0
 Authors@R: 
     person("Russ", "Conte", , "russconte@mac.com", role = c("aut", "cre", "cph"))
