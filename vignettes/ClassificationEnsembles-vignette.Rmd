@@ -11,7 +11,7 @@ vignette: >
 
 Welcome to ClassificationEnsembles! The goal of ClassificationEnsembles is to automatically conduct a thorough analysis of classification data. The user only needs to provide the data, answer a few questions, and the package does all the rest for you!.
 
-ClassificationEnsembles automatically fits 12 individual models, to the training data, and also makes predictions and checks accuracy on the test and validation data sets.It also builds 8 ensembles of models, fits each ensembles model to the training ensemble data, makes predictions and checks accuracy on the test and validation data. The package automatically returns 26 plots, and five summary tables. The summary report shows the most accurate results at the top of the report.
+ClassificationEnsembles automatically fits six individual models, to the training data, and also makes predictions and checks accuracy on the test and validation data sets.It also builds six ensembles of models, fits each ensembles model to the training ensemble data, makes predictions and checks accuracy on the test and validation data. The package automatically returns 26 plots, and five summary tables. The summary report shows the most accurate results at the top of the report.
 
 The function will automatically work with any number of levels. In this example the data has three levels. Note that the function will automatically figure out the three levels, and build the models from there.
 
@@ -43,7 +43,7 @@ Classification(data = ISLR::Carseats,
                validation_amount = 0.20)
 ```
 
-Note: ALL 14 fields must be filled in (data, colnum, numresamples, etc.). An error will be returned if any of the 14 fields are not filled in. For example, this returns an error:
+**Note: ALL 14 fields in the function call must be filled in (data, colnum, numresamples, etc.). An error will be returned if any of the 14 fields are not filled in.** For example, this returns an error:
 
 ```         
 library(ClassificationEnsembles)
