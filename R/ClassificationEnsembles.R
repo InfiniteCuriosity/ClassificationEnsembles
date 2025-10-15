@@ -113,7 +113,7 @@ barchart <- df %>%
   ggplot2::theme(axis.text.x = ggplot2::element_text(angle = 90, vjust = 1, hjust=1)) +
   ggplot2::facet_wrap(~ name, scales = "free") +
   ggplot2::scale_y_continuous(expand = ggplot2::expansion(mult = c(0.1, 0.25))) +
-  ggplot2::labs("Each feature vs. target")
+  ggplot2::labs(title = "Each feature vs. target")
 
 barchart2 <- df %>%
   dplyr::mutate(dplyr::across(-y, as.numeric)) %>%
@@ -127,7 +127,7 @@ barchart2 <- df %>%
   ggplot2::facet_wrap(~ name, scales = "free") +
   ggplot2::theme(axis.text.x = ggplot2::element_text(angle = 90, vjust = 1, hjust=1)) +
   ggplot2::scale_y_continuous(expand = ggplot2::expansion(mult = c(0.1, 0.25))) +
-  ggplot2::labs("Each feature vs. target")
+  ggplot2::labs(title = "Each feature vs. target")
 
 
 if(save_all_plots == "Y" && device == "eps"){
@@ -1918,7 +1918,7 @@ accuracy_plot <- ggplot2::ggplot(data = accuracy_data, mapping = ggplot2::aes(x 
   ggplot2::geom_hline(ggplot2::aes(yintercept = mean)) +
   ggplot2::geom_hline(ggplot2::aes(yintercept = 1, color = "red")) +
   ggplot2::facet_wrap(~model, ncol = 4, scales = "fixed") +
-  ggplot2::labs("Accuracy by model, higher is better, 1 is best, fixed scales. \n The black horizontal line is the mean of the results, the red horizontal line is 1.") +
+  ggplot2::labs(title = "Accuracy by model, higher is better, 1 is best, fixed scales. \n The black horizontal line is the mean of the results, the red horizontal line is 1.") +
   ggplot2::labs(y = "Accuracy by model, higher is better, 1 is best. \n The horizontal line is the mean of the results, the red line is 1.") +
   ggplot2::theme(legend.position = "none")
 
@@ -1947,7 +1947,7 @@ accuracy_plot2 <- ggplot2::ggplot(data = accuracy_data, mapping = ggplot2::aes(x
   ggplot2::geom_hline(ggplot2::aes(yintercept = mean)) +
   ggplot2::geom_hline(ggplot2::aes(yintercept = 1, color = "red")) +
   ggplot2::facet_wrap(~model, ncol = 4, scales = "free") +
-  ggplot2::labs("Accuracy by model, higher is better, 1 is best. \n The black horizontal line is the mean of the results, the red horizontal line is 1.") +
+  ggplot2::labs(title = "Accuracy by model, higher is better, 1 is best. \n The black horizontal line is the mean of the results, the red horizontal line is 1.") +
   ggplot2::labs(y = "Accuracy by model, higher is better, 1 is best. \n The horizontal line is the mean of the results, the red line is 1.") +
   ggplot2::theme(legend.position = "none")
 
@@ -2006,7 +2006,7 @@ residuals_plot <- ggplot2::ggplot(data = residuals_data, mapping = ggplot2::aes(
   ggplot2::geom_hline(ggplot2::aes(yintercept = mean)) +
   ggplot2::geom_hline(ggplot2::aes(yintercept = 0, color = "red")) +
   ggplot2::facet_wrap(~model, ncol = 4, scales = "fixed") +
-  ggplot2::labs("Residuals by model, lower is better, 0 is best, fixed scales. \n The black horizontal line is the mean of the results, the red horizontal line is 0.") +
+  ggplot2::labs(title = "Residuals by model, lower is better, 0 is best, fixed scales. \n The black horizontal line is the mean of the results, the red horizontal line is 0.") +
   ggplot2::labs(y = "Residuals by model, lower is better, 0 is best. \n The horizontal line is the mean of the results, the red line is 0.") +
   ggplot2::theme(legend.position = "none")
 if(save_all_plots == "Y" && device == "eps"){
@@ -2034,7 +2034,7 @@ residuals_plot2 <- ggplot2::ggplot(data = residuals_data, mapping = ggplot2::aes
   ggplot2::geom_hline(ggplot2::aes(yintercept = mean)) +
   ggplot2::geom_hline(ggplot2::aes(yintercept = 0, color = "red")) +
   ggplot2::facet_wrap(~model, ncol = 4, scales = "free") +
-  ggplot2::labs("Residuals by model, lower is better, 0 is best, free scales. \n The black horizontal line is the mean of the results, the red horizontal line is 1.") +
+  ggplot2::labs(title = "Residuals by model, lower is better, 0 is best, free scales. \n The black horizontal line is the mean of the results, the red horizontal line is 1.") +
   ggplot2::labs(y = "Residuals by model, lower is better, 0 is best. \n The horizontal line is the mean of the results, the red line is 0.") +
   ggplot2::theme(legend.position = "none")
 
@@ -2123,7 +2123,7 @@ true_positive_rate_plot <- ggplot2::ggplot(data = true_positive_rate_data, mappi
   ggplot2::geom_hline(ggplot2::aes(yintercept = mean)) +
   ggplot2::geom_hline(ggplot2::aes(yintercept = 1, color = "red")) +
   ggplot2::facet_wrap(~model, ncol = 4, scales = "fixed") +
-  ggplot2::labs("True positive rate, closer to one is better, fixed scales. \n The black horizontal line is the mean of the results, the red horizontal line is 1.") +
+  ggplot2::labs(title = "True positive rate, closer to one is better, fixed scales. \n The black horizontal line is the mean of the results, the red horizontal line is 1.") +
   ggplot2::labs(y = "True positive rate, closer to zero is better. \n The horizontal line is the mean of the results, the red line is 0.") +
   ggplot2::theme(legend.position = "none")
 
@@ -2152,7 +2152,7 @@ true_positive_rate_plot2 <- ggplot2::ggplot(data = true_positive_rate_data, mapp
   ggplot2::geom_hline(ggplot2::aes(yintercept = mean)) +
   ggplot2::geom_hline(ggplot2::aes(yintercept = 0, color = "red")) +
   ggplot2::facet_wrap(~model, ncol = 4, scales = "free") +
-  ggplot2::labs("True positive rate, closer to one is better, free scales. \n The black horizontal line is the mean of the results, the red horizontal line is 1.") +
+  ggplot2::labs(title = "True positive rate, closer to one is better, free scales. \n The black horizontal line is the mean of the results, the red horizontal line is 1.") +
   ggplot2::labs(y = "True positive rate, closer to one is better. \n The horizontal line is the mean of the results, the red line is 0.") +
   ggplot2::theme(legend.position = "none")
 
@@ -2211,7 +2211,7 @@ true_negative_rate_plot <- ggplot2::ggplot(data = true_negative_rate_data, mappi
   ggplot2::geom_hline(ggplot2::aes(yintercept = mean)) +
   ggplot2::geom_hline(ggplot2::aes(yintercept = 1, color = "red")) +
   ggplot2::facet_wrap(~model, ncol = 4, scales = "fixed") +
-  ggplot2::labs("True negative rate, closer to one is better, fixed scales. \n The black horizontal line is the mean of the results, the red horizontal line is 1.") +
+  ggplot2::labs(title = "True negative rate, closer to one is better, fixed scales. \n The black horizontal line is the mean of the results, the red horizontal line is 1.") +
   ggplot2::labs(y = "True negative rate, closer to zero is better. \n The horizontal line is the mean of the results, the red line is 0.") +
   ggplot2::theme(legend.position = "none")
 
@@ -2240,7 +2240,7 @@ true_negative_rate_plot2 <- ggplot2::ggplot(data = true_negative_rate_data, mapp
   ggplot2::geom_hline(ggplot2::aes(yintercept = mean)) +
   ggplot2::geom_hline(ggplot2::aes(yintercept = 0, color = "red")) +
   ggplot2::facet_wrap(~model, ncol = 4, scales = "free") +
-  ggplot2::labs("True negative rate, closer to one is better, free scales. \n The black horizontal line is the mean of the results, the red horizontal line is 1.") +
+  ggplot2::labs(title = "True negative rate, closer to one is better, free scales. \n The black horizontal line is the mean of the results, the red horizontal line is 1.") +
   ggplot2::labs(y = "True negative rate, closer to one is better. \n The horizontal line is the mean of the results, the red line is 0.") +
   ggplot2::theme(legend.position = "none")
 
@@ -2299,7 +2299,7 @@ false_positive_rate_plot <- ggplot2::ggplot(data = false_positive_rate_data, map
   ggplot2::geom_hline(ggplot2::aes(yintercept = mean)) +
   ggplot2::geom_hline(ggplot2::aes(yintercept = 0, color = "red")) +
   ggplot2::facet_wrap(~model, ncol = 4, scales = "fixed") +
-  ggplot2::labs("False positive rate, closer to zero is better, fixed scales. \n The black horizontal line is the mean of the results, the red horizontal line is 1.") +
+  ggplot2::labs(title = "False positive rate, closer to zero is better, fixed scales. \n The black horizontal line is the mean of the results, the red horizontal line is 1.") +
   ggplot2::labs(y = "False positive rate, closer to zero is better. \n The horizontal line is the mean of the results, the red line is 0.") +
   ggplot2::theme(legend.position = "none")
 
@@ -2328,7 +2328,7 @@ false_positive_rate_plot2 <- ggplot2::ggplot(data = false_positive_rate_data, ma
   ggplot2::geom_hline(ggplot2::aes(yintercept = mean)) +
   ggplot2::geom_hline(ggplot2::aes(yintercept = 0, color = "red")) +
   ggplot2::facet_wrap(~model, ncol = 4, scales = "free") +
-  ggplot2::labs("False positive rate, closer to zero is better, free scales. \n The black horizontal line is the mean of the results, the red horizontal line is 1.") +
+  ggplot2::labs(title = "False positive rate, closer to zero is better, free scales. \n The black horizontal line is the mean of the results, the red horizontal line is 1.") +
   ggplot2::labs(y = "False positive rate, closer to zero is better. \n The horizontal line is the mean of the results, the red line is 0.") +
   ggplot2::theme(legend.position = "none")
 
@@ -2387,7 +2387,7 @@ false_negative_rate_plot <- ggplot2::ggplot(data = false_negative_rate_data, map
   ggplot2::geom_hline(ggplot2::aes(yintercept = mean)) +
   ggplot2::geom_hline(ggplot2::aes(yintercept = 1, color = "red")) +
   ggplot2::facet_wrap(~model, ncol = 4, scales = "fixed") +
-  ggplot2::labs("False negative rate, closer to zero is better, fixed scales. \n The black horizontal line is the mean of the results, the red horizontal line is 1.") +
+  ggplot2::labs(title = "False negative rate, closer to zero is better, fixed scales. \n The black horizontal line is the mean of the results, the red horizontal line is 1.") +
   ggplot2::labs(y = "False negative rate, closer to zero is better. \n The horizontal line is the mean of the results, the red line is 0.") +
   ggplot2::theme(legend.position = "none")
 
@@ -2416,7 +2416,7 @@ false_negative_rate_plot2 <- ggplot2::ggplot(data = false_negative_rate_data, ma
   ggplot2::geom_hline(ggplot2::aes(yintercept = mean)) +
   ggplot2::geom_hline(ggplot2::aes(yintercept = 0, color = "red")) +
   ggplot2::facet_wrap(~model, ncol = 4, scales = "free") +
-  ggplot2::labs("False negative rate, closer to zero is better, free scales. \n The black horizontal line is the mean of the results, the red horizontal line is 1.") +
+  ggplot2::labs(title = "False negative rate, closer to zero is better, free scales. \n The black horizontal line is the mean of the results, the red horizontal line is 1.") +
   ggplot2::labs(y = "False negative rate, closer to zero is better. \n The horizontal line is the mean of the results, the red line is 0.") +
   ggplot2::theme(legend.position = "none")
 
@@ -2475,7 +2475,7 @@ positive_pred_value_plot <- ggplot2::ggplot(data = positive_pred_value_data, map
   ggplot2::geom_hline(ggplot2::aes(yintercept = mean)) +
   ggplot2::geom_hline(ggplot2::aes(yintercept = 1, color = "red")) +
   ggplot2::facet_wrap(~model, ncol = 4, scales = "fixed") +
-  ggplot2::labs("Positive Pred Value, closer to one is better, fixed scales. \n The black horizontal line is the mean of the results, the red horizontal line is 1.") +
+  ggplot2::labs(title = "Positive Pred Value, closer to one is better, fixed scales. \n The black horizontal line is the mean of the results, the red horizontal line is 1.") +
   ggplot2::labs(y = "Positive Pred Value, closer to one is better. \n The horizontal line is the mean of the results, the red line is 0.") +
   ggplot2::theme(legend.position = "none")
 
@@ -2504,7 +2504,7 @@ positive_pred_value_plot2 <- ggplot2::ggplot(data = positive_pred_value_data, ma
   ggplot2::geom_hline(ggplot2::aes(yintercept = mean)) +
   ggplot2::geom_hline(ggplot2::aes(yintercept = 1, color = "red")) +
   ggplot2::facet_wrap(~model, ncol = 4, scales = "free") +
-  ggplot2::labs("Positive Pred Value, closer to one is better, free scales. \n The black horizontal line is the mean of the results, the red horizontal line is 1.") +
+  ggplot2::labs(title = "Positive Pred Value, closer to one is better, free scales. \n The black horizontal line is the mean of the results, the red horizontal line is 1.") +
   ggplot2::labs(y = "Positive Pred Value, closer to one is better. \n The horizontal line is the mean of the results, the red line is 0.") +
   ggplot2::theme(legend.position = "none")
 
@@ -2563,7 +2563,7 @@ negative_pred_value_plot <- ggplot2::ggplot(data = negative_pred_value_data, map
   ggplot2::geom_hline(ggplot2::aes(yintercept = mean)) +
   ggplot2::geom_hline(ggplot2::aes(yintercept = 1, color = "red")) +
   ggplot2::facet_wrap(~model, ncol = 4, scales = "fixed") +
-  ggplot2::labs("Negative Pred Value, closer to one is better, fixed scales. \n The black horizontal line is the mean of the results, the red horizontal line is 1.") +
+  ggplot2::labs(title = "Negative Pred Value, closer to one is better, fixed scales. \n The black horizontal line is the mean of the results, the red horizontal line is 1.") +
   ggplot2::labs(y = "Negative Pred Value, closer to one is better. \n The horizontal line is the mean of the results, the red line is 0.") +
   ggplot2::theme(legend.position = "none")
 
@@ -2592,7 +2592,7 @@ negative_pred_value_plot2 <- ggplot2::ggplot(data = negative_pred_value_data, ma
   ggplot2::geom_hline(ggplot2::aes(yintercept = mean)) +
   ggplot2::geom_hline(ggplot2::aes(yintercept = 1, color = "red")) +
   ggplot2::facet_wrap(~model, ncol = 4, scales = "free") +
-  ggplot2::labs("Negative Pred Value, closer to one is better, free scales. \n The black horizontal line is the mean of the results, the red horizontal line is 1.") +
+  ggplot2::labs(title = "Negative Pred Value, closer to one is better, free scales. \n The black horizontal line is the mean of the results, the red horizontal line is 1.") +
   ggplot2::labs(y = "Negative Pred Value, closer to one is better. \n The horizontal line is the mean of the results, the red line is 0.") +
   ggplot2::theme(legend.position = "none")
 
@@ -2623,7 +2623,7 @@ holdout_vs_train_plot <- ggplot2::ggplot(data = holdout_vs_train_data, mapping =
   ggplot2::geom_hline(ggplot2::aes(yintercept = mean)) +
   ggplot2::geom_hline(ggplot2::aes(yintercept = 1, color = "red")) +
   ggplot2::facet_wrap(~model, ncol = 4, scales = "fixed") +
-  ggplot2::labs("Holdout accuracy / train accuracy by model, closer to one is better, fixed scales. \n The black horizontal line is the mean of the results, the red horizontal line is 1.") +
+  ggplot2::labs(title = "Holdout accuracy / train accuracy by model, closer to one is better, fixed scales. \n The black horizontal line is the mean of the results, the red horizontal line is 1.") +
   ggplot2::labs(y = "Holdout accuracy / train accuracy by model, closer to one is better. \n The horizontal line is the mean of the results, the red line is 1.") +
   ggplot2::theme(legend.position = "none")
 
@@ -2652,7 +2652,7 @@ holdout_vs_train_plot2 <- ggplot2::ggplot(data = holdout_vs_train_data, mapping 
   ggplot2::geom_hline(ggplot2::aes(yintercept = mean)) +
   ggplot2::geom_hline(ggplot2::aes(yintercept = 1, color = "red")) +
   ggplot2::facet_wrap(~model, ncol = 4, scales = "free") +
-  ggplot2::labs("Holdout accuracy / train accuracy by model, closer to one is better, free scales. \n The black horizontal line is the mean of the results, the red horizontal line is 1.") +
+  ggplot2::labs(title = "Holdout accuracy / train accuracy by model, closer to one is better, free scales. \n The black horizontal line is the mean of the results, the red horizontal line is 1.") +
   ggplot2::labs(y = "Holdout accuracy / train accuracy by model, closer to one is better. \n The horizontal line is the mean of the results, the red line is 1.") +
   ggplot2::theme(legend.position = "none")
 
@@ -2711,7 +2711,7 @@ classification_error_plot <- ggplot2::ggplot(data = classification_error_data, m
   ggplot2::geom_hline(ggplot2::aes(yintercept = mean)) +
   ggplot2::geom_hline(ggplot2::aes(yintercept = 0, color = "red")) +
   ggplot2::facet_wrap(~model, ncol = 4, scales = "fixed") +
-  ggplot2::labs("Classification error, closer to zero is better, fixed scales. \n The black horizontal line is the mean of the results, the red horizontal line is 1.") +
+  ggplot2::labs(title = "Classification error, closer to zero is better, fixed scales. \n The black horizontal line is the mean of the results, the red horizontal line is 1.") +
   ggplot2::labs(y = "Classification error, closer to zero is better. \n The horizontal line is the mean of the results, the red line is 0.") +
   ggplot2::theme(legend.position = "none")
 
@@ -2740,7 +2740,7 @@ classification_error_plot2 <- ggplot2::ggplot(data = classification_error_data, 
   ggplot2::geom_hline(ggplot2::aes(yintercept = mean)) +
   ggplot2::geom_hline(ggplot2::aes(yintercept = 0, color = "red")) +
   ggplot2::facet_wrap(~model, ncol = 4, scales = "free") +
-  ggplot2::labs("Classification error, closer to zero is better, free scales. \n The black horizontal line is the mean of the results, the red horizontal line is 1.") +
+  ggplot2::labs(title = "Classification error, closer to zero is better, free scales. \n The black horizontal line is the mean of the results, the red horizontal line is 1.") +
   ggplot2::labs(y = "Classification error, closer to zero is better. \n The horizontal line is the mean of the results, the red line is 0.") +
   ggplot2::theme(legend.position = "none")
 
@@ -2819,7 +2819,7 @@ total_plot <- ggplot2::ggplot(data = total_data, mapping = ggplot2::aes(x = coun
   ggplot2::geom_line(mapping = aes(x = count, y = holdout, color = "holdout")) +
   ggplot2::geom_point(mapping = aes(x = count, y = holdout)) +
   ggplot2::facet_wrap(~model, ncol = 4, scales = "fixed") +
-  ggplot2::labs("Accuracy data including train and holdout by model, fixed scales. \nAccuracy by model, higher is better, 1 is best.") +
+  ggplot2::labs(title = "Accuracy data including train and holdout by model, fixed scales. \nAccuracy by model, higher is better, 1 is best.") +
   ggplot2::labs(y = "Higher is better, 1 is best.") +
   ggplot2::scale_color_manual(
     name = "Total Results",
@@ -2852,7 +2852,7 @@ total_plot2 <- ggplot2::ggplot(data = total_data, mapping = ggplot2::aes(x = cou
   ggplot2::geom_line(mapping = aes(x = count, y = holdout, color = "holdout")) +
   ggplot2::geom_point(mapping = aes(x = count, y = holdout)) +
   ggplot2::facet_wrap(~model, ncol = 4, scales = "free") +
-  ggplot2::labs("Accuracy data including train and holdout by model, free scales. \nAccuracy by model, higher is better, 1 is best.") +
+  ggplot2::labs(title = "Accuracy data including train and holdout by model, free scales. \nAccuracy by model, higher is better, 1 is best.") +
   ggplot2::labs(y = "Higher is better, 1 is best.") +
   ggplot2::scale_color_manual(
     name = "Total Results",
