@@ -16,3 +16,4 @@ All my attempts to get anything to run in less than five seconds have failed. I 
 *You write information messages to the console that cannot be easily suppressed. All print commands were changed to message commands
 * Please do not modify the global environment (e.g. by using <<-) in your functions. This is not allowed by the CRAN policies. This is complete. Took a lot of work, but the trained models and graphics are saved to a temp directory
 
+* 0.7.1 fixed a ggplot2 issue that was crashing the system. Issue is resolved, it runs without any errors or warnings now.
