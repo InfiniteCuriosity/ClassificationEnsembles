@@ -1,3 +1,9 @@
+# ClassificationEnsembles 0.4.0
+* Reduced number of models to 12. This results in a huge improvement in speed
+* Added Cleveland_heart data, as this showcases LogisticEnsembles very well.
+* Updated license to 2026
+* Updated vignette to show the new and improved function for LogisticEnembles. Tested the vignette, ran without any errors or warnings.
+
 # ClassificationEnsembles 0.3.0
 
 # ClassificationEnsembles 0.2.0
