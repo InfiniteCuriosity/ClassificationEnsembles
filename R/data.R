@@ -69,3 +69,39 @@
 #'  \item{RiskLevel}{Predicted Risk Intensity Level during pregnancy considering the previous attribute.}
 #' }
 "Maternal_Health_Risk"
+
+#' Cleveland Heart
+#'
+#' Posted by John Gennari, 3/13/90, This is Dr. Detrano's database modified to be a real MIXED dataset.
+#'
+#' @format Cleveland_heart
+#' These are the original attributes:
+#' Attributes: 8 symbolic, 6 numeric. Age; sex; chest pain type (angina, abnang, notang, asympt)
+#' Trestbps (resting blood pres); cholesteral; fasting blood sugar < 120
+#' (true or false); resting ecg (norm, abn, hyper); max heart rate;
+#' exercise induced angina (true or false); oldpeak; slope (up, flat, down)
+#' number of vessels colored (???); thal (norm, fixed, rever). Finally, the
+#' class is either healthy (buff) or with heart-disease (sick).
+#'
+#' @source https://archive-beta.ics.uci.edu/dataset/45/heart+disease/files?path=cleve.mod
+#'
+#' The column names were corrected to be usable by R ('Chest_pain_type' instead of 'chest pain type'),
+#' removed the '<' symbol from a column name because the '<' symbol causes some errors reading the column names (such as tree models),
+#' removed three columns due to very high number of missing cells (noted as '?' in the original file.) Those three
+#' columns are 'Number_of_vessels_colored', 'Thal', and 'Resting_ECG'.
+#'
+#' \describe{
+#'  \item{Age}{Age of the subject}
+#'  \item{Sex}{Sex of the subject, either male or female}
+#'  \item{Chest_pain_type}{One of angina, abnang, notang, or asympt}
+#'  \item{Resting_blood_pressure}{The resting blood pressure for the subject}
+#'  \item{Cholesteral}{The patient's cholesterol}
+#'  \item{Fasting_blood_sugar}{Binary, whether the fasting blood sugar is <120}
+#'  \item{Max_heart_rate}{The maximum measured heart rate for the patient}
+#'  \item{Exercise_induced_angina}{Binary, whether angina was induced due to exercise}
+#'  \item{Old_peak}{Numeric value}
+#'  \item{Slope}{Three levels: Down, flat, up}
+#'  \item{Sick_or_buff}{Binary, is the patient sick or buff}
+#'  \item{Class}{0 is healthy, 1,2,3,4 is sick.}
+#' }
+"Cleveland_heart"
