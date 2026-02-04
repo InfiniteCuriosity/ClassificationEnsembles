@@ -1,9 +1,9 @@
 Package: ClassificationEnsembles
-Title: Automatically Builds 25 Classification Models (15 Individual and 10 Ensembles of Models) from Classification Data
-Version: 0.3.0
+Title: Automatically Builds 12 Classification Models (6 Individual and 6 Ensembles of Models) from Classification Data
+Version: 0.4.0
 Authors@R: 
     person("Russ", "Conte", , "russconte@mac.com", role = c("aut", "cre", "cph"))
-Description: Automatically builds 25 classification models from data. The package returns 12 plots, 5 tables and a summary report.
+Description: Automatically builds 12 classification models from data. The package also returns 25 plots, 5 tables and a summary report.
 License: MIT + file LICENSE
 Depends:
     C50,
@@ -21,7 +21,7 @@ Depends:
     parallel,
     pls,
     purrr,
-    R (>= 2.10),
+    R (>= 3.5),
     randomForest,
     ranger,
     reactable,
@@ -31,7 +31,7 @@ Depends:
     tree
 Encoding: UTF-8
 Roxygen: list(markdown = TRUE)
-RoxygenNote: 7.3.2
+RoxygenNote: 7.3.3
 LazyData: true
 Suggests: 
     knitr,
