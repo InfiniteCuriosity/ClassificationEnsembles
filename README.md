@@ -23,69 +23,65 @@ ClassificationEnsembles will model the location of a car seat (Good, Medium or B
 ``` r
 library(ClassificationEnsembles)
 Classification(data = Carseats,
-  colnum = 7,
-  numresamples = 2,
-  do_you_have_new_data = "N",
-  how_to_handle_strings = 1,
-  save_all_trained_models = "N",
-  use_parallel = "N",
-  train_amount = 0.60,
-  test_amount = 0.20,
-  validation_amount = 0.20)
+               colnum = 7,
+               numresamples = 25,
+               predict_on_new_data = "N",
+               save_all_plots = "N",
+               set_seed = "N",
+               how_to_handle_strings = 0,
+               remove_VIF_above <- 5.00,
+               save_all_trained_models = "N",
+               scale_all_numeric_predictors_in_data = "N",
+               use_parallel = "N",
+               train_amount = 0.50,
+               test_amount = 0.25,
+               validation_amount = 0.25)
 
 ```
 
-The 20 models which are build automatically are:
+The 12 models which are build automatically are:
 
-1. Bagged Random Forest
-2. Bagging
-3. C50
-4. Ensemble BaggedCart
-5. Ensemble Bagged Random Forest
-6. Ensemble C50
-7. Ensemble NaiveBayes
-8. Ensemble Random Forest
-9. Ensemble Ranger
-10. Ensemble Support Vector Machines
-11. Ensemble Trees
-12. Linear
-13. Naive Bayes
-14. Partial Least Squares
-15. Penalized Discrmininant Analysis
-16. Random Forest
-17. Ranger
-18. RPart
-19. Support Vector Machines
-20. Trees
+1. C50
+2. Ensemble BaggedCart
+3. Ensemble Bagged Random Forest
+4. Ensemble C50
+5. Ensemble NaiveBayes
+6. Ensemble Support Vector Machines
+7. Ensemble Trees
+8. Linear
+9. Partial Least Squares
+10. Penalized Discriminant Analysis
+11. RPart
+12. Trees
 
 
 The 26 plots it returns automatically are:<br>
-1. Holdout accuracy / train accurcy by model, fixed scales
+1. Holdout accuracy / train accuracy by model, fixed scales
 2. Residuals by model, free scales
 3. Residuals by model, fixed scales
 4. Classification error, free scales
 5. Classification error, fixed scales
 6. Accuracy data, free scales
 7. Accuracy data, fixed scales
-8. Accuracy by model, free scales
-9. Accuracy by model, fixed scales
-10. Histograms of numeric columns
-11. Boxplots of numeric columns
-12. Duration barchart
-13. False negative rate free scales
-14. False negative rate fixed scales
-15. False positive rate, free scales
-16. False positive rate, fixed scales
-17. True negative rate, free scales
-18. True negative rate, fixed scales
-19. True positive rate, free scales
-20. True positive rate, fixed scales
-21. Over or underfitting barchart
-22. Model accuracy barchart
-23. Barchart of each feature vs target by percentage
-24. Barchart of each feature vs target by value
-25. Correlation of numeric data as circles and colors
-26. Correlation of numeric data as numbers and colors
+8. Histograms of numeric columns
+9. Boxplots of numeric columns
+10. Duration barchart
+11. False negative rate free scales
+12. False negative rate fixed scales
+13. False positive rate, free scales
+14. False positive rate, fixed scales
+15. True negative rate, free scales
+16. True negative rate, fixed scales
+17. True positive rate, free scales
+18. True positive rate, fixed scales
+19. Over or underfitting barchart
+20. Model accuracy barchart
+21. Barchart of each feature vs target by percentage
+22. Barchart of each feature vs target by value
+23. Correlation of numeric data as circles and colors
+24. Correlation of numeric data as numbers and colors
+25. Accuracy by model, free scales
+26. Accuracy by model, fixed scales
 
 <br><br>
 The 5 tables the package returns automatically are:<br>
@@ -95,7 +91,7 @@ The 5 tables the package returns automatically are:<br>
 4. Correlation of the data<br>
 5. Summary report, including accuracy, duration, overfitting, sum of diagonals<br>
 <br>
-The package also returns 25 summary tables (sometimes called confusion matrices), one for each of the models. These can be found in the Console. For example, using the dry_beams_small classification data set:
+The package also returns all 12 summary tables (sometimes called confusion matrices), one for each of the models. These can be found in the Console. For example, using the dry_beams_small classification data set:
 
 ensemble_bag_rf_test_pred BARBUNYA BOMBAY CALI DERMASON HOROZ SEKER SIRA
                  BARBUNYA       21      0    0        0     0     0    0
