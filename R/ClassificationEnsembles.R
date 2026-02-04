@@ -3888,15 +3888,15 @@ Classification <- function(data, colnum, numresamples, predict_on_new_data = c("
   }
 
   return(list(
-    'Final_results' = Final_results, 'Barchart' = barchart, 'Barchart2' = barchart2, "Accuracy_Barchart" = accuracy_barchart, "holdout_vs_train_barchart" = holdout_vs_train_barchart,
-    'True_positive_rate1' = true_positive_rate_plot, 'True_positive_rate2' = true_positive_rate_plot2,
-    'True_negative_rate1' = true_negative_rate_plot, 'True_negative_rate2' = true_negative_rate_plot2,
-    'False_positive_rate1' = false_positive_rate_plot, 'False_positive_rate2' = false_positive_rate_plot2,
-    'False_negative_rate1' = false_negative_rate_plot, 'False_negative_rate2' = false_negative_rate_plot2,
+    'Final_results' = Final_results, 'Barchart_values' = barchart, 'Barchart_percent' = barchart2, "Accuracy_Barchart" = accuracy_barchart, "holdout_vs_train_barchart" = holdout_vs_train_barchart,
+    'True_positive_rate_fixed_scales' = true_positive_rate_plot, 'True_positive_rate_free_scales' = true_positive_rate_plot2,
+    'True_negative_rate_fixed_scales' = true_negative_rate_plot, 'True_negative_rate_free_scales' = true_negative_rate_plot2,
+    'False_positive_rate_fixed_scales' = false_positive_rate_plot, 'False_positive_rate_free_scales' = false_positive_rate_plot2,
+    'False_negative_rate_fixed_scales' = false_negative_rate_plot, 'False_negative_rate_free_scales' = false_negative_rate_plot2,
     "Duration_barchart" = duration_barchart,  'Data_summary' = data_summary, 'Correlation_matrix' = correlation_marix, 'VIF' = VIF,
     'Boxplots' = boxplots, 'Histograms' = histograms, 'Head_of_data' = head_df, 'Head_of_ensemble' = head_ensemble,
-    'Summary_tables' = summary_tables, 'Accuracy_plot' = accuracy_plot, 'Accuracy_plot2' = accuracy_plot2,  'Total_plot' = total_plot, "Total_plot2" = total_plot2,
-    'Classification_error1' = classification_error_plot, 'Classification_error2' = classification_error_plot2,
+    'Summary_tables' = summary_tables, 'Accuracy_plot_fixed_scales' = accuracy_plot, 'Accuracy_plot_free_scales' = accuracy_plot2,  'Total_plot_fixed_scales' = total_plot, "Total_plot_free_scales" = total_plot2,
+    'Classification_error_fixed_scales' = classification_error_plot, 'Classification_error_free_scales' = classification_error_plot2,
     'Residuals' = residuals_plot, 'Residuals2' = residuals_plot2, "Holdout_vs_train_plot" = holdout_vs_train_plot
   )
   )
