@@ -45,11 +45,12 @@
 #' @importFrom tree tree cv.tree prune.misclass
 #' @importFrom utils head read.csv str
 
-
+#### Function definition ####
 Classification <- function(data, colnum, numresamples, predict_on_new_data = c("Y", "N"), remove_VIF_above, scale_all_numeric_predictors_in_data,
                            how_to_handle_strings = c(0("No strings"), 1("Strings as factors")), save_all_trained_models = c("Y", "N"),
                            save_all_plots, use_parallel = c("Y", "N"), train_amount, test_amount, validation_amount) {
 
+#### Set initial values to 0 ####
   use_parallel <- 0
   no_cores <- 0
 
@@ -89,6 +90,8 @@ Classification <- function(data, colnum, numresamples, predict_on_new_data = c("
 
   data_summary <- summary(df)
 
+#### Save all plots ####
+
   if(save_all_plots == "Y"){
     reactablefmtr::save_reactable_test(head_df, "Head_of_the_data_frame.html")
   }
@@ -102,7 +105,7 @@ Classification <- function(data, colnum, numresamples, predict_on_new_data = c("
     dpi <- as.numeric(readline("Plot resolution. Applies only to raster output types (jpeg, png, tiff): "))
   }
 
-  #### Barchart of the data against y ####
+#### Barchart of the data against y ####
   barchart <- df %>%
     dplyr::mutate(dplyr::across(-y, as.numeric)) %>%
     tidyr::pivot_longer(!y) %>%
@@ -153,14 +156,14 @@ Classification <- function(data, colnum, numresamples, predict_on_new_data = c("
 
   head_data <- head(df)
 
-  #### Correlation plot of numeric data ####
+#### Correlation plot of numeric data ####
   df1 <- df %>% purrr::keep(is.numeric)
   M1 <- cor(df1)
   title <- "Correlation plot of the numerical data"
   corrplot::corrplot(M1, method = "number", title = title, mar = c(0, 0, 1, 0)) # http://stackoverflow.com/a/14754408/54964)
   corrplot::corrplot(M1, method = "circle", title = title, mar = c(0, 0, 1, 0)) # http://stackoverflow.com/a/14754408/54964)
 
-  #### Print correlation matrix of numeric data ####
+#### Print correlation matrix of numeric data ####
   correlation_marix <- reactable::reactable(round(cor(df1), 4),
                                             searchable = TRUE, pagination = FALSE, wrap = TRUE, rownames = TRUE, fullWidth = TRUE, filterable = TRUE, bordered = TRUE,
                                             striped = TRUE, highlight = TRUE, resizable = TRUE
@@ -171,7 +174,7 @@ Classification <- function(data, colnum, numresamples, predict_on_new_data = c("
     reactablefmtr::save_reactable_test(correlation_marix, "Correlation_matrix.html")
   }
 
-  #### Boxplots of the numeric data ####
+#### Boxplots of the numeric data ####
   boxplots <- df1 %>%
     tidyr::gather(key = "var", value = "value") %>%
     ggplot2::ggplot(ggplot2::aes(x = "", y = value)) +
@@ -200,7 +203,7 @@ Classification <- function(data, colnum, numresamples, predict_on_new_data = c("
     ggplot2::ggsave("boxplots.tiff", width = width, height = height, units = units, scale = scale, device = device, dpi = dpi)
   }
 
-  #### Histograms of the numeric data ####
+#### Histograms of the numeric data ####
   histograms <- ggplot2::ggplot(tidyr::gather(df1, cols, value), ggplot2::aes(x = value)) +
     ggplot2::geom_histogram(bins = round(nrow(df1) / 10)) +
     ggplot2::facet_wrap(. ~ cols, scales = "free") +
@@ -229,6 +232,8 @@ Classification <- function(data, colnum, numresamples, predict_on_new_data = c("
     cl <- parallel::makeCluster(no_cores, type = "FORK")
     doParallel::registerDoParallel(cl)
   }
+
+#### How to handle strings, move target value to the last column on the right ####
 
   y <- 0
   colnames(data)[colnum] <- "y"
@@ -270,7 +275,7 @@ Classification <- function(data, colnum, numresamples, predict_on_new_data = c("
   }
 
 
-  #### Set accuracy values to zero ####
+#### Set initial values to zero ####
 
   bagging_train_accuracy <- 0
   bagging_test_accuracy <- 0
@@ -292,20 +297,6 @@ Classification <- function(data, colnum, numresamples, predict_on_new_data = c("
   bagging_prevalence <- 0
   bagging_detection_rate <- 0
   bagging_detection_prevalence <- 0
-
-  # bag_cart_train_accuracy <- 0
-  # bag_cart_test_accuracy <- 0
-  # bag_cart_validation_accuracy <- 0
-  # bag_cart_holdout_vs_train <- 0
-  # bag_cart_holdout <- 0
-  # bag_cart_residuals <- 0
-  # bag_cart_duration <- 0
-  # bag_cart_true_positive_rate <- 0
-  # bag_cart_true_negative_rate <- 0
-  # bag_cart_false_positive_rate <- 0
-  # bag_cart_false_negative_rate <- 0
-  # bag_cart_F1_score <- 0
-  # bag_cart_table_total <- 0
 
   bag_rf_train_accuracy <- 0
   bag_rf_test_accuracy <- 0
@@ -470,7 +461,7 @@ Classification <- function(data, colnum, numresamples, predict_on_new_data = c("
   ranger_test_accuracy <- 0
   ranger_test_accuracy_mean <- 0
   ranger_validation_accuracy <-
-    ranger_validation_accuracy_mean <- 0
+  ranger_validation_accuracy_mean <- 0
   ranger_holdout_vs_train <- 0
   ranger_holdout <- 0
   ranger_residuals <- 0
@@ -790,7 +781,7 @@ Classification <- function(data, colnum, numresamples, predict_on_new_data = c("
   holdout_vs_train_St_Dev <- 0
   Duration_St_Dev <- 0
 
-  #### Random resampling starts here ####
+#### Random resampling starts here ####
 
   for (i in 1:numresamples) {
     print(noquote(""))
@@ -816,7 +807,7 @@ Classification <- function(data, colnum, numresamples, predict_on_new_data = c("
     test <- df[index == 2, ] %>% dplyr::select(-y)
     validation <- df[index == 3, ] %>% dplyr::select(-y)
 
-    #### 1. Bagging ####
+#### 1. Bagging ####
     bagging_start <- Sys.time()
     print("Working on Bagging analysis")
     bagging_train_fit <- ipred::bagging(y ~ ., data = train01, coob = TRUE)
@@ -895,7 +886,7 @@ Classification <- function(data, colnum, numresamples, predict_on_new_data = c("
     bagging_duration_mean <- mean(bagging_duration)
     bagging_duration_sd <- sd(bagging_duration)
 
-    #### 2. Bagged Random Forest ####
+#### 2. Bagged Random Forest ####
     bag_rf_start <- Sys.time()
     print("Working on Bagged Random Forest analysis")
     bag_rf_train_fit <- randomForest::randomForest(y ~ ., data = train01, mtry = ncol(train))
@@ -974,7 +965,7 @@ Classification <- function(data, colnum, numresamples, predict_on_new_data = c("
     bag_rf_duration_mean <- mean(bag_rf_duration)
     bag_rf_duration_sd <- sd(bag_rf_duration)
 
-    #### 3. C50 ####
+#### 3. C50 ####
     C50_start <- Sys.time()
     print("Working on C50 analysis")
     C50_train_fit <- C50::C5.0(as.factor(y_train) ~ ., data = train)
@@ -1050,7 +1041,7 @@ Classification <- function(data, colnum, numresamples, predict_on_new_data = c("
     C50_duration_mean <- mean(C50_duration)
     C50_duration_sd <- sd(C50_duration)
 
-    #### 4. Linear Model ####
+#### 4. Linear Model ####
     linear_start <- Sys.time()
     print("Working on Linear analysis")
     linear_train_fit <- MachineShop::fit(y ~ ., data = train01, model = "LMModel")
@@ -1126,7 +1117,7 @@ Classification <- function(data, colnum, numresamples, predict_on_new_data = c("
     linear_duration_mean <- mean(linear_duration)
     linear_duration_sd <- sd(linear_duration)
 
-    #### 5. Naive Bayes ####
+#### 5. Naive Bayes ####
     n_bayes_start <- Sys.time()
     print("Working on Naive Bayes analysis")
     n_bayes_train_fit <- e1071::naiveBayes(y_train ~ ., data = train)
@@ -1205,7 +1196,7 @@ Classification <- function(data, colnum, numresamples, predict_on_new_data = c("
     n_bayes_duration_mean <- mean(n_bayes_duration)
     n_bayes_duration_sd <- sd(n_bayes_duration)
 
-    #### 6. Partial Least Squares ####
+#### 6. Partial Least Squares ####
     pls_start <- Sys.time()
     print("Working on Partial Least Squares analysis")
     pls_train_fit <- MachineShop::fit(y ~ ., data = train01, model = "PLSModel")
@@ -1284,7 +1275,7 @@ Classification <- function(data, colnum, numresamples, predict_on_new_data = c("
     pls_duration_mean <- mean(pls_duration)
     pls_duration_sd <- sd(pls_duration)
 
-    #### 7. Penalized Discriminant Analysis Model ####
+#### 7. Penalized Discriminant Analysis Model ####
     pda_start <- Sys.time()
     print("Working on Penalized Discriminant analysis")
     pda_train_fit <- MachineShop::fit(y ~ ., data = train01, model = "PDAModel")
@@ -1363,7 +1354,7 @@ Classification <- function(data, colnum, numresamples, predict_on_new_data = c("
     pda_duration_mean <- mean(pda_duration)
     pda_duration_sd <- sd(pda_duration)
 
-    #### 8. Random Forest ####
+#### 8. Random Forest ####
     rf_start <- Sys.time()
     print("Working on Random Forest analysis")
     rf_train_fit <- randomForest::randomForest(x = train, y = y_train, data = df)
@@ -1442,7 +1433,7 @@ Classification <- function(data, colnum, numresamples, predict_on_new_data = c("
     rf_duration_mean <- mean(rf_duration)
     rf_duration_sd <- sd(rf_duration)
 
-    #### 9. Ranger Model ####
+#### 9. Ranger Model ####
     ranger_start <- Sys.time()
     print("Working on Ranger analysis")
     ranger_train_fit <- MachineShop::fit(y ~ ., data = train01, model = "RangerModel")
@@ -1521,7 +1512,7 @@ Classification <- function(data, colnum, numresamples, predict_on_new_data = c("
     ranger_duration_mean <- mean(ranger_duration)
     ranger_duration_sd <- sd(ranger_duration)
 
-    #### 10. RPart Model ####
+#### 10. RPart Model ####
     rpart_start <- Sys.time()
     print("Working on RPart analysis")
     rpart_train_fit <- MachineShop::fit(y ~ ., data = train01, model = "RPartModel")
@@ -1601,7 +1592,7 @@ Classification <- function(data, colnum, numresamples, predict_on_new_data = c("
     rpart_duration_sd <- sd(rpart_duration)
 
 
-    #### 11. Support Vector Machines ####
+#### 11. Support Vector Machines ####
     svm_start <- Sys.time()
     print("Working on Support Vector Machine analysis")
     svm_train_fit <- e1071::svm(y_train ~ ., data = train, kernel = "radial", gamma = 1, cost = 1)
@@ -1680,7 +1671,7 @@ Classification <- function(data, colnum, numresamples, predict_on_new_data = c("
     svm_duration_sd <- sd(svm_duration)
 
 
-    #### 12. Trees ####
+#### 12. Trees ####
     tree_start <- Sys.time()
     print("Working on Trees analysis")
     tree_train_fit <- tree::tree(y_train ~ ., data = train)
@@ -1761,7 +1752,7 @@ Classification <- function(data, colnum, numresamples, predict_on_new_data = c("
 
 
 
-    #### Ensembles start here ####
+#### Ensembles start here ####
     ensemble1 <- data.frame(
       "Bagged_Random_Forest" = c(bag_rf_test_pred, bag_rf_validation_pred),
       "Bagging" = c(bagging_test_pred, bagging_validation_pred),
@@ -1804,7 +1795,7 @@ Classification <- function(data, colnum, numresamples, predict_on_new_data = c("
     print("Working on the Ensembles section")
     print(noquote(""))
 
-    #### 13. Ensemble Bagged CART ####
+#### 13. Ensemble Bagged CART ####
     ensemble_bag_cart_start <- Sys.time()
     print("Working on Ensemble Bagged CART analysis")
     ensemble_bag_cart_train_fit <- ipred::bagging(y ~ ., data = ensemble_train)
@@ -1880,7 +1871,7 @@ Classification <- function(data, colnum, numresamples, predict_on_new_data = c("
     ensemble_bag_cart_duration_mean <- mean(ensemble_bag_cart_duration)
     ensemble_bag_cart_duration_sd <- sd(ensemble_bag_cart_duration)
 
-    #### 14. Ensemble Bagged Random Forest ####
+#### 14. Ensemble Bagged Random Forest ####
     ensemble_bag_rf_start <- Sys.time()
     print("Working on Ensemble Bagged Random Forest analysis")
     ensemble_bag_train_rf <- randomForest::randomForest(ensemble_y_train ~ ., data = ensemble_train, mtry = ncol(ensemble_train) - 1)
@@ -1960,7 +1951,7 @@ Classification <- function(data, colnum, numresamples, predict_on_new_data = c("
     ensemble_bag_rf_duration_mean <- mean(ensemble_bag_rf_duration)
     ensemble_bag_rf_duration_sd <- sd(ensemble_bag_rf_duration)
 
-    #### 15. Ensemble C50 ####
+#### 15. Ensemble C50 ####
     ensemble_C50_start <- Sys.time()
     print("Working on Ensemble C50 analysis")
     ensemble_C50_train_fit <- C50::C5.0(ensemble_y_train ~ ., data = ensemble_train)
@@ -2037,7 +2028,7 @@ Classification <- function(data, colnum, numresamples, predict_on_new_data = c("
     ensemble_C50_duration_sd <- sd(ensemble_C50_duration)
 
 
-    #### 16. Ensemble Naive Bayes ####
+#### 16. Ensemble Naive Bayes ####
     ensemble_n_bayes_start <- Sys.time()
     print("Working on Ensembles using Naive Bayes analysis")
     ensemble_n_bayes_train_fit <- e1071::naiveBayes(ensemble_y_train ~ ., data = ensemble_train)
@@ -2118,7 +2109,7 @@ Classification <- function(data, colnum, numresamples, predict_on_new_data = c("
     ensemble_n_bayes_duration_mean <- mean(ensemble_n_bayes_duration)
     ensemble_n_bayes_duration_sd <- sd(ensemble_n_bayes_duration)
 
-    #### 17. Ensemble Ranger Model #####
+#### 17. Ensemble Ranger Model #####
     ensemble_ranger_start <- Sys.time()
     print("Working on Ensembles using Ranger analysis")
     ensemble_ranger_train_fit <- MachineShop::fit(y ~ ., data = ensemble_train, model = "RangerModel")
@@ -2199,7 +2190,7 @@ Classification <- function(data, colnum, numresamples, predict_on_new_data = c("
     ensemble_ranger_duration_mean <- mean(ensemble_ranger_duration)
     ensemble_ranger_duration_sd <- sd(ensemble_ranger_duration)
 
-    #### 18. Ensemble Random Forest ####
+#### 18. Ensemble Random Forest ####
     ensemble_rf_start <- Sys.time()
     print("Working on Ensembles using Random Forest analysis")
     ensemble_train_rf_fit <- randomForest::randomForest(x = ensemble_train, y = ensemble_y_train)
@@ -2278,7 +2269,7 @@ Classification <- function(data, colnum, numresamples, predict_on_new_data = c("
     ensemble_rf_duration_mean <- mean(ensemble_rf_duration)
     ensemble_rf_duration_sd <- sd(ensemble_rf_duration)
 
-    #### 19. Ensemble Support Vector Machines ####
+#### 19. Ensemble Support Vector Machines ####
     ensemble_svm_start <- Sys.time()
     print("Working on Ensembles using Support Vector Machines analysis")
     ensemble_svm_train_fit <- e1071::svm(ensemble_y_train ~ ., data = ensemble_train, kernel = "radial", gamma = 1, cost = 1)
@@ -2359,7 +2350,7 @@ Classification <- function(data, colnum, numresamples, predict_on_new_data = c("
     ensemble_svm_duration_mean <- mean(ensemble_svm_duration)
     ensemble_svm_duration_sd <- sd(ensemble_svm_duration)
 
-    #### 20. Ensemble Trees ####
+#### 20. Ensemble Trees ####
     ensemble_tree_start <- Sys.time()
     print("Working on Ensembles using Trees analysis")
     ensemble_tree_train_fit <- tree::tree(y ~ ., data = ensemble_train)
@@ -2438,7 +2429,9 @@ Classification <- function(data, colnum, numresamples, predict_on_new_data = c("
     ensemble_tree_duration_mean <- mean(ensemble_tree_duration)
     ensemble_tree_duration_sd <- sd(ensemble_tree_duration)
   }
-  #### Ensembles end here ####
+#### Ensembles end here ####
+
+#### Build results tables starts here ####
 
   Results <- data.frame(
     "Model" = c(
@@ -2697,6 +2690,8 @@ Classification <- function(data, colnum, numresamples, predict_on_new_data = c("
     ), each = numresamples)
   )
 
+
+#### Accuracy plot ####
   accuracy_plot <- ggplot2::ggplot(data = accuracy_data, mapping = ggplot2::aes(x = count, y = data, color = model)) +
     ggplot2::geom_line(mapping = ggplot2::aes(x = count, y = data)) +
     ggplot2::geom_point(mapping = ggplot2::aes(x = count, y = data)) +
@@ -2755,7 +2750,8 @@ Classification <- function(data, colnum, numresamples, predict_on_new_data = c("
     ggplot2::ggsave("accuracy_plot2.tiff", width = width, height = height, units = units, scale = scale, device = device, dpi = dpi)
   }
 
-  residuals_data <- data.frame(
+#### Residuals plot ####
+    residuals_data <- data.frame(
     "count" = 1:numresamples,
     "model" = c(
       rep("Bagging", numresamples), rep("Bagged Random Forest", numresamples),
@@ -2843,6 +2839,8 @@ Classification <- function(data, colnum, numresamples, predict_on_new_data = c("
     ggplot2::ggsave("residuals_plot2.tiff", width = width, height = height, units = units, scale = scale, device = device, dpi = dpi)
   }
 
+#### Holdout vs train plot ####
+
   holdout_vs_train_data <- data.frame(
     "count" = 1:numresamples,
     "model" = c(
@@ -2874,6 +2872,7 @@ Classification <- function(data, colnum, numresamples, predict_on_new_data = c("
     ), each = numresamples)
   )
 
+#### True positive rate plot ####
   true_positive_rate_data <- data.frame(
     "count" = 1:numresamples,
     "model" = c(
@@ -2963,7 +2962,8 @@ Classification <- function(data, colnum, numresamples, predict_on_new_data = c("
     ggplot2::ggsave("true_positive_rate_plot2.tiff", width = width, height = height, units = units, scale = scale, device = device, dpi = dpi)
   }
 
-  true_negative_rate_data <- data.frame(
+#### True negative rate plot ####
+    true_negative_rate_data <- data.frame(
     "count" = 1:numresamples,
     "model" = c(
       rep("Bagging", numresamples), rep("Bagged Random Forest", numresamples),
@@ -3052,6 +3052,8 @@ Classification <- function(data, colnum, numresamples, predict_on_new_data = c("
     ggplot2::ggsave("true_negative_rate_plot2.tiff", width = width, height = height, units = units, scale = scale, device = device, dpi = dpi)
   }
 
+
+#### False positive rate plot ####
   false_positive_rate_data <- data.frame(
     "count" = 1:numresamples,
     "model" = c(
@@ -3141,7 +3143,9 @@ Classification <- function(data, colnum, numresamples, predict_on_new_data = c("
     ggplot2::ggsave("false_positive_rate_plot2.tiff", width = width, height = height, units = units, scale = scale, device = device, dpi = dpi)
   }
 
-  false_negative_rate_data <- data.frame(
+
+#### False negative rate plot ####
+    false_negative_rate_data <- data.frame(
     "count" = 1:numresamples,
     "model" = c(
       rep("Bagging", numresamples), rep("Bagged Random Forest", numresamples),
@@ -3230,7 +3234,8 @@ Classification <- function(data, colnum, numresamples, predict_on_new_data = c("
     ggplot2::ggsave("false_negative_rate_plot2.tiff", width = width, height = height, units = units, scale = scale, device = device, dpi = dpi)
   }
 
-  positive_pred_value_data <- data.frame(
+#### Positive predictive value plot ####
+    positive_pred_value_data <- data.frame(
     "count" = 1:numresamples,
     "model" = c(
       rep("Bagging", numresamples), rep("Bagged Random Forest", numresamples),
@@ -3319,7 +3324,8 @@ Classification <- function(data, colnum, numresamples, predict_on_new_data = c("
     ggplot2::ggsave("positive_pred_value_plot2.tiff", width = width, height = height, units = units, scale = scale, device = device, dpi = dpi)
   }
 
-  negative_pred_value_data <- data.frame(
+#### Negative predictive value plot ####
+    negative_pred_value_data <- data.frame(
     "count" = 1:numresamples,
     "model" = c(
       rep("Bagging", numresamples), rep("Bagged Random Forest", numresamples),
@@ -3408,8 +3414,7 @@ Classification <- function(data, colnum, numresamples, predict_on_new_data = c("
     ggplot2::ggsave("negative_pred_value_plot2.tiff", width = width, height = height, units = units, scale = scale, device = device, dpi = dpi)
   }
 
-
-
+#### Holdout vs train plot ####
   holdout_vs_train_plot <- ggplot2::ggplot(data = holdout_vs_train_data, mapping = ggplot2::aes(x = count, y = data, color = model)) +
     ggplot2::geom_line(mapping = ggplot2::aes(x = count, y = data)) +
     ggplot2::geom_point(mapping = ggplot2::aes(x = count, y = data)) +
@@ -3468,7 +3473,8 @@ Classification <- function(data, colnum, numresamples, predict_on_new_data = c("
     ggplot2::ggsave("holdout_vs_train_plot2.tiff", width = width, height = height, units = units, scale = scale, device = device, dpi = dpi)
   }
 
-  classification_error_data <- data.frame(
+#### Classification error plot ####
+    classification_error_data <- data.frame(
     "count" = 1:numresamples,
     "model" = c(
       rep("Bagging", numresamples), rep("Bagged Random Forest", numresamples),
@@ -3558,12 +3564,7 @@ Classification <- function(data, colnum, numresamples, predict_on_new_data = c("
   }
 
 
-  ####################################################
-
-  ###### Total Data visualizations start here ########
-
-  ####################################################
-
+###### Total Data visualizations start here ########
 
   total_data <- data.frame(
     "count" = 1:numresamples,
@@ -3674,7 +3675,8 @@ Classification <- function(data, colnum, numresamples, predict_on_new_data = c("
     ggplot2::ggsave("total_plot2.tiff", width = width, height = height, units = units, scale = scale, device = device, dpi = dpi)
   }
 
-  accuracy_barchart <- ggplot2::ggplot(Results, aes(x = reorder(Model, dplyr::desc(Mean_Holdout_Accuracy)), y = Mean_Holdout_Accuracy)) +
+#### Accuracy barchart ####
+    accuracy_barchart <- ggplot2::ggplot(Results, aes(x = reorder(Model, dplyr::desc(Mean_Holdout_Accuracy)), y = Mean_Holdout_Accuracy)) +
     ggplot2::geom_col(width = 0.5)+
     ggplot2::theme(axis.text.x = ggplot2::element_text(angle = 90, vjust = 1, hjust=1)) +
     ggplot2::labs(x = "Model", y = "Mean Accuracy", title = "Model accuracy, closer to one is better, 1 standard deviation error bars") +
@@ -3701,7 +3703,8 @@ Classification <- function(data, colnum, numresamples, predict_on_new_data = c("
     ggplot2::ggsave("accuracy_barchart.tiff", width = width, height = height, units = units, scale = scale, device = device, dpi = dpi)
   }
 
-  holdout_vs_train_barchart <- ggplot2::ggplot(Results, aes(x = reorder(Model, dplyr::desc(Holdout_vs_train)), y = Holdout_vs_train)) +
+#### Holdout vs train barchart ####
+    holdout_vs_train_barchart <- ggplot2::ggplot(Results, aes(x = reorder(Model, dplyr::desc(Holdout_vs_train)), y = Holdout_vs_train)) +
     ggplot2::geom_col(width = 0.5)+
     ggplot2::theme(axis.text.x = ggplot2::element_text(angle = 90, vjust = 1, hjust=1)) +
     ggplot2::labs(x = "Model", y = "Holdout accuracy / train accuracy", title = "Over or Under Fitting, closer to 1 is better, 1 standard deviation error bars") +
@@ -3728,7 +3731,8 @@ Classification <- function(data, colnum, numresamples, predict_on_new_data = c("
     ggplot2::ggsave("holdout_vs_train_barchart.tiff", width = width, height = height, units = units, scale = scale, device = device, dpi = dpi)
   }
 
-  duration_barchart <- ggplot2::ggplot(Results, aes(x = reorder(Model, Duration), y = Duration)) +
+#### Duration barchart ####
+    duration_barchart <- ggplot2::ggplot(Results, aes(x = reorder(Model, Duration), y = Duration)) +
     ggplot2::geom_col(width = 0.5)+
     ggplot2::theme(axis.text.x = ggplot2::element_text(angle = 90, vjust = 1, hjust=1)) +
     ggplot2::labs(x = "Model", y = "Duration", title = "Duration, shorter is better, 1 standard deviation error bars") +
@@ -3756,6 +3760,7 @@ Classification <- function(data, colnum, numresamples, predict_on_new_data = c("
   }
 
 
+#### Predict on new data starts here ####
   if (predict_on_new_data == "Y") {
     is_num <- sapply(new_data, is.integer)
     new_data[ , is_num] <- as.data.frame(apply(new_data[, is_num], 2, as.numeric))
@@ -3887,6 +3892,7 @@ Classification <- function(data, colnum, numresamples, predict_on_new_data = c("
     ensemble_tree_train_fit <<- ensemble_tree_train_fit
   }
 
+#### Return list of all reports ####
   return(list(
     'Final_results' = Final_results, 'Barchart_values' = barchart, 'Barchart_percent' = barchart2, "Accuracy_Barchart" = accuracy_barchart, "holdout_vs_train_barchart" = holdout_vs_train_barchart,
     'True_positive_rate_fixed_scales' = true_positive_rate_plot, 'True_positive_rate_free_scales' = true_positive_rate_plot2,
