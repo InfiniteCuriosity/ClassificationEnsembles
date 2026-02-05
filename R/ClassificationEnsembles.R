@@ -3,10 +3,10 @@
 #' @param data a data set that includes classification data. For example, the Carseats data in the ISLR package
 #' @param colnum the number of the column. For example, in the Carseats data this is column 7, ShelveLoc with three values, Good, Medium and Bad
 #' @param numresamples the number of times to resample the analysis
-#' @param how_to_handle_strings Converts strings to factor levels
+#' @param how_to_handle_strings Option to convert strings to factor levels
+#' @param set_seed Option to set a seed
 #' @param predict_on_new_data asks if the user has new data to be analyzed using the trained models that were just developed
-#' @param predict_on_new_data Gives the user the opportunity to use the trained models to predict on new and untrained data
-#' @param remove_VIF_above Removes columns with Variance Inflaction Factors above the level chosen by the user
+#' @param remove_VIF_above Removes columns with Variance Inflation Factors above the level chosen by the user
 #' @param scale_all_numeric_predictors_in_data Scales all numeric predictors in the original data
 #' @param save_all_trained_models Gives the user the option to save all trained models in the Environment
 #' @param save_all_plots Saves all plots in the user's chosen format
@@ -47,12 +47,16 @@
 
 #### Function definition ####
 Classification <- function(data, colnum, numresamples, predict_on_new_data = c("Y", "N"), remove_VIF_above, scale_all_numeric_predictors_in_data,
-                           how_to_handle_strings = c(0("No strings"), 1("Strings as factors")), save_all_trained_models = c("Y", "N"),
+                           how_to_handle_strings = c(0("No strings"), 1("Strings as factors")), set_seed = c("Y", "N"), save_all_trained_models = c("Y", "N"),
                            save_all_plots, use_parallel = c("Y", "N"), train_amount, test_amount, validation_amount) {
 
 #### Set initial values to 0 ####
   use_parallel <- 0
   no_cores <- 0
+
+  if(set_seed == "Y"){
+    seed = as.integer(readline("Which integer would you like to use for the seed? "))
+  }
 
   if (use_parallel == "Y") {
     cl <- parallel::makeCluster(no_cores, type = "FORK")
@@ -810,7 +814,13 @@ Classification <- function(data, colnum, numresamples, predict_on_new_data = c("
 #### 1. Bagging ####
     bagging_start <- Sys.time()
     print("Working on Bagging analysis")
-    bagging_train_fit <- ipred::bagging(y ~ ., data = train01, coob = TRUE)
+    if(set_seed == "Y"){
+      set.seed(seed = seed)
+      bagging_train_fit <- ipred::bagging(y ~ ., data = train01, coob = TRUE)
+    }
+    if(set_seed == "N"){
+      bagging_train_fit <- ipred::bagging(y ~ ., data = train01, coob = TRUE)
+    }
     bagging_train_pred <- predict(object = bagging_train_fit, newdata = train)
     bagging_train_table <- table(bagging_train_pred, y_train)
     bagging_train_accuracy[i] <- sum(diag(bagging_train_table)) / sum(bagging_train_table)
@@ -889,7 +899,13 @@ Classification <- function(data, colnum, numresamples, predict_on_new_data = c("
 #### 2. Bagged Random Forest ####
     bag_rf_start <- Sys.time()
     print("Working on Bagged Random Forest analysis")
-    bag_rf_train_fit <- randomForest::randomForest(y ~ ., data = train01, mtry = ncol(train))
+    if(set_seed == "Y"){
+      set.seed(seed = seed)
+      bag_rf_train_fit <- randomForest::randomForest(y ~ ., data = train01, mtry = ncol(train))
+    }
+    if(set_seed == "N"){
+      bag_rf_train_fit <- randomForest::randomForest(y ~ ., data = train01, mtry = ncol(train))
+    }
     bag_rf_train_pred <- predict(bag_rf_train_fit, train, type = "class")
     bag_rf_train_table <- table(bag_rf_train_pred, y_train)
     bag_rf_train_accuracy[i] <- sum(diag(bag_rf_train_table)) / sum(bag_rf_train_table)
@@ -968,7 +984,13 @@ Classification <- function(data, colnum, numresamples, predict_on_new_data = c("
 #### 3. C50 ####
     C50_start <- Sys.time()
     print("Working on C50 analysis")
-    C50_train_fit <- C50::C5.0(as.factor(y_train) ~ ., data = train)
+    if(set_seed == "Y"){
+      set.seed(seed = seed)
+      C50_train_fit <- C50::C5.0(as.factor(y_train) ~ ., data = train)
+    }
+    if(set_seed == "N"){
+      C50_train_fit <- C50::C5.0(as.factor(y_train) ~ ., data = train)
+    }
     C50_train_pred <- predict(C50_train_fit, train)
     C50_train_table <- table(C50_train_pred, y_train)
     C50_train_accuracy[i] <- sum(diag(C50_train_table)) / sum(C50_train_table)
@@ -1044,7 +1066,13 @@ Classification <- function(data, colnum, numresamples, predict_on_new_data = c("
 #### 4. Linear Model ####
     linear_start <- Sys.time()
     print("Working on Linear analysis")
-    linear_train_fit <- MachineShop::fit(y ~ ., data = train01, model = "LMModel")
+    if(set_seed == "Y"){
+      set.seed(seed = seed)
+      linear_train_fit <- MachineShop::fit(y ~ ., data = train01, model = "LMModel")
+    }
+    if(set_seed == "N"){
+      linear_train_fit <- MachineShop::fit(y ~ ., data = train01, model = "LMModel")
+    }
     linear_train_pred <- predict(object = linear_train_fit, newdata = train01)
     linear_train_table <- table(linear_train_pred, y_train)
     linear_train_accuracy[i] <- sum(diag(linear_train_table)) / sum(linear_train_table)
@@ -1120,7 +1148,13 @@ Classification <- function(data, colnum, numresamples, predict_on_new_data = c("
 #### 5. Naive Bayes ####
     n_bayes_start <- Sys.time()
     print("Working on Naive Bayes analysis")
-    n_bayes_train_fit <- e1071::naiveBayes(y_train ~ ., data = train)
+    if(set_seed == "Y"){
+      set.seed(seed = seed)
+      n_bayes_train_fit <- e1071::naiveBayes(y_train ~ ., data = train)
+    }
+    if(set_seed == "N"){
+      n_bayes_train_fit <- e1071::naiveBayes(y_train ~ ., data = train)
+    }
     n_bayes_train_pred <- predict(n_bayes_train_fit, train)
     n_bayes_train_table <- table(n_bayes_train_pred, y_train)
     n_bayes_train_accuracy[i] <- sum(diag(n_bayes_train_table)) / sum(n_bayes_train_table)
@@ -1199,7 +1233,13 @@ Classification <- function(data, colnum, numresamples, predict_on_new_data = c("
 #### 6. Partial Least Squares ####
     pls_start <- Sys.time()
     print("Working on Partial Least Squares analysis")
-    pls_train_fit <- MachineShop::fit(y ~ ., data = train01, model = "PLSModel")
+    if(set_seed == "Y"){
+      set.seed(seed = seed)
+      pls_train_fit <- MachineShop::fit(y ~ ., data = train01, model = "PLSModel")
+    }
+    if(set_seed == "N"){
+      pls_train_fit <- MachineShop::fit(y ~ ., data = train01, model = "PLSModel")
+    }
     pls_train_predict <- predict(object = pls_train_fit, newdata = train01)
     pls_train_table <- table(pls_train_predict, y_train)
     pls_train_accuracy[i] <- sum(diag(pls_train_table)) / sum(pls_train_table)
@@ -1278,7 +1318,13 @@ Classification <- function(data, colnum, numresamples, predict_on_new_data = c("
 #### 7. Penalized Discriminant Analysis Model ####
     pda_start <- Sys.time()
     print("Working on Penalized Discriminant analysis")
-    pda_train_fit <- MachineShop::fit(y ~ ., data = train01, model = "PDAModel")
+    if(set_seed == "Y"){
+      set.seed(seed = seed)
+      pda_train_fit <- MachineShop::fit(y ~ ., data = train01, model = "PDAModel")
+    }
+    if(set_seed == "N"){
+      pda_train_fit <- MachineShop::fit(y ~ ., data = train01, model = "PDAModel")
+    }
     pda_train_predict <- predict(object = pda_train_fit, newdata = train01)
     pda_train_table <- table(pda_train_predict, y_train)
     pda_train_accuracy[i] <- sum(diag(pda_train_table)) / sum(pda_train_table)
@@ -1357,7 +1403,13 @@ Classification <- function(data, colnum, numresamples, predict_on_new_data = c("
 #### 8. Random Forest ####
     rf_start <- Sys.time()
     print("Working on Random Forest analysis")
-    rf_train_fit <- randomForest::randomForest(x = train, y = y_train, data = df)
+    if(set_seed == "Y"){
+      set.seed(seed = seed)
+      rf_train_fit <- randomForest::randomForest(x = train, y = y_train, data = df)
+    }
+    if(set_seed == "N"){
+      rf_train_fit <- randomForest::randomForest(x = train, y = y_train, data = df)
+    }
     rf_train_pred <- predict(rf_train_fit, train, type = "class")
     rf_train_table <- table(rf_train_pred, y_train)
     rf_train_accuracy[i] <- sum(diag(rf_train_table)) / sum(rf_train_table)
@@ -1436,7 +1488,13 @@ Classification <- function(data, colnum, numresamples, predict_on_new_data = c("
 #### 9. Ranger Model ####
     ranger_start <- Sys.time()
     print("Working on Ranger analysis")
-    ranger_train_fit <- MachineShop::fit(y ~ ., data = train01, model = "RangerModel")
+    if(set_seed == "Y"){
+      set.seed(seed = seed)
+      ranger_train_fit <- MachineShop::fit(y ~ ., data = train01, model = "RangerModel")
+    }
+    if(set_seed == "N"){
+      ranger_train_fit <- MachineShop::fit(y ~ ., data = train01, model = "RangerModel")
+    }
     ranger_train_predict <- predict(object = ranger_train_fit, newdata = train01)
     ranger_train_table <- table(ranger_train_predict, y_train)
     ranger_train_accuracy[i] <- sum(diag(ranger_train_table)) / sum(ranger_train_table)
@@ -1515,7 +1573,13 @@ Classification <- function(data, colnum, numresamples, predict_on_new_data = c("
 #### 10. RPart Model ####
     rpart_start <- Sys.time()
     print("Working on RPart analysis")
-    rpart_train_fit <- MachineShop::fit(y ~ ., data = train01, model = "RPartModel")
+    if(set_seed == "Y"){
+      set.seed(seed = seed)
+      rpart_train_fit <- MachineShop::fit(y ~ ., data = train01, model = "RPartModel")
+    }
+    if(set_seed == "N"){
+      rpart_train_fit <- MachineShop::fit(y ~ ., data = train01, model = "RPartModel")
+    }
     rpart_train_predict <- predict(object = rpart_train_fit, newdata = train01)
     rpart_train_table <- table(rpart_train_predict, y_train)
     rpart_train_accuracy[i] <- sum(diag(rpart_train_table)) / sum(rpart_train_table)
@@ -1595,7 +1659,13 @@ Classification <- function(data, colnum, numresamples, predict_on_new_data = c("
 #### 11. Support Vector Machines ####
     svm_start <- Sys.time()
     print("Working on Support Vector Machine analysis")
-    svm_train_fit <- e1071::svm(y_train ~ ., data = train, kernel = "radial", gamma = 1, cost = 1)
+    if(set_seed == "Y"){
+      set.seed(seed = seed)
+      svm_train_fit <- e1071::svm(y_train ~ ., data = train, kernel = "radial", gamma = 1, cost = 1)
+    }
+    if(set_seed == "N"){
+      svm_train_fit <- e1071::svm(y_train ~ ., data = train, kernel = "radial", gamma = 1, cost = 1)
+    }
     svm_train_pred <- predict(svm_train_fit, train, type = "class")
     svm_train_table <- table(svm_train_pred, y_train)
     svm_train_accuracy[i] <- sum(diag(svm_train_table)) / sum(svm_train_table)
@@ -1674,7 +1744,13 @@ Classification <- function(data, colnum, numresamples, predict_on_new_data = c("
 #### 12. Trees ####
     tree_start <- Sys.time()
     print("Working on Trees analysis")
-    tree_train_fit <- tree::tree(y_train ~ ., data = train)
+    if(set_seed == "Y"){
+      set.seed(seed = seed)
+      tree_train_fit <- tree::tree(y_train ~ ., data = train)
+    }
+    if(set_seed == "N"){
+      tree_train_fit <- tree::tree(y_train ~ ., data = train)
+    }
     tree_train_pred <- predict(tree_train_fit, train, type = "class")
     tree_train_table <- table(tree_train_pred, y_train)
     tree_train_accuracy[i] <- sum(diag(tree_train_table)) / sum(tree_train_table)
@@ -1798,7 +1874,13 @@ Classification <- function(data, colnum, numresamples, predict_on_new_data = c("
 #### 13. Ensemble Bagged CART ####
     ensemble_bag_cart_start <- Sys.time()
     print("Working on Ensemble Bagged CART analysis")
-    ensemble_bag_cart_train_fit <- ipred::bagging(y ~ ., data = ensemble_train)
+    if(set_seed == "Y"){
+      set.seed(seed = seed)
+      ensemble_bag_cart_train_fit <- ipred::bagging(y ~ ., data = ensemble_train)
+    }
+    if(set_seed == "N"){
+      ensemble_bag_cart_train_fit <- ipred::bagging(y ~ ., data = ensemble_train)
+    }
     ensemble_bag_cart_train_pred <- predict(ensemble_bag_cart_train_fit, ensemble_train)
     ensemble_bag_cart_train_table <- table(ensemble_bag_cart_train_pred, ensemble_train$y)
     ensemble_bag_cart_train_accuracy[i] <- sum(diag(ensemble_bag_cart_train_table)) / sum(ensemble_bag_cart_train_table)
@@ -1874,7 +1956,13 @@ Classification <- function(data, colnum, numresamples, predict_on_new_data = c("
 #### 14. Ensemble Bagged Random Forest ####
     ensemble_bag_rf_start <- Sys.time()
     print("Working on Ensemble Bagged Random Forest analysis")
-    ensemble_bag_train_rf <- randomForest::randomForest(ensemble_y_train ~ ., data = ensemble_train, mtry = ncol(ensemble_train) - 1)
+    if(set_seed == "Y"){
+      set.seed(seed = seed)
+      ensemble_bag_train_rf <- randomForest::randomForest(ensemble_y_train ~ ., data = ensemble_train, mtry = ncol(ensemble_train) - 1)
+    }
+    if(set_seed == "N"){
+      ensemble_bag_train_rf <- randomForest::randomForest(ensemble_y_train ~ ., data = ensemble_train, mtry = ncol(ensemble_train) - 1)
+    }
     ensemble_bag_rf_train_pred <- predict(ensemble_bag_train_rf, ensemble_train, type = "class")
     ensemble_bag_rf_train_table <- table(ensemble_bag_rf_train_pred, ensemble_train$y)
     ensemble_bag_rf_train_accuracy[i] <- sum(diag(ensemble_bag_rf_train_table)) / sum(ensemble_bag_rf_train_table)
@@ -1954,7 +2042,13 @@ Classification <- function(data, colnum, numresamples, predict_on_new_data = c("
 #### 15. Ensemble C50 ####
     ensemble_C50_start <- Sys.time()
     print("Working on Ensemble C50 analysis")
-    ensemble_C50_train_fit <- C50::C5.0(ensemble_y_train ~ ., data = ensemble_train)
+    if(set_seed == "Y"){
+      set.seed(seed = seed)
+      ensemble_C50_train_fit <- C50::C5.0(ensemble_y_train ~ ., data = ensemble_train)
+    }
+    if(set_seed == "N"){
+      ensemble_C50_train_fit <- C50::C5.0(ensemble_y_train ~ ., data = ensemble_train)
+    }
     ensemble_C50_train_pred <- predict(ensemble_C50_train_fit, ensemble_train)
     ensemble_C50_train_table <- table(ensemble_C50_train_pred, ensemble_y_train)
     ensemble_C50_train_accuracy[i] <- sum(diag(ensemble_C50_train_table)) / sum(ensemble_C50_train_table)
@@ -2031,7 +2125,13 @@ Classification <- function(data, colnum, numresamples, predict_on_new_data = c("
 #### 16. Ensemble Naive Bayes ####
     ensemble_n_bayes_start <- Sys.time()
     print("Working on Ensembles using Naive Bayes analysis")
-    ensemble_n_bayes_train_fit <- e1071::naiveBayes(ensemble_y_train ~ ., data = ensemble_train)
+    if(set_seed == "Y"){
+      set.seed(seed = seed)
+      ensemble_n_bayes_train_fit <- e1071::naiveBayes(ensemble_y_train ~ ., data = ensemble_train)
+    }
+    if(set_seed == "N"){
+      ensemble_n_bayes_train_fit <- e1071::naiveBayes(ensemble_y_train ~ ., data = ensemble_train)
+    }
     ensemble_n_bayes_train_pred <- predict(ensemble_n_bayes_train_fit, ensemble_train)
     ensemble_n_bayes_train_table <- table(ensemble_n_bayes_train_pred, ensemble_y_train)
     ensemble_n_bayes_train_accuracy[i] <- sum(diag(ensemble_n_bayes_train_table)) / sum(ensemble_n_bayes_train_table)
@@ -2112,7 +2212,13 @@ Classification <- function(data, colnum, numresamples, predict_on_new_data = c("
 #### 17. Ensemble Ranger Model #####
     ensemble_ranger_start <- Sys.time()
     print("Working on Ensembles using Ranger analysis")
-    ensemble_ranger_train_fit <- MachineShop::fit(y ~ ., data = ensemble_train, model = "RangerModel")
+    if(set_seed == "Y"){
+      set.seed(seed = seed)
+      ensemble_ranger_train_fit <- MachineShop::fit(y ~ ., data = ensemble_train, model = "RangerModel")
+    }
+    if(set_seed == "N"){
+      ensemble_ranger_train_fit <- MachineShop::fit(y ~ ., data = ensemble_train, model = "RangerModel")
+    }
     ensemble_ranger_train_pred <- predict(ensemble_ranger_train_fit, newdata = ensemble_train)
     ensemble_ranger_train_table <- table(ensemble_ranger_train_pred, ensemble_y_train)
     ensemble_ranger_train_accuracy[i] <- sum(diag(ensemble_ranger_train_table)) / sum(ensemble_ranger_train_table)
@@ -2193,7 +2299,13 @@ Classification <- function(data, colnum, numresamples, predict_on_new_data = c("
 #### 18. Ensemble Random Forest ####
     ensemble_rf_start <- Sys.time()
     print("Working on Ensembles using Random Forest analysis")
-    ensemble_train_rf_fit <- randomForest::randomForest(x = ensemble_train, y = ensemble_y_train)
+    if(set_seed == "Y"){
+      set.seed(seed = seed)
+      ensemble_train_rf_fit <- randomForest::randomForest(x = ensemble_train, y = ensemble_y_train)
+    }
+    if(set_seed == "N"){
+      ensemble_train_rf_fit <- randomForest::randomForest(x = ensemble_train, y = ensemble_y_train)
+    }
     ensemble_rf_train_pred <- predict(ensemble_train_rf_fit, ensemble_train, type = "class")
     ensemble_rf_train_table <- table(ensemble_rf_train_pred, ensemble_y_train)
     ensemble_rf_train_accuracy[i] <- sum(diag(ensemble_rf_train_table)) / sum(ensemble_rf_train_table)
@@ -2272,7 +2384,13 @@ Classification <- function(data, colnum, numresamples, predict_on_new_data = c("
 #### 19. Ensemble Support Vector Machines ####
     ensemble_svm_start <- Sys.time()
     print("Working on Ensembles using Support Vector Machines analysis")
-    ensemble_svm_train_fit <- e1071::svm(ensemble_y_train ~ ., data = ensemble_train, kernel = "radial", gamma = 1, cost = 1)
+    if(set_seed == "Y"){
+      set.seed(seed = seed)
+      ensemble_svm_train_fit <- e1071::svm(ensemble_y_train ~ ., data = ensemble_train, kernel = "radial", gamma = 1, cost = 1)
+    }
+    if(set_seed == "N"){
+      ensemble_svm_train_fit <- e1071::svm(ensemble_y_train ~ ., data = ensemble_train, kernel = "radial", gamma = 1, cost = 1)
+    }
     ensemble_svm_train_pred <- predict(ensemble_svm_train_fit, ensemble_train, type = "class")
     ensemble_svm_train_table <- table(ensemble_svm_train_pred, ensemble_y_train)
     ensemble_svm_train_accuracy[i] <- sum(diag(ensemble_svm_train_table)) / sum(ensemble_svm_train_table)
@@ -2353,7 +2471,13 @@ Classification <- function(data, colnum, numresamples, predict_on_new_data = c("
 #### 20. Ensemble Trees ####
     ensemble_tree_start <- Sys.time()
     print("Working on Ensembles using Trees analysis")
-    ensemble_tree_train_fit <- tree::tree(y ~ ., data = ensemble_train)
+    if(set_seed == "Y"){
+      set.seed(seed = seed)
+      ensemble_tree_train_fit <- tree::tree(y ~ ., data = ensemble_train)
+    }
+    if(set_seed == "N"){
+      ensemble_tree_train_fit <- tree::tree(y ~ ., data = ensemble_train)
+    }
     ensemble_tree_train_pred <- predict(ensemble_tree_train_fit, ensemble_train, type = "class")
     ensemble_tree_train_table <- table(ensemble_tree_train_pred, ensemble_y_train)
     ensemble_tree_train_accuracy[i] <- sum(diag(ensemble_tree_train_table)) / sum(ensemble_tree_train_table)
