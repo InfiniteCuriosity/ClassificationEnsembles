@@ -3903,7 +3903,7 @@ Classification <- function(data, colnum, numresamples, predict_on_new_data = c("
     'Boxplots' = boxplots, 'Histograms' = histograms, 'Head_of_data' = head_df, 'Head_of_ensemble' = head_ensemble,
     'Summary_tables' = summary_tables, 'Accuracy_plot_fixed_scales' = accuracy_plot, 'Accuracy_plot_free_scales' = accuracy_plot2,  'Total_plot_fixed_scales' = total_plot, "Total_plot_free_scales" = total_plot2,
     'Classification_error_fixed_scales' = classification_error_plot, 'Classification_error_free_scales' = classification_error_plot2,
-    'Residuals' = residuals_plot, 'Residuals2' = residuals_plot2, "Holdout_vs_train_plot" = holdout_vs_train_plot
+    'Residuals_fixed_scales' = residuals_plot, 'Residuals_free_scales' = residuals_plot2, "Holdout_vs_train_plot" = holdout_vs_train_plot
   )
   )
 }
