@@ -12,6 +12,7 @@ Classification(
   remove_VIF_above,
   scale_all_numeric_predictors_in_data,
   how_to_handle_strings = c(0("No strings"), 1("Strings as factors")),
+  set_seed = c("Y", "N"),
   save_all_trained_models = c("Y", "N"),
   save_all_plots,
   use_parallel = c("Y", "N"),
@@ -27,13 +28,15 @@ Classification(
 
 \item{numresamples}{the number of times to resample the analysis}
 
-\item{predict_on_new_data}{Gives the user the opportunity to use the trained models to predict on new and untrained data}
+\item{predict_on_new_data}{asks if the user has new data to be analyzed using the trained models that were just developed}
 
-\item{remove_VIF_above}{Removes columns with Variance Inflaction Factors above the level chosen by the user}
+\item{remove_VIF_above}{Removes columns with Variance Inflation Factors above the level chosen by the user}
 
 \item{scale_all_numeric_predictors_in_data}{Scales all numeric predictors in the original data}
 
-\item{how_to_handle_strings}{Converts strings to factor levels}
+\item{how_to_handle_strings}{Option to convert strings to factor levels}
+
+\item{set_seed}{Option to set a seed}
 
 \item{save_all_trained_models}{Gives the user the option to save all trained models in the Environment}
 
