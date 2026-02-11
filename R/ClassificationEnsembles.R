@@ -813,7 +813,7 @@ Classification <- function(data, colnum, numresamples, predict_on_new_data = c("
 
 #### 1. Bagging ####
     bagging_start <- Sys.time()
-    print("Working on Bagging analysis")
+    message("Working on Bagging analysis")
     if(set_seed == "Y"){
       set.seed(seed = seed)
       bagging_train_fit <- ipred::bagging(y ~ ., data = train01, coob = TRUE)
@@ -873,7 +873,7 @@ Classification <- function(data, colnum, numresamples, predict_on_new_data = c("
     bagging_true_negative_rate[i] <- bagging_confusion_matrix_summary[2]
     bagging_true_negative_rate_mean <- mean(bagging_true_negative_rate)
     bagging_false_negative_rate[i] <- 1 -  bagging_true_positive_rate[i]
-    bagging_false_negative_rate_mean <- mean(bagging_false_positive_rate)
+    bagging_false_negative_rate_mean <- mean(bagging_false_negative_rate)
     bagging_false_positive_rate[i] <- 1 - bagging_true_negative_rate[i]
     bagging_false_positive_rate_mean <- mean(bagging_false_positive_rate)
     bagging_positive_pred_value[i] <- bagging_confusion_matrix_summary[3]
@@ -898,7 +898,7 @@ Classification <- function(data, colnum, numresamples, predict_on_new_data = c("
 
 #### 2. Bagged Random Forest ####
     bag_rf_start <- Sys.time()
-    print("Working on Bagged Random Forest analysis")
+    message("Working on Bagged Random Forest analysis")
     if(set_seed == "Y"){
       set.seed(seed = seed)
       bag_rf_train_fit <- randomForest::randomForest(y ~ ., data = train01, mtry = ncol(train))
@@ -958,7 +958,7 @@ Classification <- function(data, colnum, numresamples, predict_on_new_data = c("
     bag_rf_true_negative_rate[i] <- bag_rf_confusion_matrix_summary[2]
     bag_rf_true_negative_rate_mean <- mean(bag_rf_true_negative_rate)
     bag_rf_false_negative_rate[i] <- 1 -  bag_rf_true_positive_rate[i]
-    bag_rf_false_negative_rate_mean <- mean(bag_rf_false_positive_rate)
+    bag_rf_false_negative_rate_mean <- mean(bag_rf_false_negative_rate)
     bag_rf_false_positive_rate[i] <- 1 - bag_rf_true_negative_rate[i]
     bag_rf_false_positive_rate_mean <- mean(bag_rf_false_positive_rate)
     bag_rf_positive_pred_value[i] <- bag_rf_confusion_matrix_summary[3]
@@ -983,7 +983,7 @@ Classification <- function(data, colnum, numresamples, predict_on_new_data = c("
 
 #### 3. C50 ####
     C50_start <- Sys.time()
-    print("Working on C50 analysis")
+    message("Working on C50 analysis")
     if(set_seed == "Y"){
       set.seed(seed = seed)
       C50_train_fit <- C50::C5.0(as.factor(y_train) ~ ., data = train)
@@ -1040,7 +1040,7 @@ Classification <- function(data, colnum, numresamples, predict_on_new_data = c("
     C50_true_negative_rate[i] <- C50_confusion_matrix_summary[2]
     C50_true_negative_rate_mean <- mean(C50_true_negative_rate)
     C50_false_negative_rate[i] <- 1 -  C50_true_positive_rate[i]
-    C50_false_negative_rate_mean <- mean(C50_false_positive_rate)
+    C50_false_negative_rate_mean <- mean(C50_false_negative_rate)
     C50_false_positive_rate[i] <- 1 - C50_true_negative_rate[i]
     C50_false_positive_rate_mean <- mean(C50_false_positive_rate)
     C50_positive_pred_value[i] <- C50_confusion_matrix_summary[3]
@@ -1065,7 +1065,7 @@ Classification <- function(data, colnum, numresamples, predict_on_new_data = c("
 
 #### 4. Linear Model ####
     linear_start <- Sys.time()
-    print("Working on Linear analysis")
+    message("Working on Linear analysis")
     if(set_seed == "Y"){
       set.seed(seed = seed)
       linear_train_fit <- MachineShop::fit(y ~ ., data = train01, model = "LMModel")
@@ -1122,7 +1122,7 @@ Classification <- function(data, colnum, numresamples, predict_on_new_data = c("
     linear_true_negative_rate[i] <- linear_confusion_matrix_summary[2]
     linear_true_negative_rate_mean <- mean(linear_true_negative_rate)
     linear_false_negative_rate[i] <- 1 -  linear_true_positive_rate[i]
-    linear_false_negative_rate_mean <- mean(linear_false_positive_rate)
+    linear_false_negative_rate_mean <- mean(linear_false_negative_rate)
     linear_false_positive_rate[i] <- 1 - linear_true_negative_rate[i]
     linear_false_positive_rate_mean <- mean(linear_false_positive_rate)
     linear_positive_pred_value[i] <- linear_confusion_matrix_summary[3]
@@ -1147,7 +1147,7 @@ Classification <- function(data, colnum, numresamples, predict_on_new_data = c("
 
 #### 5. Naive Bayes ####
     n_bayes_start <- Sys.time()
-    print("Working on Naive Bayes analysis")
+    message("Working on Naive Bayes analysis")
     if(set_seed == "Y"){
       set.seed(seed = seed)
       n_bayes_train_fit <- e1071::naiveBayes(y_train ~ ., data = train)
@@ -1207,7 +1207,7 @@ Classification <- function(data, colnum, numresamples, predict_on_new_data = c("
     n_bayes_true_negative_rate[i] <- n_bayes_confusion_matrix_summary[2]
     n_bayes_true_negative_rate_mean <- mean(n_bayes_true_negative_rate)
     n_bayes_false_negative_rate[i] <- 1 -  n_bayes_true_positive_rate[i]
-    n_bayes_false_negative_rate_mean <- mean(n_bayes_false_positive_rate)
+    n_bayes_false_negative_rate_mean <- mean(n_bayes_false_negative_rate)
     n_bayes_false_positive_rate[i] <- 1 - n_bayes_true_negative_rate[i]
     n_bayes_false_positive_rate_mean <- mean(n_bayes_false_positive_rate)
     n_bayes_positive_pred_value[i] <- n_bayes_confusion_matrix_summary[3]
@@ -1232,7 +1232,7 @@ Classification <- function(data, colnum, numresamples, predict_on_new_data = c("
 
 #### 6. Partial Least Squares ####
     pls_start <- Sys.time()
-    print("Working on Partial Least Squares analysis")
+    message("Working on Partial Least Squares analysis")
     if(set_seed == "Y"){
       set.seed(seed = seed)
       pls_train_fit <- MachineShop::fit(y ~ ., data = train01, model = "PLSModel")
@@ -1292,7 +1292,7 @@ Classification <- function(data, colnum, numresamples, predict_on_new_data = c("
     pls_true_negative_rate[i] <- pls_confusion_matrix_summary[2]
     pls_true_negative_rate_mean <- mean(pls_true_negative_rate)
     pls_false_negative_rate[i] <- 1 -  pls_true_positive_rate[i]
-    pls_false_negative_rate_mean <- mean(pls_false_positive_rate)
+    pls_false_negative_rate_mean <- mean(pls_false_negative_rate)
     pls_false_positive_rate[i] <- 1 - pls_true_negative_rate[i]
     pls_false_positive_rate_mean <- mean(pls_false_positive_rate)
     pls_positive_pred_value[i] <- pls_confusion_matrix_summary[3]
@@ -1317,7 +1317,7 @@ Classification <- function(data, colnum, numresamples, predict_on_new_data = c("
 
 #### 7. Penalized Discriminant Analysis Model ####
     pda_start <- Sys.time()
-    print("Working on Penalized Discriminant analysis")
+    message("Working on Penalized Discriminant analysis")
     if(set_seed == "Y"){
       set.seed(seed = seed)
       pda_train_fit <- MachineShop::fit(y ~ ., data = train01, model = "PDAModel")
@@ -1377,7 +1377,7 @@ Classification <- function(data, colnum, numresamples, predict_on_new_data = c("
     pda_true_negative_rate[i] <- pda_confusion_matrix_summary[2]
     pda_true_negative_rate_mean <- mean(pda_true_negative_rate)
     pda_false_negative_rate[i] <- 1 -  pda_true_positive_rate[i]
-    pda_false_negative_rate_mean <- mean(pda_false_positive_rate)
+    pda_false_negative_rate_mean <- mean(pda_false_negative_rate)
     pda_false_positive_rate[i] <- 1 - pda_true_negative_rate[i]
     pda_false_positive_rate_mean <- mean(pda_false_positive_rate)
     pda_positive_pred_value[i] <- pda_confusion_matrix_summary[3]
@@ -1402,7 +1402,7 @@ Classification <- function(data, colnum, numresamples, predict_on_new_data = c("
 
 #### 8. Random Forest ####
     rf_start <- Sys.time()
-    print("Working on Random Forest analysis")
+    message("Working on Random Forest analysis")
     if(set_seed == "Y"){
       set.seed(seed = seed)
       rf_train_fit <- randomForest::randomForest(x = train, y = y_train, data = df)
@@ -1462,7 +1462,7 @@ Classification <- function(data, colnum, numresamples, predict_on_new_data = c("
     rf_true_negative_rate[i] <- rf_confusion_matrix_summary[2]
     rf_true_negative_rate_mean <- mean(rf_true_negative_rate)
     rf_false_negative_rate[i] <- 1 -  rf_true_positive_rate[i]
-    rf_false_negative_rate_mean <- mean(rf_false_positive_rate)
+    rf_false_negative_rate_mean <- mean(rf_false_negative_rate)
     rf_false_positive_rate[i] <- 1 - rf_true_negative_rate[i]
     rf_false_positive_rate_mean <- mean(rf_false_positive_rate)
     rf_positive_pred_value[i] <- rf_confusion_matrix_summary[3]
@@ -1487,7 +1487,7 @@ Classification <- function(data, colnum, numresamples, predict_on_new_data = c("
 
 #### 9. Ranger Model ####
     ranger_start <- Sys.time()
-    print("Working on Ranger analysis")
+    message("Working on Ranger analysis")
     if(set_seed == "Y"){
       set.seed(seed = seed)
       ranger_train_fit <- MachineShop::fit(y ~ ., data = train01, model = "RangerModel")
@@ -1547,7 +1547,7 @@ Classification <- function(data, colnum, numresamples, predict_on_new_data = c("
     ranger_true_negative_rate[i] <- ranger_confusion_matrix_summary[2]
     ranger_true_negative_rate_mean <- mean(ranger_true_negative_rate)
     ranger_false_negative_rate[i] <- 1 -  ranger_true_positive_rate[i]
-    ranger_false_negative_rate_mean <- mean(ranger_false_positive_rate)
+    ranger_false_negative_rate_mean <- mean(ranger_false_negative_rate)
     ranger_false_positive_rate[i] <- 1 - ranger_true_negative_rate[i]
     ranger_false_positive_rate_mean <- mean(ranger_false_positive_rate)
     ranger_positive_pred_value[i] <- ranger_confusion_matrix_summary[3]
@@ -1572,7 +1572,7 @@ Classification <- function(data, colnum, numresamples, predict_on_new_data = c("
 
 #### 10. RPart Model ####
     rpart_start <- Sys.time()
-    print("Working on RPart analysis")
+    message("Working on RPart analysis")
     if(set_seed == "Y"){
       set.seed(seed = seed)
       rpart_train_fit <- MachineShop::fit(y ~ ., data = train01, model = "RPartModel")
@@ -1632,7 +1632,7 @@ Classification <- function(data, colnum, numresamples, predict_on_new_data = c("
     rpart_true_negative_rate[i] <- rpart_confusion_matrix_summary[2]
     rpart_true_negative_rate_mean <- mean(rpart_true_negative_rate)
     rpart_false_negative_rate[i] <- 1 -  rpart_true_positive_rate[i]
-    rpart_false_negative_rate_mean <- mean(rpart_false_positive_rate)
+    rpart_false_negative_rate_mean <- mean(rpart_false_negative_rate)
     rpart_false_positive_rate[i] <- 1 - rpart_true_negative_rate[i]
     rpart_false_positive_rate_mean <- mean(rpart_false_positive_rate)
     rpart_positive_pred_value[i] <- rpart_confusion_matrix_summary[3]
@@ -1658,7 +1658,7 @@ Classification <- function(data, colnum, numresamples, predict_on_new_data = c("
 
 #### 11. Support Vector Machines ####
     svm_start <- Sys.time()
-    print("Working on Support Vector Machine analysis")
+    message("Working on Support Vector Machine analysis")
     if(set_seed == "Y"){
       set.seed(seed = seed)
       svm_train_fit <- e1071::svm(y_train ~ ., data = train, kernel = "radial", gamma = 1, cost = 1)
@@ -1717,7 +1717,7 @@ Classification <- function(data, colnum, numresamples, predict_on_new_data = c("
     svm_true_negative_rate[i] <- svm_confusion_matrix_summary[2]
     svm_true_negative_rate_mean <- mean(svm_true_negative_rate)
     svm_false_negative_rate[i] <- 1 -  svm_true_positive_rate[i]
-    svm_false_negative_rate_mean <- mean(svm_false_positive_rate)
+    svm_false_negative_rate_mean <- mean(svm_false_negative_rate)
     svm_false_positive_rate[i] <- 1 - svm_true_negative_rate[i]
     svm_false_positive_rate_mean <- mean(svm_false_positive_rate)
     svm_positive_pred_value[i] <- svm_confusion_matrix_summary[3]
@@ -1743,7 +1743,7 @@ Classification <- function(data, colnum, numresamples, predict_on_new_data = c("
 
 #### 12. Trees ####
     tree_start <- Sys.time()
-    print("Working on Trees analysis")
+    message("Working on Trees analysis")
     if(set_seed == "Y"){
       set.seed(seed = seed)
       tree_train_fit <- tree::tree(y_train ~ ., data = train)
@@ -1803,7 +1803,7 @@ Classification <- function(data, colnum, numresamples, predict_on_new_data = c("
     tree_true_negative_rate[i] <- tree_confusion_matrix_summary[2]
     tree_true_negative_rate_mean <- mean(tree_true_negative_rate)
     tree_false_negative_rate[i] <- 1 -  tree_true_positive_rate[i]
-    tree_false_negative_rate_mean <- mean(tree_false_positive_rate)
+    tree_false_negative_rate_mean <- mean(tree_false_negative_rate)
     tree_false_positive_rate[i] <- 1 - tree_true_negative_rate[i]
     tree_false_positive_rate_mean <- mean(tree_false_positive_rate)
     tree_positive_pred_value[i] <- tree_confusion_matrix_summary[3]
@@ -1873,7 +1873,7 @@ Classification <- function(data, colnum, numresamples, predict_on_new_data = c("
 
 #### 13. Ensemble Bagged CART ####
     ensemble_bag_cart_start <- Sys.time()
-    print("Working on Ensemble Bagged CART analysis")
+    message("Working on Ensemble Bagged CART analysis")
     if(set_seed == "Y"){
       set.seed(seed = seed)
       ensemble_bag_cart_train_fit <- ipred::bagging(y ~ ., data = ensemble_train)
@@ -1930,7 +1930,7 @@ Classification <- function(data, colnum, numresamples, predict_on_new_data = c("
     ensemble_bag_cart_true_negative_rate[i] <- ensemble_bag_cart_confusion_matrix_summary[2]
     ensemble_bag_cart_true_negative_rate_mean <- mean(ensemble_bag_cart_true_negative_rate)
     ensemble_bag_cart_false_negative_rate[i] <- 1 -  ensemble_bag_cart_true_positive_rate[i]
-    ensemble_bag_cart_false_negative_rate_mean <- mean(ensemble_bag_cart_false_positive_rate)
+    ensemble_bag_cart_false_negative_rate_mean <- mean(ensemble_bag_cart_false_negative_rate)
     ensemble_bag_cart_false_positive_rate[i] <- 1 - ensemble_bag_cart_true_negative_rate[i]
     ensemble_bag_cart_false_positive_rate_mean <- mean(ensemble_bag_cart_false_positive_rate)
     ensemble_bag_cart_positive_pred_value[i] <- ensemble_bag_cart_confusion_matrix_summary[3]
@@ -1955,7 +1955,7 @@ Classification <- function(data, colnum, numresamples, predict_on_new_data = c("
 
 #### 14. Ensemble Bagged Random Forest ####
     ensemble_bag_rf_start <- Sys.time()
-    print("Working on Ensemble Bagged Random Forest analysis")
+    message("Working on Ensemble Bagged Random Forest analysis")
     if(set_seed == "Y"){
       set.seed(seed = seed)
       ensemble_bag_train_rf <- randomForest::randomForest(ensemble_y_train ~ ., data = ensemble_train, mtry = ncol(ensemble_train) - 1)
@@ -2016,7 +2016,7 @@ Classification <- function(data, colnum, numresamples, predict_on_new_data = c("
     ensemble_bag_rf_true_negative_rate[i] <- ensemble_bag_rf_confusion_matrix_summary[2]
     ensemble_bag_rf_true_negative_rate_mean <- mean(ensemble_bag_rf_true_negative_rate)
     ensemble_bag_rf_false_negative_rate[i] <- 1 -  ensemble_bag_rf_true_positive_rate[i]
-    ensemble_bag_rf_false_negative_rate_mean <- mean(ensemble_bag_rf_false_positive_rate)
+    ensemble_bag_rf_false_negative_rate_mean <- mean(ensemble_bag_rf_false_negative_rate)
     ensemble_bag_rf_false_positive_rate[i] <- 1 - ensemble_bag_rf_true_negative_rate[i]
     ensemble_bag_rf_false_positive_rate_mean <- mean(ensemble_bag_rf_false_positive_rate)
     ensemble_bag_rf_positive_pred_value[i] <- ensemble_bag_rf_confusion_matrix_summary[3]
@@ -2041,7 +2041,7 @@ Classification <- function(data, colnum, numresamples, predict_on_new_data = c("
 
 #### 15. Ensemble C50 ####
     ensemble_C50_start <- Sys.time()
-    print("Working on Ensemble C50 analysis")
+    message("Working on Ensemble C50 analysis")
     if(set_seed == "Y"){
       set.seed(seed = seed)
       ensemble_C50_train_fit <- C50::C5.0(ensemble_y_train ~ ., data = ensemble_train)
@@ -2098,7 +2098,7 @@ Classification <- function(data, colnum, numresamples, predict_on_new_data = c("
     ensemble_C50_true_negative_rate[i] <- ensemble_C50_confusion_matrix_summary[2]
     ensemble_C50_true_negative_rate_mean <- mean(ensemble_C50_true_negative_rate)
     ensemble_C50_false_negative_rate[i] <- 1 -  ensemble_C50_true_positive_rate[i]
-    ensemble_C50_false_negative_rate_mean <- mean(ensemble_C50_false_positive_rate)
+    ensemble_C50_false_negative_rate_mean <- mean(ensemble_C50_false_negative_rate)
     ensemble_C50_false_positive_rate[i] <- 1 - ensemble_C50_true_negative_rate[i]
     ensemble_C50_false_positive_rate_mean <- mean(ensemble_C50_false_positive_rate)
     ensemble_C50_positive_pred_value[i] <- ensemble_C50_confusion_matrix_summary[3]
@@ -2124,7 +2124,7 @@ Classification <- function(data, colnum, numresamples, predict_on_new_data = c("
 
 #### 16. Ensemble Naive Bayes ####
     ensemble_n_bayes_start <- Sys.time()
-    print("Working on Ensembles using Naive Bayes analysis")
+    message("Working on Ensembles using Naive Bayes analysis")
     if(set_seed == "Y"){
       set.seed(seed = seed)
       ensemble_n_bayes_train_fit <- e1071::naiveBayes(ensemble_y_train ~ ., data = ensemble_train)
@@ -2186,7 +2186,7 @@ Classification <- function(data, colnum, numresamples, predict_on_new_data = c("
     ensemble_n_bayes_true_negative_rate[i] <- ensemble_n_bayes_confusion_matrix_summary[2]
     ensemble_n_bayes_true_negative_rate_mean <- mean(ensemble_n_bayes_true_negative_rate)
     ensemble_n_bayes_false_negative_rate[i] <- 1 -  ensemble_n_bayes_true_positive_rate[i]
-    ensemble_n_bayes_false_negative_rate_mean <- mean(ensemble_n_bayes_false_positive_rate)
+    ensemble_n_bayes_false_negative_rate_mean <- mean(ensemble_n_bayes_false_negative_rate)
     ensemble_n_bayes_false_positive_rate[i] <- 1 - ensemble_n_bayes_true_negative_rate[i]
     ensemble_n_bayes_false_positive_rate_mean <- mean(ensemble_n_bayes_false_positive_rate)
     ensemble_n_bayes_positive_pred_value[i] <- ensemble_n_bayes_confusion_matrix_summary[3]
@@ -2211,7 +2211,7 @@ Classification <- function(data, colnum, numresamples, predict_on_new_data = c("
 
 #### 17. Ensemble Ranger Model #####
     ensemble_ranger_start <- Sys.time()
-    print("Working on Ensembles using Ranger analysis")
+    message("Working on Ensembles using Ranger analysis")
     if(set_seed == "Y"){
       set.seed(seed = seed)
       ensemble_ranger_train_fit <- MachineShop::fit(y ~ ., data = ensemble_train, model = "RangerModel")
@@ -2273,7 +2273,7 @@ Classification <- function(data, colnum, numresamples, predict_on_new_data = c("
     ensemble_ranger_true_negative_rate[i] <- ensemble_ranger_confusion_matrix_summary[2]
     ensemble_ranger_true_negative_rate_mean <- mean(ensemble_ranger_true_negative_rate)
     ensemble_ranger_false_negative_rate[i] <- 1 -  ensemble_ranger_true_positive_rate[i]
-    ensemble_ranger_false_negative_rate_mean <- mean(ensemble_ranger_false_positive_rate)
+    ensemble_ranger_false_negative_rate_mean <- mean(ensemble_ranger_false_negative_rate)
     ensemble_ranger_false_positive_rate[i] <- 1 - ensemble_ranger_true_negative_rate[i]
     ensemble_ranger_false_positive_rate_mean <- mean(ensemble_ranger_false_positive_rate)
     ensemble_ranger_positive_pred_value[i] <- ensemble_ranger_confusion_matrix_summary[3]
@@ -2298,7 +2298,7 @@ Classification <- function(data, colnum, numresamples, predict_on_new_data = c("
 
 #### 18. Ensemble Random Forest ####
     ensemble_rf_start <- Sys.time()
-    print("Working on Ensembles using Random Forest analysis")
+    message("Working on Ensembles using Random Forest analysis")
     if(set_seed == "Y"){
       set.seed(seed = seed)
       ensemble_train_rf_fit <- randomForest::randomForest(x = ensemble_train, y = ensemble_y_train)
@@ -2358,7 +2358,7 @@ Classification <- function(data, colnum, numresamples, predict_on_new_data = c("
     ensemble_rf_true_negative_rate[i] <- ensemble_rf_confusion_matrix_summary[2]
     ensemble_rf_true_negative_rate_mean <- mean(ensemble_rf_true_negative_rate)
     ensemble_rf_false_negative_rate[i] <- 1 -  ensemble_rf_true_positive_rate[i]
-    ensemble_rf_false_negative_rate_mean <- mean(ensemble_rf_false_positive_rate)
+    ensemble_rf_false_negative_rate_mean <- mean(ensemble_rf_false_negative_rate)
     ensemble_rf_false_positive_rate[i] <- 1 - ensemble_rf_true_negative_rate[i]
     ensemble_rf_false_positive_rate_mean <- mean(ensemble_rf_false_positive_rate)
     ensemble_rf_positive_pred_value[i] <- ensemble_rf_confusion_matrix_summary[3]
@@ -2383,7 +2383,7 @@ Classification <- function(data, colnum, numresamples, predict_on_new_data = c("
 
 #### 19. Ensemble Support Vector Machines ####
     ensemble_svm_start <- Sys.time()
-    print("Working on Ensembles using Support Vector Machines analysis")
+    message("Working on Ensembles using Support Vector Machines analysis")
     if(set_seed == "Y"){
       set.seed(seed = seed)
       ensemble_svm_train_fit <- e1071::svm(ensemble_y_train ~ ., data = ensemble_train, kernel = "radial", gamma = 1, cost = 1)
@@ -2445,7 +2445,7 @@ Classification <- function(data, colnum, numresamples, predict_on_new_data = c("
     ensemble_svm_true_negative_rate[i] <- ensemble_svm_confusion_matrix_summary[2]
     ensemble_svm_true_negative_rate_mean <- mean(ensemble_svm_true_negative_rate)
     ensemble_svm_false_negative_rate[i] <- 1 -  ensemble_svm_true_positive_rate[i]
-    ensemble_svm_false_negative_rate_mean <- mean(ensemble_svm_false_positive_rate)
+    ensemble_svm_false_negative_rate_mean <- mean(ensemble_svm_false_negative_rate)
     ensemble_svm_false_positive_rate[i] <- 1 - ensemble_svm_true_negative_rate[i]
     ensemble_svm_false_positive_rate_mean <- mean(ensemble_svm_false_positive_rate)
     ensemble_svm_positive_pred_value[i] <- ensemble_svm_confusion_matrix_summary[3]
@@ -2470,7 +2470,7 @@ Classification <- function(data, colnum, numresamples, predict_on_new_data = c("
 
 #### 20. Ensemble Trees ####
     ensemble_tree_start <- Sys.time()
-    print("Working on Ensembles using Trees analysis")
+    message("Working on Ensembles using Trees analysis")
     if(set_seed == "Y"){
       set.seed(seed = seed)
       ensemble_tree_train_fit <- tree::tree(y ~ ., data = ensemble_train)
@@ -2530,7 +2530,7 @@ Classification <- function(data, colnum, numresamples, predict_on_new_data = c("
     ensemble_tree_true_negative_rate[i] <- ensemble_tree_confusion_matrix_summary[2]
     ensemble_tree_true_negative_rate_mean <- mean(ensemble_tree_true_negative_rate)
     ensemble_tree_false_negative_rate[i] <- 1 -  ensemble_tree_true_positive_rate[i]
-    ensemble_tree_false_negative_rate_mean <- mean(ensemble_tree_false_positive_rate)
+    ensemble_tree_false_negative_rate_mean <- mean(ensemble_tree_false_negative_rate)
     ensemble_tree_false_positive_rate[i] <- 1 - ensemble_tree_true_negative_rate[i]
     ensemble_tree_false_positive_rate_mean <- mean(ensemble_tree_false_positive_rate)
     ensemble_tree_positive_pred_value[i] <- ensemble_tree_confusion_matrix_summary[3]
