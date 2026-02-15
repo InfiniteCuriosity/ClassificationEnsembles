@@ -22,24 +22,24 @@ ClassificationEnsembles will model the location of a car seat (Good, Medium or B
 
 ``` r
 library(ClassificationEnsembles)
-Classification(data = Carseats,
-               colnum = 7,
+Classification(data = Cleveland_heart,
+               colnum = 12,
                numresamples = 25,
                predict_on_new_data = "N",
                save_all_plots = "N",
-               set_seed = "N",
-               how_to_handle_strings = 0,
+               how_to_handle_strings = 1,
+               stratified_random_column = 3,
                remove_VIF_above <- 5.00,
+               set_seed = "N",
                save_all_trained_models = "N",
                scale_all_numeric_predictors_in_data = "N",
                use_parallel = "N",
                train_amount = 0.50,
                test_amount = 0.25,
                validation_amount = 0.25)
-
 ```
 
-The 12 models which are build automatically are:
+The 12 models which are automatically built are:
 
 1. C50
 2. Ensemble BaggedCart
