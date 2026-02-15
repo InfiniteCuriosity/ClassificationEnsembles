@@ -815,7 +815,7 @@ if(stratified_random_column > 0){
 
   df1 <- as.data.frame(rbind(total_data_mean, train_ratio_mean, test_ratio_mean, validation_ratio_mean))
   df1 <- data.frame(lapply(df1, function(x) if(is.numeric(x)) round(x, 4) else x))
-  row.names(df1) = c('Total data', 'Train ratio', 'Test ratio', 'Validation ratio')
+  row.names(df1) = c('Mean total data ratios', 'Mean train data ratios', 'Mean test data ratio', 'Mean validation data ratios')
   colnames(df1) <- levels
 
   stratified_sampling_report <- reactable::reactable(df1, searchable = TRUE, pagination = FALSE, wrap = TRUE, rownames = TRUE, fullWidth = TRUE, filterable = TRUE, bordered = TRUE,
