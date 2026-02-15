@@ -15,6 +15,7 @@ Classification(
   set_seed = c("Y", "N"),
   save_all_trained_models = c("Y", "N"),
   save_all_plots,
+  stratified_random_column,
   use_parallel = c("Y", "N"),
   train_amount,
   test_amount,
@@ -41,6 +42,8 @@ Classification(
 \item{save_all_trained_models}{Gives the user the option to save all trained models in the Environment}
 
 \item{save_all_plots}{Saves all plots in the user's chosen format}
+
+\item{stratified_random_column}{0 if no stratified random sampling, or column number for stratified random sampling}
 
 \item{use_parallel}{"Y" or "N" for parallel processing}
 
