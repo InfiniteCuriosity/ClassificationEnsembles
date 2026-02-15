@@ -1,3 +1,6 @@
+# ClassificationEnsembles 1.0.0
+* All desired features are included and working, this is version 1.0.0!
+
 # ClassificationEnsembles 0.5.0
 * Added automatic stratified random sampling and the stratified random sampling report
 
