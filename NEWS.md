@@ -1,3 +1,6 @@
+# ClassificationEnsembles 0.5.0
+* Added automatic stratified random sampling and the stratified random sampling report
+
 # ClassificationEnsembles 0.4.0
 * Reduced number of models to 12. This results in a huge improvement in speed
 * Added Cleveland_heart data, as this showcases LogisticEnsembles very well.
