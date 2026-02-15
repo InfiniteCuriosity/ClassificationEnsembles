@@ -99,13 +99,13 @@ ClassificationEnsembles automatically makes 25 plots. Here are a few of them:
 
 Accuracy by model and resample
 
-![**Closeup of accuracy by model and resample. Note that Ensemble Bagged Random Forest had 100% accuracy 25 times in a row on the holdout data.**](Close_up_of_.accuracy_by_model.png){width="700"}
+![Closeup of accuracy by model](Close_up_of_.accuracy_by_model.jpg)
 
 <br>
 
 Accuracy including train and holdout
 
-![**Closeup of accuracy by train and holdout, by resample**](closeup_of_accuracy_by_train_and_holdout.png){width="700"}
+![Closeup of accuracy by train and holdout](closeup_of_accuracy_by_train_and_holdout.jpg)
 
 Note that Ensemble Bagged Random Forest had 100% accuracy on the holdout data, 25 times in a row.
 
@@ -137,7 +137,7 @@ Histograms of the numeric columns
 
 Model accuracy barchart
 
-![Closeup of model accuracy barchart. Three models had 100% accuracy, all three are ensembles of models.](closeup_of_accuracy_barchart.png){width="700"}
+![Closeup of accuracy barchart](closeup_of_accuracy_barchart.jpg)
 
 <br>
 
@@ -151,13 +151,13 @@ Over or underfitting barchart
 
 Target vs each feature
 
-![Target vs each feature in the original data set.](Target_vs_each_feature.png){width="700"}
+![Target vs each feature](Target_vs_each_feature.jpeg)
 
 <br>
 
 **Summary report example:**
 
-![Summary report](Summary_report.png){width="700"}
+![Summary report](Summary_report.jpg)
 
 The summary report provides the following for each classification model:
 
@@ -203,7 +203,7 @@ Diagonal Sum
 
 The package also provides summary tables for all models. Here are the summary tables for the models with the highest accuracy:
 
-![Closeup of summary tables](closeup_of_best_summary_tables.png){width="700"}
+![closeup of best summary tables](closeup_of_best_summary_tables.jpg)
 
 # Grand summary
 
