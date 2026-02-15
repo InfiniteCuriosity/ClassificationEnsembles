@@ -41,7 +41,7 @@ Classification(data = ISLR::Carseats,
                validation_amount = 0.25)
 ```
 
-ClassificationEnsembles will automatically build 20 models to predict the location of carseats (Bad, Medium, Good). The data is available as part of the ISLR package.
+ClassificationEnsembles will automatically build 15 models to predict the location of carseats (Bad, Medium, Good). The data is available as part of the ISLR package.
 
 This is the head of the data set. We will be modeling the ShelveLoc column:
 
@@ -207,6 +207,6 @@ The package also provides summary tables for all models. Here are the summary ta
 
 # Grand summary
 
-The ClassificationEnsembles package was able to build 20 classification models from the Carseats data. Three of the ensembles had 100% accuracy 25 times in a row on the holdout data.
+The ClassificationEnsembles package was able to build 15 classification models from the Carseats data. Three of the ensembles had 100% accuracy 25 times in a row on the holdout data.
 
 The package also automatically provided 25 plots, five tables, a summary report, and summary tables all the models.
