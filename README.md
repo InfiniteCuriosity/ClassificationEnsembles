@@ -39,20 +39,28 @@ Classification(data = Cleveland_heart,
                validation_amount = 0.25)
 ```
 
-The 12 models which are automatically built are:
+The 20 models which are automatically built are:
 
-1. C50
-2. Ensemble BaggedCart
-3. Ensemble Bagged Random Forest
-4. Ensemble C50
-5. Ensemble NaiveBayes
-6. Ensemble Support Vector Machines
-7. Ensemble Trees
-8. Linear
-9. Partial Least Squares
-10. Penalized Discriminant Analysis
-11. RPart
-12. Trees
+1. Bagged Random Forest
+2. Bagging
+3. C50
+4. Ensemble BaggedCart
+5. Ensemble Bagged Random Forest
+6. Ensemble C50
+7. Ensemble NaiveBayes
+8. Ensemble Support Vector Machines
+9. Ensemble Ranger
+10.Ensemble Support Vector Machines
+11. Ensemble Trees
+12. Linear
+13. Naive Bayes
+14. Partial Least Squares
+15. Penalized Discriminant Analysis
+16. Random Forest
+17. Ranger
+18. RPart
+19. Support Vector Machines
+20. Trees
 
 
 The 26 plots it returns automatically are:<br>
