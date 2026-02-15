@@ -25,30 +25,33 @@ devtools::install_github("InfiniteCuriosity/ClassificationEnsembles")
 
 ```         
 Classification(data = ISLR::Carseats,
-  colnum = 7,
-  numresamples = 2,
-  do_you_have_new_data = "N",
-  how_to_handle_strings = 1,
-  save_all_trained_models = "N",
-  use_parallel = "N",
-  train_amount = 0.60,
-  test_amount = 0.20,
-  validation_amount = 0.20)
+               colnum = 7,
+               numresamples = 25,
+               predict_on_new_data = "N",
+               save_all_plots = "N",
+               how_to_handle_strings = 1,
+               stratified_random_column = 0,
+               remove_VIF_above <- 5.00,
+               set_seed = "N",
+               save_all_trained_models = "N",
+               scale_all_numeric_predictors_in_data = "N",
+               use_parallel = "N",
+               train_amount = 0.50,
+               test_amount = 0.25,
+               validation_amount = 0.25)
 ```
 
-ClassificationEnsembles will automatically build 25 models to predict the location of carseats (Bad, Medium, Good). The data is available as part of the ISLR package.
+ClassificationEnsembles will automatically build 20 models to predict the location of carseats (Bad, Medium, Good). The data is available as part of the ISLR package.
 
 This is the head of the data set. We will be modeling the ShelveLoc column:
 
 ![Head of carseats data set, the example will model the 7th column, ShelveLoc](head_carseats.png){width="700"}
 
-**The 15 individual classification models are:**
-
-Adabag
-
-Bagging
+**The 12 individual classification models are:**
 
 Bagged Random Forest
+
+Bagging
 
 C50
 
@@ -64,21 +67,15 @@ Random Forest
 
 Ranger
 
-Regularized Discriminant Analysis
-
 RPart
 
 Support Vector Machines
 
 Trees
 
-XGBoost
-
 <br>
 
-**The 10 ensembles are:**
-
-Ensemble ADA Bag
+**The 8 ensembles are:**
 
 Ensemble Bagged Cart
 
@@ -88,17 +85,17 @@ Ensemble C50
 
 Ensemble Naive Bayes
 
-Ensemble Ranger
-
 Ensemble Random Forest
 
-Ensemble Regularized Discriminant Analysis
+Ensemble Ranger
 
 Ensemble Support Vector Machines
 
+Ensemble Trees
+
 <br>
 
-**The 11 plots automatically created (these are close-up views)**
+ClassificationEnsembles automatically makes 25 plots. Here are a few of them:
 
 Accuracy by model and resample
 
@@ -210,6 +207,6 @@ The package also provides summary tables for all models. Here are the summary ta
 
 # Grand summary
 
-The ClassificationEnsembles package was able to build 25 classification models from the Carseats data. Three of the ensembles had 100% accuracy 25 times in a row on the holdout data.
+The ClassificationEnsembles package was able to build 20 classification models from the Carseats data. Three of the ensembles had 100% accuracy 25 times in a row on the holdout data.
 
-The package also automatically provided 11 plots, three tables, a summary report, and summary tables all the models.
+The package also automatically provided 25 plots, five tables, a summary report, and summary tables all the models.
