@@ -114,6 +114,8 @@ if(save_all_plots == "Y"){
   dpi <- as.numeric(readline("Plot resolution. Applies only to raster output types (jpeg, png, tiff): "))
 }
 
+tempdir1 = tempdir()
+
 #### Barchart of the data against y ####
 barchart <- df %>%
   dplyr::mutate(dplyr::across(-y, as.numeric)) %>%
@@ -143,22 +145,22 @@ barchart2 <- df %>%
 
 
 if(save_all_plots == "Y" && device == "eps"){
-  ggplot2::ggsave("barchart.eps", width = width, height = height, units = units, scale = scale, device = device, dpi = dpi)
+  ggplot2::ggsave("barchart.eps", width = width, height = height, path = tempdir1, units = units, scale = scale, device = device, dpi = dpi)
 }
 if(save_all_plots == "Y" && device == "jpeg"){
-  ggplot2::ggsave("barchart.jpeg", width = width, height = height, units = units, scale = scale, device = device, dpi = dpi)
+  ggplot2::ggsave("barchart.jpeg", width = width, height = height, path = tempdir1,  units = units, scale = scale, device = device, dpi = dpi)
 }
 if(save_all_plots == "Y" && device == "pdf"){
-  ggplot2::ggsave("barchart.pdf", width = width, height = height, units = units, scale = scale, device = device, dpi = dpi)
+  ggplot2::ggsave("barchart.pdf", width = width, height = height, path = tempdir1,  units = units, scale = scale, device = device, dpi = dpi)
 }
 if(save_all_plots == "Y" && device == "png"){
-  ggplot2::ggsave("barchart.png", width = width, height = height, units = units, scale = scale, device = device, dpi = dpi)
+  ggplot2::ggsave("barchart.png", width = width, height = height, path = tempdir1,  units = units, scale = scale, device = device, dpi = dpi)
 }
 if(save_all_plots == "Y" && device == "svg"){
-  ggplot2::ggsave("barchart.svg", width = width, height = height, units = units, scale = scale, device = device, dpi = dpi)
+  ggplot2::ggsave("barchart.svg", width = width, height = height, path = tempdir1,  units = units, scale = scale, device = device, dpi = dpi)
 }
 if(save_all_plots == "Y" && device == "tiff"){
-  ggplot2::ggsave("barchart.tiff", width = width, height = height, units = units, scale = scale, device = device, dpi = dpi)
+  ggplot2::ggsave("barchart.tiff", width = width, height = height, path = tempdir1,  units = units, scale = scale, device = device, dpi = dpi)
 }
 
 data_summary <- summary(df)
@@ -194,22 +196,22 @@ boxplots <- df1 %>%
 # Thanks to https://rstudio-pubs-static.s3.amazonaws.com/388596_e21196f1adf04e0ea7cd68edd9eba966.html
 
 if(save_all_plots == "Y" && device == "eps"){
-  ggplot2::ggsave("boxplots.eps", width = width, height = height, units = units, scale = scale, device = device, dpi = dpi)
+  ggplot2::ggsave("boxplots.eps", width = width, height = height, path = tempdir1,  units = units, scale = scale, device = device, dpi = dpi)
 }
 if(save_all_plots == "Y" && device == "jpeg"){
-  ggplot2::ggsave("boxplots.jpeg", width = width, height = height, units = units, scale = scale, device = device, dpi = dpi)
+  ggplot2::ggsave("boxplots.jpeg", width = width, height = height, path = tempdir1,  units = units, scale = scale, device = device, dpi = dpi)
 }
 if(save_all_plots == "Y" && device == "pdf"){
-  ggplot2::ggsave("boxplots.pdf", width = width, height = height, units = units, scale = scale, device = device, dpi = dpi)
+  ggplot2::ggsave("boxplots.pdf", width = width, height = height, path = tempdir1,  units = units, scale = scale, device = device, dpi = dpi)
 }
 if(save_all_plots == "Y" && device == "png"){
-  ggplot2::ggsave("boxplots.png", width = width, height = height, units = units, scale = scale, device = device, dpi = dpi)
+  ggplot2::ggsave("boxplots.png", width = width, height = height, path = tempdir1,  units = units, scale = scale, device = device, dpi = dpi)
 }
 if(save_all_plots == "Y" && device == "svg"){
-  ggplot2::ggsave("boxplots.svg", width = width, height = height, units = units, scale = scale, device = device, dpi = dpi)
+  ggplot2::ggsave("boxplots.svg", width = width, height = height, path = tempdir1,  units = units, scale = scale, device = device, dpi = dpi)
 }
 if(save_all_plots == "Y" && device == "tiff"){
-  ggplot2::ggsave("boxplots.tiff", width = width, height = height, units = units, scale = scale, device = device, dpi = dpi)
+  ggplot2::ggsave("boxplots.tiff", width = width, height = height, path = tempdir1,  units = units, scale = scale, device = device, dpi = dpi)
 }
 
 #### Histograms of the numeric data ####
@@ -219,22 +221,22 @@ histograms <- ggplot2::ggplot(tidyr::gather(df1, cols, value), ggplot2::aes(x = 
   ggplot2::labs(title = "Histograms of each numeric column. Each bar = 10 rows of data")
 
 if(save_all_plots == "Y" && device == "eps"){
-  ggplot2::ggsave("histograms.eps", width = width, height = height, units = units, scale = scale, device = device, dpi = dpi)
+  ggplot2::ggsave("histograms.eps", width = width, height = height, path = tempdir1,  units = units, scale = scale, device = device, dpi = dpi)
 }
 if(save_all_plots == "Y" && device == "jpeg"){
-  ggplot2::ggsave("histograms.jpeg", width = width, height = height, units = units, scale = scale, device = device, dpi = dpi)
+  ggplot2::ggsave("histograms.jpeg", width = width, height = height, path = tempdir1,  units = units, scale = scale, device = device, dpi = dpi)
 }
 if(save_all_plots == "Y" && device == "pdf"){
-  ggplot2::ggsave("histograms.pdf", width = width, height = height, units = units, scale = scale, device = device, dpi = dpi)
+  ggplot2::ggsave("histograms.pdf", width = width, height = height, path = tempdir1,  units = units, scale = scale, device = device, dpi = dpi)
 }
 if(save_all_plots == "Y" && device == "png"){
-  ggplot2::ggsave("histograms.png", width = width, height = height, units = units, scale = scale, device = device, dpi = dpi)
+  ggplot2::ggsave("histograms.png", width = width, height = height, path = tempdir1,  units = units, scale = scale, device = device, dpi = dpi)
 }
 if(save_all_plots == "Y" && device == "svg"){
-  ggplot2::ggsave("histograms.svg", width = width, height = height, units = units, scale = scale, device = device, dpi = dpi)
+  ggplot2::ggsave("histograms.svg", width = width, height = height, path = tempdir1,  units = units, scale = scale, device = device, dpi = dpi)
 }
 if(save_all_plots == "Y" && device == "tiff"){
-  ggplot2::ggsave("histograms.tiff", width = width, height = height, units = units, scale = scale, device = device, dpi = dpi)
+  ggplot2::ggsave("histograms.tiff", width = width, height = height, path = tempdir1,  units = units, scale = scale, device = device, dpi = dpi)
 }
 
 if (use_parallel == "Y") {
@@ -2866,22 +2868,22 @@ accuracy_plot <- ggplot2::ggplot(data = accuracy_data, mapping = ggplot2::aes(x 
   ggplot2::theme(legend.position = "none")
 
 if(save_all_plots == "Y" && device == "eps"){
-  ggplot2::ggsave("accuracy_plot.eps", width = width, height = height, units = units, scale = scale, device = device, dpi = dpi)
+  ggplot2::ggsave("accuracy_plot.eps", width = width, height = height, path = tempdir1,  units = units, scale = scale, device = device, dpi = dpi)
 }
 if(save_all_plots == "Y" && device == "jpeg"){
-  ggplot2::ggsave("accuracy_plot.jpeg", width = width, height = height, units = units, scale = scale, device = device, dpi = dpi)
+  ggplot2::ggsave("accuracy_plot.jpeg", width = width, height = height, path = tempdir1,  units = units, scale = scale, device = device, dpi = dpi)
 }
 if(save_all_plots == "Y" && device == "pdf"){
-  ggplot2::ggsave("accuracy_plot.pdf", width = width, height = height, units = units, scale = scale, device = device, dpi = dpi)
+  ggplot2::ggsave("accuracy_plot.pdf", width = width, height = height, path = tempdir1,  units = units, scale = scale, device = device, dpi = dpi)
 }
 if(save_all_plots == "Y" && device == "png"){
-  ggplot2::ggsave("accuracy_plot.png", width = width, height = height, units = units, scale = scale, device = device, dpi = dpi)
+  ggplot2::ggsave("accuracy_plot.png", width = width, height = height, path = tempdir1,  units = units, scale = scale, device = device, dpi = dpi)
 }
 if(save_all_plots == "Y" && device == "svg"){
-  ggplot2::ggsave("accuracy_plot.svg", width = width, height = height, units = units, scale = scale, device = device, dpi = dpi)
+  ggplot2::ggsave("accuracy_plot.svg", width = width, height = height, path = tempdir1,  units = units, scale = scale, device = device, dpi = dpi)
 }
 if(save_all_plots == "Y" && device == "tiff"){
-  ggplot2::ggsave("accuracy_plot.tiff", width = width, height = height, units = units, scale = scale, device = device, dpi = dpi)
+  ggplot2::ggsave("accuracy_plot.tiff", width = width, height = height, path = tempdir1,  units = units, scale = scale, device = device, dpi = dpi)
 }
 
 accuracy_plot2 <- ggplot2::ggplot(data = accuracy_data, mapping = ggplot2::aes(x = count, y = data, color = model)) +
@@ -2895,22 +2897,22 @@ accuracy_plot2 <- ggplot2::ggplot(data = accuracy_data, mapping = ggplot2::aes(x
   ggplot2::theme(legend.position = "none")
 
 if(save_all_plots == "Y" && device == "eps"){
-  ggplot2::ggsave("accuracy_plot2.eps", width = width, height = height, units = units, scale = scale, device = device, dpi = dpi)
+  ggplot2::ggsave("accuracy_plot2.eps", width = width, height = height, path = tempdir1,  units = units, scale = scale, device = device, dpi = dpi)
 }
 if(save_all_plots == "Y" && device == "jpeg"){
-  ggplot2::ggsave("accuracy_plot2.jpeg", width = width, height = height, units = units, scale = scale, device = device, dpi = dpi)
+  ggplot2::ggsave("accuracy_plot2.jpeg", width = width, height = height, path = tempdir1,  units = units, scale = scale, device = device, dpi = dpi)
 }
 if(save_all_plots == "Y" && device == "pdf"){
-  ggplot2::ggsave("accuracy_plot2.pdf", width = width, height = height, units = units, scale = scale, device = device, dpi = dpi)
+  ggplot2::ggsave("accuracy_plot2.pdf", width = width, height = height, path = tempdir1,  units = units, scale = scale, device = device, dpi = dpi)
 }
 if(save_all_plots == "Y" && device == "png"){
-  ggplot2::ggsave("accuracy_plot2.png", width = width, height = height, units = units, scale = scale, device = device, dpi = dpi)
+  ggplot2::ggsave("accuracy_plot2.png", width = width, height = height, path = tempdir1,  units = units, scale = scale, device = device, dpi = dpi)
 }
 if(save_all_plots == "Y" && device == "svg"){
-  ggplot2::ggsave("accuracy_plot2.svg", width = width, height = height, units = units, scale = scale, device = device, dpi = dpi)
+  ggplot2::ggsave("accuracy_plot2.svg", width = width, height = height, path = tempdir1,  units = units, scale = scale, device = device, dpi = dpi)
 }
 if(save_all_plots == "Y" && device == "tiff"){
-  ggplot2::ggsave("accuracy_plot2.tiff", width = width, height = height, units = units, scale = scale, device = device, dpi = dpi)
+  ggplot2::ggsave("accuracy_plot2.tiff", width = width, height = height, path = tempdir1,  units = units, scale = scale, device = device, dpi = dpi)
 }
 
 #### Residuals plot ####
@@ -2955,22 +2957,22 @@ residuals_plot <- ggplot2::ggplot(data = residuals_data, mapping = ggplot2::aes(
   ggplot2::labs(y = "Residuals by model, lower is better, 0 is best. \n The horizontal line is the mean of the results, the red line is 0.") +
   ggplot2::theme(legend.position = "none")
 if(save_all_plots == "Y" && device == "eps"){
-  ggplot2::ggsave("residuals_plot.eps", width = width, height = height, units = units, scale = scale, device = device, dpi = dpi)
+  ggplot2::ggsave("residuals_plot.eps", width = width, height = height, path = tempdir1,  units = units, scale = scale, device = device, dpi = dpi)
 }
 if(save_all_plots == "Y" && device == "jpeg"){
-  ggplot2::ggsave("residuals_plot.jpeg", width = width, height = height, units = units, scale = scale, device = device, dpi = dpi)
+  ggplot2::ggsave("residuals_plot.jpeg", width = width, height = height, path = tempdir1,  units = units, scale = scale, device = device, dpi = dpi)
 }
 if(save_all_plots == "Y" && device == "pdf"){
-  ggplot2::ggsave("residuals_plot.pdf", width = width, height = height, units = units, scale = scale, device = device, dpi = dpi)
+  ggplot2::ggsave("residuals_plot.pdf", width = width, height = height, path = tempdir1,  units = units, scale = scale, device = device, dpi = dpi)
 }
 if(save_all_plots == "Y" && device == "png"){
-  ggplot2::ggsave("residuals_plot.png", width = width, height = height, units = units, scale = scale, device = device, dpi = dpi)
+  ggplot2::ggsave("residuals_plot.png", width = width, height = height, path = tempdir1,  units = units, scale = scale, device = device, dpi = dpi)
 }
 if(save_all_plots == "Y" && device == "svg"){
-  ggplot2::ggsave("residuals_plot.svg", width = width, height = height, units = units, scale = scale, device = device, dpi = dpi)
+  ggplot2::ggsave("residuals_plot.svg", width = width, height = height, path = tempdir1,  units = units, scale = scale, device = device, dpi = dpi)
 }
 if(save_all_plots == "Y" && device == "tiff"){
-  ggplot2::ggsave("residuals_plot.tiff", width = width, height = height, units = units, scale = scale, device = device, dpi = dpi)
+  ggplot2::ggsave("residuals_plot.tiff", width = width, height = height, path = tempdir1,  units = units, scale = scale, device = device, dpi = dpi)
 }
 
 residuals_plot2 <- ggplot2::ggplot(data = residuals_data, mapping = ggplot2::aes(x = count, y = data, color = model)) +
@@ -2984,22 +2986,22 @@ residuals_plot2 <- ggplot2::ggplot(data = residuals_data, mapping = ggplot2::aes
   ggplot2::theme(legend.position = "none")
 
 if(save_all_plots == "Y" && device == "eps"){
-  ggplot2::ggsave("residuals_plot2.eps", width = width, height = height, units = units, scale = scale, device = device, dpi = dpi)
+  ggplot2::ggsave("residuals_plot2.eps", width = width, height = height, path = tempdir1,  units = units, scale = scale, device = device, dpi = dpi)
 }
 if(save_all_plots == "Y" && device == "jpeg"){
-  ggplot2::ggsave("residuals_plot2.jpeg", width = width, height = height, units = units, scale = scale, device = device, dpi = dpi)
+  ggplot2::ggsave("residuals_plot2.jpeg", width = width, height = height, path = tempdir1,  units = units, scale = scale, device = device, dpi = dpi)
 }
 if(save_all_plots == "Y" && device == "pdf"){
-  ggplot2::ggsave("residuals_plot2.pdf", width = width, height = height, units = units, scale = scale, device = device, dpi = dpi)
+  ggplot2::ggsave("residuals_plot2.pdf", width = width, height = height, path = tempdir1,  units = units, scale = scale, device = device, dpi = dpi)
 }
 if(save_all_plots == "Y" && device == "png"){
-  ggplot2::ggsave("residuals_plot2.png", width = width, height = height, units = units, scale = scale, device = device, dpi = dpi)
+  ggplot2::ggsave("residuals_plot2.png", width = width, height = height, path = tempdir1,  units = units, scale = scale, device = device, dpi = dpi)
 }
 if(save_all_plots == "Y" && device == "svg"){
-  ggplot2::ggsave("residuals_plot2.svg", width = width, height = height, units = units, scale = scale, device = device, dpi = dpi)
+  ggplot2::ggsave("residuals_plot2.svg", width = width, height = height, path = tempdir1,  units = units, scale = scale, device = device, dpi = dpi)
 }
 if(save_all_plots == "Y" && device == "tiff"){
-  ggplot2::ggsave("residuals_plot2.tiff", width = width, height = height, units = units, scale = scale, device = device, dpi = dpi)
+  ggplot2::ggsave("residuals_plot2.tiff", width = width, height = height, path = tempdir1,  units = units, scale = scale, device = device, dpi = dpi)
 }
 
 #### Holdout vs train plot ####
@@ -3078,22 +3080,22 @@ true_positive_rate_plot <- ggplot2::ggplot(data = true_positive_rate_data, mappi
   ggplot2::theme(legend.position = "none")
 
 if(save_all_plots == "Y" && device == "eps"){
-  ggplot2::ggsave("true_positive_rate_plot.eps", width = width, height = height, units = units, scale = scale, device = device, dpi = dpi)
+  ggplot2::ggsave("true_positive_rate_plot.eps", width = width, height = height, path = tempdir1,  units = units, scale = scale, device = device, dpi = dpi)
 }
 if(save_all_plots == "Y" && device == "jpeg"){
-  ggplot2::ggsave("true_positive_rate_plot.jpeg", width = width, height = height, units = units, scale = scale, device = device, dpi = dpi)
+  ggplot2::ggsave("true_positive_rate_plot.jpeg", width = width, height = height, path = tempdir1,  units = units, scale = scale, device = device, dpi = dpi)
 }
 if(save_all_plots == "Y" && device == "pdf"){
-  ggplot2::ggsave("true_positive_rate_plot.pdf", width = width, height = height, units = units, scale = scale, device = device, dpi = dpi)
+  ggplot2::ggsave("true_positive_rate_plot.pdf", width = width, height = height, path = tempdir1,  units = units, scale = scale, device = device, dpi = dpi)
 }
 if(save_all_plots == "Y" && device == "png"){
-  ggplot2::ggsave("true_positive_rate_plot.png", width = width, height = height, units = units, scale = scale, device = device, dpi = dpi)
+  ggplot2::ggsave("true_positive_rate_plot.png", width = width, height = height, path = tempdir1,  units = units, scale = scale, device = device, dpi = dpi)
 }
 if(save_all_plots == "Y" && device == "svg"){
-  ggplot2::ggsave("true_positive_rate_plot.svg", width = width, height = height, units = units, scale = scale, device = device, dpi = dpi)
+  ggplot2::ggsave("true_positive_rate_plot.svg", width = width, height = height, path = tempdir1,  units = units, scale = scale, device = device, dpi = dpi)
 }
 if(save_all_plots == "Y" && device == "tiff"){
-  ggplot2::ggsave("true_positive_rate_plot.tiff", width = width, height = height, units = units, scale = scale, device = device, dpi = dpi)
+  ggplot2::ggsave("true_positive_rate_plot.tiff", width = width, height = height, path = tempdir1,  units = units, scale = scale, device = device, dpi = dpi)
 }
 
 true_positive_rate_plot2 <- ggplot2::ggplot(data = true_positive_rate_data, mapping = ggplot2::aes(x = count, y = data, color = model)) +
@@ -3107,22 +3109,22 @@ true_positive_rate_plot2 <- ggplot2::ggplot(data = true_positive_rate_data, mapp
   ggplot2::theme(legend.position = "none")
 
 if(save_all_plots == "Y" && device == "eps"){
-  ggplot2::ggsave("true_positive_rate_plot2.eps", width = width, height = height, units = units, scale = scale, device = device, dpi = dpi)
+  ggplot2::ggsave("true_positive_rate_plot2.eps", width = width, height = height, path = tempdir1,  units = units, scale = scale, device = device, dpi = dpi)
 }
 if(save_all_plots == "Y" && device == "jpeg"){
-  ggplot2::ggsave("true_positive_rate_plot2.jpeg", width = width, height = height, units = units, scale = scale, device = device, dpi = dpi)
+  ggplot2::ggsave("true_positive_rate_plot2.jpeg", width = width, height = height, path = tempdir1,  units = units, scale = scale, device = device, dpi = dpi)
 }
 if(save_all_plots == "Y" && device == "pdf"){
-  ggplot2::ggsave("true_positive_rate_plot2.pdf", width = width, height = height, units = units, scale = scale, device = device, dpi = dpi)
+  ggplot2::ggsave("true_positive_rate_plot2.pdf", width = width, height = height, path = tempdir1,  units = units, scale = scale, device = device, dpi = dpi)
 }
 if(save_all_plots == "Y" && device == "png"){
-  ggplot2::ggsave("true_positive_rate_plot2.png", width = width, height = height, units = units, scale = scale, device = device, dpi = dpi)
+  ggplot2::ggsave("true_positive_rate_plot2.png", width = width, height = height, path = tempdir1,  units = units, scale = scale, device = device, dpi = dpi)
 }
 if(save_all_plots == "Y" && device == "svg"){
-  ggplot2::ggsave("true_positive_rate_plot2.svg", width = width, height = height, units = units, scale = scale, device = device, dpi = dpi)
+  ggplot2::ggsave("true_positive_rate_plot2.svg", width = width, height = height, path = tempdir1,  units = units, scale = scale, device = device, dpi = dpi)
 }
 if(save_all_plots == "Y" && device == "tiff"){
-  ggplot2::ggsave("true_positive_rate_plot2.tiff", width = width, height = height, units = units, scale = scale, device = device, dpi = dpi)
+  ggplot2::ggsave("true_positive_rate_plot2.tiff", width = width, height = height, path = tempdir1,  units = units, scale = scale, device = device, dpi = dpi)
 }
 
 #### True negative rate plot ####
@@ -3168,22 +3170,22 @@ true_negative_rate_plot <- ggplot2::ggplot(data = true_negative_rate_data, mappi
   ggplot2::theme(legend.position = "none")
 
 if(save_all_plots == "Y" && device == "eps"){
-  ggplot2::ggsave("true_negative_rate_plot.eps", width = width, height = height, units = units, scale = scale, device = device, dpi = dpi)
+  ggplot2::ggsave("true_negative_rate_plot.eps", width = width, height = height, path = tempdir1,  units = units, scale = scale, device = device, dpi = dpi)
 }
 if(save_all_plots == "Y" && device == "jpeg"){
-  ggplot2::ggsave("true_negative_rate_plot.jpeg", width = width, height = height, units = units, scale = scale, device = device, dpi = dpi)
+  ggplot2::ggsave("true_negative_rate_plot.jpeg", width = width, height = height, path = tempdir1,  units = units, scale = scale, device = device, dpi = dpi)
 }
 if(save_all_plots == "Y" && device == "pdf"){
-  ggplot2::ggsave("true_negative_rate_plot.pdf", width = width, height = height, units = units, scale = scale, device = device, dpi = dpi)
+  ggplot2::ggsave("true_negative_rate_plot.pdf", width = width, height = height, path = tempdir1,  units = units, scale = scale, device = device, dpi = dpi)
 }
 if(save_all_plots == "Y" && device == "png"){
-  ggplot2::ggsave("true_negative_rate_plot.png", width = width, height = height, units = units, scale = scale, device = device, dpi = dpi)
+  ggplot2::ggsave("true_negative_rate_plot.png", width = width, height = height, path = tempdir1,  units = units, scale = scale, device = device, dpi = dpi)
 }
 if(save_all_plots == "Y" && device == "svg"){
-  ggplot2::ggsave("true_negative_rate_plot.svg", width = width, height = height, units = units, scale = scale, device = device, dpi = dpi)
+  ggplot2::ggsave("true_negative_rate_plot.svg", width = width, height = height, path = tempdir1,  units = units, scale = scale, device = device, dpi = dpi)
 }
 if(save_all_plots == "Y" && device == "tiff"){
-  ggplot2::ggsave("true_negative_rate_plot.tiff", width = width, height = height, units = units, scale = scale, device = device, dpi = dpi)
+  ggplot2::ggsave("true_negative_rate_plot.tiff", width = width, height = height, path = tempdir1,  units = units, scale = scale, device = device, dpi = dpi)
 }
 
 true_negative_rate_plot2 <- ggplot2::ggplot(data = true_negative_rate_data, mapping = ggplot2::aes(x = count, y = data, color = model)) +
@@ -3197,22 +3199,22 @@ true_negative_rate_plot2 <- ggplot2::ggplot(data = true_negative_rate_data, mapp
   ggplot2::theme(legend.position = "none")
 
 if(save_all_plots == "Y" && device == "eps"){
-  ggplot2::ggsave("true_negative_rate_plot2.eps", width = width, height = height, units = units, scale = scale, device = device, dpi = dpi)
+  ggplot2::ggsave("true_negative_rate_plot2.eps", width = width, height = height, path = tempdir1,  units = units, scale = scale, device = device, dpi = dpi)
 }
 if(save_all_plots == "Y" && device == "jpeg"){
-  ggplot2::ggsave("true_negative_rate_plot2.jpeg", width = width, height = height, units = units, scale = scale, device = device, dpi = dpi)
+  ggplot2::ggsave("true_negative_rate_plot2.jpeg", width = width, height = height, path = tempdir1,  units = units, scale = scale, device = device, dpi = dpi)
 }
 if(save_all_plots == "Y" && device == "pdf"){
-  ggplot2::ggsave("true_negative_rate_plot2.pdf", width = width, height = height, units = units, scale = scale, device = device, dpi = dpi)
+  ggplot2::ggsave("true_negative_rate_plot2.pdf", width = width, height = height, path = tempdir1,  units = units, scale = scale, device = device, dpi = dpi)
 }
 if(save_all_plots == "Y" && device == "png"){
-  ggplot2::ggsave("true_negative_rate_plot2.png", width = width, height = height, units = units, scale = scale, device = device, dpi = dpi)
+  ggplot2::ggsave("true_negative_rate_plot2.png", width = width, height = height, path = tempdir1,  units = units, scale = scale, device = device, dpi = dpi)
 }
 if(save_all_plots == "Y" && device == "svg"){
-  ggplot2::ggsave("true_negative_rate_plot2.svg", width = width, height = height, units = units, scale = scale, device = device, dpi = dpi)
+  ggplot2::ggsave("true_negative_rate_plot2.svg", width = width, height = height, path = tempdir1,  units = units, scale = scale, device = device, dpi = dpi)
 }
 if(save_all_plots == "Y" && device == "tiff"){
-  ggplot2::ggsave("true_negative_rate_plot2.tiff", width = width, height = height, units = units, scale = scale, device = device, dpi = dpi)
+  ggplot2::ggsave("true_negative_rate_plot2.tiff", width = width, height = height, path = tempdir1,  units = units, scale = scale, device = device, dpi = dpi)
 }
 
 
@@ -3259,22 +3261,22 @@ false_positive_rate_plot <- ggplot2::ggplot(data = false_positive_rate_data, map
   ggplot2::theme(legend.position = "none")
 
 if(save_all_plots == "Y" && device == "eps"){
-  ggplot2::ggsave("false_positive_rate_plot.eps", width = width, height = height, units = units, scale = scale, device = device, dpi = dpi)
+  ggplot2::ggsave("false_positive_rate_plot.eps", width = width, height = height, path = tempdir1,  units = units, scale = scale, device = device, dpi = dpi)
 }
 if(save_all_plots == "Y" && device == "jpeg"){
-  ggplot2::ggsave("false_positive_rate_plot.jpeg", width = width, height = height, units = units, scale = scale, device = device, dpi = dpi)
+  ggplot2::ggsave("false_positive_rate_plot.jpeg", width = width, height = height, path = tempdir1,  units = units, scale = scale, device = device, dpi = dpi)
 }
 if(save_all_plots == "Y" && device == "pdf"){
-  ggplot2::ggsave("false_positive_rate_plot.pdf", width = width, height = height, units = units, scale = scale, device = device, dpi = dpi)
+  ggplot2::ggsave("false_positive_rate_plot.pdf", width = width, height = height, path = tempdir1,  units = units, scale = scale, device = device, dpi = dpi)
 }
 if(save_all_plots == "Y" && device == "png"){
-  ggplot2::ggsave("false_positive_rate_plot.png", width = width, height = height, units = units, scale = scale, device = device, dpi = dpi)
+  ggplot2::ggsave("false_positive_rate_plot.png", width = width, height = height, path = tempdir1,  units = units, scale = scale, device = device, dpi = dpi)
 }
 if(save_all_plots == "Y" && device == "svg"){
-  ggplot2::ggsave("false_positive_rate_plot.svg", width = width, height = height, units = units, scale = scale, device = device, dpi = dpi)
+  ggplot2::ggsave("false_positive_rate_plot.svg", width = width, height = height, path = tempdir1,  units = units, scale = scale, device = device, dpi = dpi)
 }
 if(save_all_plots == "Y" && device == "tiff"){
-  ggplot2::ggsave("false_positive_rate_plot.tiff", width = width, height = height, units = units, scale = scale, device = device, dpi = dpi)
+  ggplot2::ggsave("false_positive_rate_plot.tiff", width = width, height = height, path = tempdir1,  units = units, scale = scale, device = device, dpi = dpi)
 }
 
 false_positive_rate_plot2 <- ggplot2::ggplot(data = false_positive_rate_data, mapping = ggplot2::aes(x = count, y = data, color = model)) +
@@ -3288,22 +3290,22 @@ false_positive_rate_plot2 <- ggplot2::ggplot(data = false_positive_rate_data, ma
   ggplot2::theme(legend.position = "none")
 
 if(save_all_plots == "Y" && device == "eps"){
-  ggplot2::ggsave("false_positive_rate_plot2.eps", width = width, height = height, units = units, scale = scale, device = device, dpi = dpi)
+  ggplot2::ggsave("false_positive_rate_plot2.eps", width = width, height = height, path = tempdir1,  units = units, scale = scale, device = device, dpi = dpi)
 }
 if(save_all_plots == "Y" && device == "jpeg"){
-  ggplot2::ggsave("false_positive_rate_plot2.jpeg", width = width, height = height, units = units, scale = scale, device = device, dpi = dpi)
+  ggplot2::ggsave("false_positive_rate_plot2.jpeg", width = width, height = height, path = tempdir1,  units = units, scale = scale, device = device, dpi = dpi)
 }
 if(save_all_plots == "Y" && device == "pdf"){
-  ggplot2::ggsave("false_positive_rate_plot2.pdf", width = width, height = height, units = units, scale = scale, device = device, dpi = dpi)
+  ggplot2::ggsave("false_positive_rate_plot2.pdf", width = width, height = height, path = tempdir1,  units = units, scale = scale, device = device, dpi = dpi)
 }
 if(save_all_plots == "Y" && device == "png"){
-  ggplot2::ggsave("false_positive_rate_plot2.png", width = width, height = height, units = units, scale = scale, device = device, dpi = dpi)
+  ggplot2::ggsave("false_positive_rate_plot2.png", width = width, height = height, path = tempdir1,  units = units, scale = scale, device = device, dpi = dpi)
 }
 if(save_all_plots == "Y" && device == "svg"){
-  ggplot2::ggsave("false_positive_rate_plot2.svg", width = width, height = height, units = units, scale = scale, device = device, dpi = dpi)
+  ggplot2::ggsave("false_positive_rate_plot2.svg", width = width, height = height, path = tempdir1,  units = units, scale = scale, device = device, dpi = dpi)
 }
 if(save_all_plots == "Y" && device == "tiff"){
-  ggplot2::ggsave("false_positive_rate_plot2.tiff", width = width, height = height, units = units, scale = scale, device = device, dpi = dpi)
+  ggplot2::ggsave("false_positive_rate_plot2.tiff", width = width, height = height, path = tempdir1,  units = units, scale = scale, device = device, dpi = dpi)
 }
 
 
@@ -3350,22 +3352,22 @@ false_negative_rate_plot <- ggplot2::ggplot(data = false_negative_rate_data, map
   ggplot2::theme(legend.position = "none")
 
 if(save_all_plots == "Y" && device == "eps"){
-  ggplot2::ggsave("false_negative_rate_plot.eps", width = width, height = height, units = units, scale = scale, device = device, dpi = dpi)
+  ggplot2::ggsave("false_negative_rate_plot.eps", width = width, height = height, path = tempdir1,  units = units, scale = scale, device = device, dpi = dpi)
 }
 if(save_all_plots == "Y" && device == "jpeg"){
-  ggplot2::ggsave("false_negative_rate_plot.jpeg", width = width, height = height, units = units, scale = scale, device = device, dpi = dpi)
+  ggplot2::ggsave("false_negative_rate_plot.jpeg", width = width, height = height, path = tempdir1,  units = units, scale = scale, device = device, dpi = dpi)
 }
 if(save_all_plots == "Y" && device == "pdf"){
-  ggplot2::ggsave("false_negative_rate_plot.pdf", width = width, height = height, units = units, scale = scale, device = device, dpi = dpi)
+  ggplot2::ggsave("false_negative_rate_plot.pdf", width = width, height = height, path = tempdir1,  units = units, scale = scale, device = device, dpi = dpi)
 }
 if(save_all_plots == "Y" && device == "png"){
-  ggplot2::ggsave("false_negative_rate_plot.png", width = width, height = height, units = units, scale = scale, device = device, dpi = dpi)
+  ggplot2::ggsave("false_negative_rate_plot.png", width = width, height = height, path = tempdir1,  units = units, scale = scale, device = device, dpi = dpi)
 }
 if(save_all_plots == "Y" && device == "svg"){
-  ggplot2::ggsave("false_negative_rate_plot.svg", width = width, height = height, units = units, scale = scale, device = device, dpi = dpi)
+  ggplot2::ggsave("false_negative_rate_plot.svg", width = width, height = height, path = tempdir1,  units = units, scale = scale, device = device, dpi = dpi)
 }
 if(save_all_plots == "Y" && device == "tiff"){
-  ggplot2::ggsave("false_negative_rate_plot.tiff", width = width, height = height, units = units, scale = scale, device = device, dpi = dpi)
+  ggplot2::ggsave("false_negative_rate_plot.tiff", width = width, height = height, path = tempdir1,  units = units, scale = scale, device = device, dpi = dpi)
 }
 
 false_negative_rate_plot2 <- ggplot2::ggplot(data = false_negative_rate_data, mapping = ggplot2::aes(x = count, y = data, color = model)) +
@@ -3379,22 +3381,22 @@ false_negative_rate_plot2 <- ggplot2::ggplot(data = false_negative_rate_data, ma
   ggplot2::theme(legend.position = "none")
 
 if(save_all_plots == "Y" && device == "eps"){
-  ggplot2::ggsave("false_negative_rate_plot2.eps", width = width, height = height, units = units, scale = scale, device = device, dpi = dpi)
+  ggplot2::ggsave("false_negative_rate_plot2.eps", width = width, height = height, path = tempdir1,  units = units, scale = scale, device = device, dpi = dpi)
 }
 if(save_all_plots == "Y" && device == "jpeg"){
-  ggplot2::ggsave("false_negative_rate_plot2.jpeg", width = width, height = height, units = units, scale = scale, device = device, dpi = dpi)
+  ggplot2::ggsave("false_negative_rate_plot2.jpeg", width = width, height = height, path = tempdir1,  units = units, scale = scale, device = device, dpi = dpi)
 }
 if(save_all_plots == "Y" && device == "pdf"){
-  ggplot2::ggsave("false_negative_rate_plot2.pdf", width = width, height = height, units = units, scale = scale, device = device, dpi = dpi)
+  ggplot2::ggsave("false_negative_rate_plot2.pdf", width = width, height = height, path = tempdir1,  units = units, scale = scale, device = device, dpi = dpi)
 }
 if(save_all_plots == "Y" && device == "png"){
-  ggplot2::ggsave("false_negative_rate_plot2.png", width = width, height = height, units = units, scale = scale, device = device, dpi = dpi)
+  ggplot2::ggsave("false_negative_rate_plot2.png", width = width, height = height, path = tempdir1,  units = units, scale = scale, device = device, dpi = dpi)
 }
 if(save_all_plots == "Y" && device == "svg"){
-  ggplot2::ggsave("false_negative_rate_plot2.svg", width = width, height = height, units = units, scale = scale, device = device, dpi = dpi)
+  ggplot2::ggsave("false_negative_rate_plot2.svg", width = width, height = height, path = tempdir1,  units = units, scale = scale, device = device, dpi = dpi)
 }
 if(save_all_plots == "Y" && device == "tiff"){
-  ggplot2::ggsave("false_negative_rate_plot2.tiff", width = width, height = height, units = units, scale = scale, device = device, dpi = dpi)
+  ggplot2::ggsave("false_negative_rate_plot2.tiff", width = width, height = height, path = tempdir1,  units = units, scale = scale, device = device, dpi = dpi)
 }
 
 #### Positive predictive value plot ####
@@ -3440,22 +3442,22 @@ positive_pred_value_plot <- ggplot2::ggplot(data = positive_pred_value_data, map
   ggplot2::theme(legend.position = "none")
 
 if(save_all_plots == "Y" && device == "eps"){
-  ggplot2::ggsave("positive_pred_value_plot.eps", width = width, height = height, units = units, scale = scale, device = device, dpi = dpi)
+  ggplot2::ggsave("positive_pred_value_plot.eps", width = width, height = height, path = tempdir1,  units = units, scale = scale, device = device, dpi = dpi)
 }
 if(save_all_plots == "Y" && device == "jpeg"){
-  ggplot2::ggsave("positive_pred_value_plot.jpeg", width = width, height = height, units = units, scale = scale, device = device, dpi = dpi)
+  ggplot2::ggsave("positive_pred_value_plot.jpeg", width = width, height = height, path = tempdir1,  units = units, scale = scale, device = device, dpi = dpi)
 }
 if(save_all_plots == "Y" && device == "pdf"){
-  ggplot2::ggsave("positive_pred_value_plot.pdf", width = width, height = height, units = units, scale = scale, device = device, dpi = dpi)
+  ggplot2::ggsave("positive_pred_value_plot.pdf", width = width, height = height, path = tempdir1,  units = units, scale = scale, device = device, dpi = dpi)
 }
 if(save_all_plots == "Y" && device == "png"){
-  ggplot2::ggsave("positive_pred_value_plot.png", width = width, height = height, units = units, scale = scale, device = device, dpi = dpi)
+  ggplot2::ggsave("positive_pred_value_plot.png", width = width, height = height, path = tempdir1,  units = units, scale = scale, device = device, dpi = dpi)
 }
 if(save_all_plots == "Y" && device == "svg"){
-  ggplot2::ggsave("positive_pred_value_plot.svg", width = width, height = height, units = units, scale = scale, device = device, dpi = dpi)
+  ggplot2::ggsave("positive_pred_value_plot.svg", width = width, height = height, path = tempdir1,  units = units, scale = scale, device = device, dpi = dpi)
 }
 if(save_all_plots == "Y" && device == "tiff"){
-  ggplot2::ggsave("positive_pred_value_plot.tiff", width = width, height = height, units = units, scale = scale, device = device, dpi = dpi)
+  ggplot2::ggsave("positive_pred_value_plot.tiff", width = width, height = height, path = tempdir1,  units = units, scale = scale, device = device, dpi = dpi)
 }
 
 positive_pred_value_plot2 <- ggplot2::ggplot(data = positive_pred_value_data, mapping = ggplot2::aes(x = count, y = data, color = model)) +
@@ -3469,22 +3471,22 @@ positive_pred_value_plot2 <- ggplot2::ggplot(data = positive_pred_value_data, ma
   ggplot2::theme(legend.position = "none")
 
 if(save_all_plots == "Y" && device == "eps"){
-  ggplot2::ggsave("positive_pred_value_plot2.eps", width = width, height = height, units = units, scale = scale, device = device, dpi = dpi)
+  ggplot2::ggsave("positive_pred_value_plot2.eps", width = width, height = height, path = tempdir1,  units = units, scale = scale, device = device, dpi = dpi)
 }
 if(save_all_plots == "Y" && device == "jpeg"){
-  ggplot2::ggsave("positive_pred_value_plot2.jpeg", width = width, height = height, units = units, scale = scale, device = device, dpi = dpi)
+  ggplot2::ggsave("positive_pred_value_plot2.jpeg", width = width, height = height, path = tempdir1,  units = units, scale = scale, device = device, dpi = dpi)
 }
 if(save_all_plots == "Y" && device == "pdf"){
-  ggplot2::ggsave("positive_pred_value_plot2.pdf", width = width, height = height, units = units, scale = scale, device = device, dpi = dpi)
+  ggplot2::ggsave("positive_pred_value_plot2.pdf", width = width, height = height, path = tempdir1,  units = units, scale = scale, device = device, dpi = dpi)
 }
 if(save_all_plots == "Y" && device == "png"){
-  ggplot2::ggsave("positive_pred_value_plot2.png", width = width, height = height, units = units, scale = scale, device = device, dpi = dpi)
+  ggplot2::ggsave("positive_pred_value_plot2.png", width = width, height = height, path = tempdir1,  units = units, scale = scale, device = device, dpi = dpi)
 }
 if(save_all_plots == "Y" && device == "svg"){
-  ggplot2::ggsave("positive_pred_value_plot2.svg", width = width, height = height, units = units, scale = scale, device = device, dpi = dpi)
+  ggplot2::ggsave("positive_pred_value_plot2.svg", width = width, height = height, path = tempdir1,  units = units, scale = scale, device = device, dpi = dpi)
 }
 if(save_all_plots == "Y" && device == "tiff"){
-  ggplot2::ggsave("positive_pred_value_plot2.tiff", width = width, height = height, units = units, scale = scale, device = device, dpi = dpi)
+  ggplot2::ggsave("positive_pred_value_plot2.tiff", width = width, height = height, path = tempdir1,  units = units, scale = scale, device = device, dpi = dpi)
 }
 
 #### Negative predictive value plot ####
@@ -3530,22 +3532,22 @@ negative_pred_value_plot <- ggplot2::ggplot(data = negative_pred_value_data, map
   ggplot2::theme(legend.position = "none")
 
 if(save_all_plots == "Y" && device == "eps"){
-  ggplot2::ggsave("negative_pred_value_plot.eps", width = width, height = height, units = units, scale = scale, device = device, dpi = dpi)
+  ggplot2::ggsave("negative_pred_value_plot.eps", width = width, height = height, path = tempdir1,  units = units, scale = scale, device = device, dpi = dpi)
 }
 if(save_all_plots == "Y" && device == "jpeg"){
-  ggplot2::ggsave("negative_pred_value_plot.jpeg", width = width, height = height, units = units, scale = scale, device = device, dpi = dpi)
+  ggplot2::ggsave("negative_pred_value_plot.jpeg", width = width, height = height, path = tempdir1,  units = units, scale = scale, device = device, dpi = dpi)
 }
 if(save_all_plots == "Y" && device == "pdf"){
-  ggplot2::ggsave("negative_pred_value_plot.pdf", width = width, height = height, units = units, scale = scale, device = device, dpi = dpi)
+  ggplot2::ggsave("negative_pred_value_plot.pdf", width = width, height = height, path = tempdir1,  units = units, scale = scale, device = device, dpi = dpi)
 }
 if(save_all_plots == "Y" && device == "png"){
-  ggplot2::ggsave("negative_pred_value_plot.png", width = width, height = height, units = units, scale = scale, device = device, dpi = dpi)
+  ggplot2::ggsave("negative_pred_value_plot.png", width = width, height = height, path = tempdir1,  units = units, scale = scale, device = device, dpi = dpi)
 }
 if(save_all_plots == "Y" && device == "svg"){
-  ggplot2::ggsave("negative_pred_value_plot.svg", width = width, height = height, units = units, scale = scale, device = device, dpi = dpi)
+  ggplot2::ggsave("negative_pred_value_plot.svg", width = width, height = height, path = tempdir1,  units = units, scale = scale, device = device, dpi = dpi)
 }
 if(save_all_plots == "Y" && device == "tiff"){
-  ggplot2::ggsave("negative_pred_value_plot.tiff", width = width, height = height, units = units, scale = scale, device = device, dpi = dpi)
+  ggplot2::ggsave("negative_pred_value_plot.tiff", width = width, height = height, path = tempdir1,  units = units, scale = scale, device = device, dpi = dpi)
 }
 
 negative_pred_value_plot2 <- ggplot2::ggplot(data = negative_pred_value_data, mapping = ggplot2::aes(x = count, y = data, color = model)) +
@@ -3559,22 +3561,22 @@ negative_pred_value_plot2 <- ggplot2::ggplot(data = negative_pred_value_data, ma
   ggplot2::theme(legend.position = "none")
 
 if(save_all_plots == "Y" && device == "eps"){
-  ggplot2::ggsave("negative_pred_value_plot2.eps", width = width, height = height, units = units, scale = scale, device = device, dpi = dpi)
+  ggplot2::ggsave("negative_pred_value_plot2.eps", width = width, height = height, path = tempdir1,  units = units, scale = scale, device = device, dpi = dpi)
 }
 if(save_all_plots == "Y" && device == "jpeg"){
-  ggplot2::ggsave("negative_pred_value_plot2.jpeg", width = width, height = height, units = units, scale = scale, device = device, dpi = dpi)
+  ggplot2::ggsave("negative_pred_value_plot2.jpeg", width = width, height = height, path = tempdir1,  units = units, scale = scale, device = device, dpi = dpi)
 }
 if(save_all_plots == "Y" && device == "pdf"){
-  ggplot2::ggsave("negative_pred_value_plot2.pdf", width = width, height = height, units = units, scale = scale, device = device, dpi = dpi)
+  ggplot2::ggsave("negative_pred_value_plot2.pdf", width = width, height = height, path = tempdir1,  units = units, scale = scale, device = device, dpi = dpi)
 }
 if(save_all_plots == "Y" && device == "png"){
-  ggplot2::ggsave("negative_pred_value_plot2.png", width = width, height = height, units = units, scale = scale, device = device, dpi = dpi)
+  ggplot2::ggsave("negative_pred_value_plot2.png", width = width, height = height, path = tempdir1,  units = units, scale = scale, device = device, dpi = dpi)
 }
 if(save_all_plots == "Y" && device == "svg"){
-  ggplot2::ggsave("negative_pred_value_plot2.svg", width = width, height = height, units = units, scale = scale, device = device, dpi = dpi)
+  ggplot2::ggsave("negative_pred_value_plot2.svg", width = width, height = height, path = tempdir1,  units = units, scale = scale, device = device, dpi = dpi)
 }
 if(save_all_plots == "Y" && device == "tiff"){
-  ggplot2::ggsave("negative_pred_value_plot2.tiff", width = width, height = height, units = units, scale = scale, device = device, dpi = dpi)
+  ggplot2::ggsave("negative_pred_value_plot2.tiff", width = width, height = height, path = tempdir1,  units = units, scale = scale, device = device, dpi = dpi)
 }
 
 #### Holdout vs train plot ####
@@ -3589,22 +3591,22 @@ holdout_vs_train_plot <- ggplot2::ggplot(data = holdout_vs_train_data, mapping =
   ggplot2::theme(legend.position = "none")
 
 if(save_all_plots == "Y" && device == "eps"){
-  ggplot2::ggsave("holdout_vs_train_plot.eps", width = width, height = height, units = units, scale = scale, device = device, dpi = dpi)
+  ggplot2::ggsave("holdout_vs_train_plot.eps", width = width, height = height, path = tempdir1,  units = units, scale = scale, device = device, dpi = dpi)
 }
 if(save_all_plots == "Y" && device == "jpeg"){
-  ggplot2::ggsave("holdout_vs_train_plot.jpeg", width = width, height = height, units = units, scale = scale, device = device, dpi = dpi)
+  ggplot2::ggsave("holdout_vs_train_plot.jpeg", width = width, height = height, path = tempdir1,  units = units, scale = scale, device = device, dpi = dpi)
 }
 if(save_all_plots == "Y" && device == "pdf"){
-  ggplot2::ggsave("holdout_vs_train_plot.pdf", width = width, height = height, units = units, scale = scale, device = device, dpi = dpi)
+  ggplot2::ggsave("holdout_vs_train_plot.pdf", width = width, height = height, path = tempdir1,  units = units, scale = scale, device = device, dpi = dpi)
 }
 if(save_all_plots == "Y" && device == "png"){
-  ggplot2::ggsave("holdout_vs_train_plot.png", width = width, height = height, units = units, scale = scale, device = device, dpi = dpi)
+  ggplot2::ggsave("holdout_vs_train_plot.png", width = width, height = height, path = tempdir1,  units = units, scale = scale, device = device, dpi = dpi)
 }
 if(save_all_plots == "Y" && device == "svg"){
-  ggplot2::ggsave("holdout_vs_train_plot.svg", width = width, height = height, units = units, scale = scale, device = device, dpi = dpi)
+  ggplot2::ggsave("holdout_vs_train_plot.svg", width = width, height = height, path = tempdir1,  units = units, scale = scale, device = device, dpi = dpi)
 }
 if(save_all_plots == "Y" && device == "tiff"){
-  ggplot2::ggsave("holdout_vs_train_plot.tiff", width = width, height = height, units = units, scale = scale, device = device, dpi = dpi)
+  ggplot2::ggsave("holdout_vs_train_plot.tiff", width = width, height = height, path = tempdir1,  units = units, scale = scale, device = device, dpi = dpi)
 }
 
 holdout_vs_train_plot2 <- ggplot2::ggplot(data = holdout_vs_train_data, mapping = ggplot2::aes(x = count, y = data, color = model)) +
@@ -3618,22 +3620,22 @@ holdout_vs_train_plot2 <- ggplot2::ggplot(data = holdout_vs_train_data, mapping 
   ggplot2::theme(legend.position = "none")
 
 if(save_all_plots == "Y" && device == "eps"){
-  ggplot2::ggsave("holdout_vs_train_plot2.eps", width = width, height = height, units = units, scale = scale, device = device, dpi = dpi)
+  ggplot2::ggsave("holdout_vs_train_plot2.eps", width = width, height = height, path = tempdir1,  units = units, scale = scale, device = device, dpi = dpi)
 }
 if(save_all_plots == "Y" && device == "jpeg"){
-  ggplot2::ggsave("holdout_vs_train_plot2.jpeg", width = width, height = height, units = units, scale = scale, device = device, dpi = dpi)
+  ggplot2::ggsave("holdout_vs_train_plot2.jpeg", width = width, height = height, path = tempdir1,  units = units, scale = scale, device = device, dpi = dpi)
 }
 if(save_all_plots == "Y" && device == "pdf"){
-  ggplot2::ggsave("holdout_vs_train_plot2.pdf", width = width, height = height, units = units, scale = scale, device = device, dpi = dpi)
+  ggplot2::ggsave("holdout_vs_train_plot2.pdf", width = width, height = height, path = tempdir1,  units = units, scale = scale, device = device, dpi = dpi)
 }
 if(save_all_plots == "Y" && device == "png"){
-  ggplot2::ggsave("holdout_vs_train_plot2.png", width = width, height = height, units = units, scale = scale, device = device, dpi = dpi)
+  ggplot2::ggsave("holdout_vs_train_plot2.png", width = width, height = height, path = tempdir1,  units = units, scale = scale, device = device, dpi = dpi)
 }
 if(save_all_plots == "Y" && device == "svg"){
-  ggplot2::ggsave("holdout_vs_train_plot2.svg", width = width, height = height, units = units, scale = scale, device = device, dpi = dpi)
+  ggplot2::ggsave("holdout_vs_train_plot2.svg", width = width, height = height, path = tempdir1,  units = units, scale = scale, device = device, dpi = dpi)
 }
 if(save_all_plots == "Y" && device == "tiff"){
-  ggplot2::ggsave("holdout_vs_train_plot2.tiff", width = width, height = height, units = units, scale = scale, device = device, dpi = dpi)
+  ggplot2::ggsave("holdout_vs_train_plot2.tiff", width = width, height = height, path = tempdir1,  units = units, scale = scale, device = device, dpi = dpi)
 }
 
 #### Classification error plot ####
@@ -3679,22 +3681,22 @@ classification_error_plot <- ggplot2::ggplot(data = classification_error_data, m
   ggplot2::theme(legend.position = "none")
 
 if(save_all_plots == "Y" && device == "eps"){
-  ggplot2::ggsave("classification_error_plot.eps", width = width, height = height, units = units, scale = scale, device = device, dpi = dpi)
+  ggplot2::ggsave("classification_error_plot.eps", width = width, height = height, path = tempdir1,  units = units, scale = scale, device = device, dpi = dpi)
 }
 if(save_all_plots == "Y" && device == "jpeg"){
-  ggplot2::ggsave("classification_error_plot.jpeg", width = width, height = height, units = units, scale = scale, device = device, dpi = dpi)
+  ggplot2::ggsave("classification_error_plot.jpeg", width = width, height = height, path = tempdir1,  units = units, scale = scale, device = device, dpi = dpi)
 }
 if(save_all_plots == "Y" && device == "pdf"){
-  ggplot2::ggsave("classification_error_plot.pdf", width = width, height = height, units = units, scale = scale, device = device, dpi = dpi)
+  ggplot2::ggsave("classification_error_plot.pdf", width = width, height = height, path = tempdir1,  units = units, scale = scale, device = device, dpi = dpi)
 }
 if(save_all_plots == "Y" && device == "png"){
-  ggplot2::ggsave("classification_error_plot.png", width = width, height = height, units = units, scale = scale, device = device, dpi = dpi)
+  ggplot2::ggsave("classification_error_plot.png", width = width, height = height, path = tempdir1,  units = units, scale = scale, device = device, dpi = dpi)
 }
 if(save_all_plots == "Y" && device == "svg"){
-  ggplot2::ggsave("classification_error_plot.svg", width = width, height = height, units = units, scale = scale, device = device, dpi = dpi)
+  ggplot2::ggsave("classification_error_plot.svg", width = width, height = height, path = tempdir1,  units = units, scale = scale, device = device, dpi = dpi)
 }
 if(save_all_plots == "Y" && device == "tiff"){
-  ggplot2::ggsave("classification_error_plot.tiff", width = width, height = height, units = units, scale = scale, device = device, dpi = dpi)
+  ggplot2::ggsave("classification_error_plot.tiff", width = width, height = height, path = tempdir1,  units = units, scale = scale, device = device, dpi = dpi)
 }
 
 classification_error_plot2 <- ggplot2::ggplot(data = classification_error_data, mapping = ggplot2::aes(x = count, y = data, color = model)) +
@@ -3708,22 +3710,22 @@ classification_error_plot2 <- ggplot2::ggplot(data = classification_error_data, 
   ggplot2::theme(legend.position = "none")
 
 if(save_all_plots == "Y" && device == "eps"){
-  ggplot2::ggsave("classification_error_plot2.eps", width = width, height = height, units = units, scale = scale, device = device, dpi = dpi)
+  ggplot2::ggsave("classification_error_plot2.eps", width = width, height = height, path = tempdir1,  units = units, scale = scale, device = device, dpi = dpi)
 }
 if(save_all_plots == "Y" && device == "jpeg"){
-  ggplot2::ggsave("classification_error_plot2.jpeg", width = width, height = height, units = units, scale = scale, device = device, dpi = dpi)
+  ggplot2::ggsave("classification_error_plot2.jpeg", width = width, height = height, path = tempdir1,  units = units, scale = scale, device = device, dpi = dpi)
 }
 if(save_all_plots == "Y" && device == "pdf"){
-  ggplot2::ggsave("classification_error_plot2.pdf", width = width, height = height, units = units, scale = scale, device = device, dpi = dpi)
+  ggplot2::ggsave("classification_error_plot2.pdf", width = width, height = height, path = tempdir1,  units = units, scale = scale, device = device, dpi = dpi)
 }
 if(save_all_plots == "Y" && device == "png"){
-  ggplot2::ggsave("classification_error_plot2.png", width = width, height = height, units = units, scale = scale, device = device, dpi = dpi)
+  ggplot2::ggsave("classification_error_plot2.png", width = width, height = height, path = tempdir1,  units = units, scale = scale, device = device, dpi = dpi)
 }
 if(save_all_plots == "Y" && device == "svg"){
-  ggplot2::ggsave("classification_error_plot2.svg", width = width, height = height, units = units, scale = scale, device = device, dpi = dpi)
+  ggplot2::ggsave("classification_error_plot2.svg", width = width, height = height, path = tempdir1,  units = units, scale = scale, device = device, dpi = dpi)
 }
 if(save_all_plots == "Y" && device == "tiff"){
-  ggplot2::ggsave("classification_error_plot2.tiff", width = width, height = height, units = units, scale = scale, device = device, dpi = dpi)
+  ggplot2::ggsave("classification_error_plot2.tiff", width = width, height = height, path = tempdir1,  units = units, scale = scale, device = device, dpi = dpi)
 }
 
 
@@ -3787,22 +3789,22 @@ total_plot <- ggplot2::ggplot(data = total_data, mapping = ggplot2::aes(x = coun
   )
 
 if(save_all_plots == "Y" && device == "eps"){
-  ggplot2::ggsave("total_plot.eps", width = width, height = height, units = units, scale = scale, device = device, dpi = dpi)
+  ggplot2::ggsave("total_plot.eps", width = width, height = height, path = tempdir1,  units = units, scale = scale, device = device, dpi = dpi)
 }
 if(save_all_plots == "Y" && device == "jpeg"){
-  ggplot2::ggsave("total_plot.jpeg", width = width, height = height, units = units, scale = scale, device = device, dpi = dpi)
+  ggplot2::ggsave("total_plot.jpeg", width = width, height = height, path = tempdir1,  units = units, scale = scale, device = device, dpi = dpi)
 }
 if(save_all_plots == "Y" && device == "pdf"){
-  ggplot2::ggsave("total_plot.pdf", width = width, height = height, units = units, scale = scale, device = device, dpi = dpi)
+  ggplot2::ggsave("total_plot.pdf", width = width, height = height, path = tempdir1,  units = units, scale = scale, device = device, dpi = dpi)
 }
 if(save_all_plots == "Y" && device == "png"){
-  ggplot2::ggsave("total_plot.png", width = width, height = height, units = units, scale = scale, device = device, dpi = dpi)
+  ggplot2::ggsave("total_plot.png", width = width, height = height, path = tempdir1,  units = units, scale = scale, device = device, dpi = dpi)
 }
 if(save_all_plots == "Y" && device == "svg"){
-  ggplot2::ggsave("total_plot.svg", width = width, height = height, units = units, scale = scale, device = device, dpi = dpi)
+  ggplot2::ggsave("total_plot.svg", width = width, height = height, path = tempdir1,  units = units, scale = scale, device = device, dpi = dpi)
 }
 if(save_all_plots == "Y" && device == "tiff"){
-  ggplot2::ggsave("total_plot.tiff", width = width, height = height, units = units, scale = scale, device = device, dpi = dpi)
+  ggplot2::ggsave("total_plot.tiff", width = width, height = height, path = tempdir1,  units = units, scale = scale, device = device, dpi = dpi)
 }
 
 total_plot2 <- ggplot2::ggplot(data = total_data, mapping = ggplot2::aes(x = count, y = data, color = model)) +
@@ -3820,22 +3822,22 @@ total_plot2 <- ggplot2::ggplot(data = total_data, mapping = ggplot2::aes(x = cou
   )
 
 if(save_all_plots == "Y" && device == "eps"){
-  ggplot2::ggsave("total_plot2.eps", width = width, height = height, units = units, scale = scale, device = device, dpi = dpi)
+  ggplot2::ggsave("total_plot2.eps", width = width, height = height, path = tempdir1,  units = units, scale = scale, device = device, dpi = dpi)
 }
 if(save_all_plots == "Y" && device == "jpeg"){
-  ggplot2::ggsave("total_plot2.jpeg", width = width, height = height, units = units, scale = scale, device = device, dpi = dpi)
+  ggplot2::ggsave("total_plot2.jpeg", width = width, height = height, path = tempdir1,  units = units, scale = scale, device = device, dpi = dpi)
 }
 if(save_all_plots == "Y" && device == "pdf"){
-  ggplot2::ggsave("total_plot2.pdf", width = width, height = height, units = units, scale = scale, device = device, dpi = dpi)
+  ggplot2::ggsave("total_plot2.pdf", width = width, height = height, path = tempdir1,  units = units, scale = scale, device = device, dpi = dpi)
 }
 if(save_all_plots == "Y" && device == "png"){
-  ggplot2::ggsave("total_plot2.png", width = width, height = height, units = units, scale = scale, device = device, dpi = dpi)
+  ggplot2::ggsave("total_plot2.png", width = width, height = height, path = tempdir1,  units = units, scale = scale, device = device, dpi = dpi)
 }
 if(save_all_plots == "Y" && device == "svg"){
-  ggplot2::ggsave("total_plot2.svg", width = width, height = height, units = units, scale = scale, device = device, dpi = dpi)
+  ggplot2::ggsave("total_plot2.svg", width = width, height = height, path = tempdir1,  units = units, scale = scale, device = device, dpi = dpi)
 }
 if(save_all_plots == "Y" && device == "tiff"){
-  ggplot2::ggsave("total_plot2.tiff", width = width, height = height, units = units, scale = scale, device = device, dpi = dpi)
+  ggplot2::ggsave("total_plot2.tiff", width = width, height = height, path = tempdir1,  units = units, scale = scale, device = device, dpi = dpi)
 }
 
 #### Accuracy barchart ####
@@ -3848,22 +3850,22 @@ accuracy_barchart <- ggplot2::ggplot(Results, aes(x = reorder(Model, dplyr::desc
                              ymax =  Mean_Holdout_Accuracy + Accuracy_Holdout_Std.Dev))
 
 if(save_all_plots == "Y" && device == "eps"){
-  ggplot2::ggsave("accuracy_barchart.eps", width = width, height = height, units = units, scale = scale, device = device, dpi = dpi)
+  ggplot2::ggsave("accuracy_barchart.eps", width = width, height = height, path = tempdir1,  units = units, scale = scale, device = device, dpi = dpi)
 }
 if(save_all_plots == "Y" && device == "jpeg"){
-  ggplot2::ggsave("accuracy_barchart.jpeg", width = width, height = height, units = units, scale = scale, device = device, dpi = dpi)
+  ggplot2::ggsave("accuracy_barchart.jpeg", width = width, height = height, path = tempdir1,  units = units, scale = scale, device = device, dpi = dpi)
 }
 if(save_all_plots == "Y" && device == "pdf"){
-  ggplot2::ggsave("accuracy_barchart.pdf", width = width, height = height, units = units, scale = scale, device = device, dpi = dpi)
+  ggplot2::ggsave("accuracy_barchart.pdf", width = width, height = height, path = tempdir1,  units = units, scale = scale, device = device, dpi = dpi)
 }
 if(save_all_plots == "Y" && device == "png"){
-  ggplot2::ggsave("accuracy_barchart.png", width = width, height = height, units = units, scale = scale, device = device, dpi = dpi)
+  ggplot2::ggsave("accuracy_barchart.png", width = width, height = height, path = tempdir1,  units = units, scale = scale, device = device, dpi = dpi)
 }
 if(save_all_plots == "Y" && device == "svg"){
-  ggplot2::ggsave("accuracy_barchart.svg", width = width, height = height, units = units, scale = scale, device = device, dpi = dpi)
+  ggplot2::ggsave("accuracy_barchart.svg", width = width, height = height, path = tempdir1,  units = units, scale = scale, device = device, dpi = dpi)
 }
 if(save_all_plots == "Y" && device == "tiff"){
-  ggplot2::ggsave("accuracy_barchart.tiff", width = width, height = height, units = units, scale = scale, device = device, dpi = dpi)
+  ggplot2::ggsave("accuracy_barchart.tiff", width = width, height = height, path = tempdir1,  units = units, scale = scale, device = device, dpi = dpi)
 }
 
 #### Holdout vs train barchart ####
@@ -3876,22 +3878,22 @@ holdout_vs_train_barchart <- ggplot2::ggplot(Results, aes(x = reorder(Model, dpl
   ggplot2::geom_errorbar(aes(x = Model, ymin = Holdout_vs_train - Holdout_vs_train_St_Dev, ymax = Holdout_vs_train + Holdout_vs_train_St_Dev))
 
 if(save_all_plots == "Y" && device == "eps"){
-  ggplot2::ggsave("holdout_vs_train_barchart.eps", width = width, height = height, units = units, scale = scale, device = device, dpi = dpi)
+  ggplot2::ggsave("holdout_vs_train_barchart.eps", width = width, height = height, path = tempdir1,  units = units, scale = scale, device = device, dpi = dpi)
 }
 if(save_all_plots == "Y" && device == "jpeg"){
-  ggplot2::ggsave("holdout_vs_train_barchart.jpeg", width = width, height = height, units = units, scale = scale, device = device, dpi = dpi)
+  ggplot2::ggsave("holdout_vs_train_barchart.jpeg", width = width, height = height, path = tempdir1,  units = units, scale = scale, device = device, dpi = dpi)
 }
 if(save_all_plots == "Y" && device == "pdf"){
-  ggplot2::ggsave("holdout_vs_train_barchart.pdf", width = width, height = height, units = units, scale = scale, device = device, dpi = dpi)
+  ggplot2::ggsave("holdout_vs_train_barchart.pdf", width = width, height = height, path = tempdir1,  units = units, scale = scale, device = device, dpi = dpi)
 }
 if(save_all_plots == "Y" && device == "png"){
-  ggplot2::ggsave("holdout_vs_train_barchart.png", width = width, height = height, units = units, scale = scale, device = device, dpi = dpi)
+  ggplot2::ggsave("holdout_vs_train_barchart.png", width = width, height = height, path = tempdir1,  units = units, scale = scale, device = device, dpi = dpi)
 }
 if(save_all_plots == "Y" && device == "svg"){
-  ggplot2::ggsave("holdout_vs_train_barchart.svg", width = width, height = height, units = units, scale = scale, device = device, dpi = dpi)
+  ggplot2::ggsave("holdout_vs_train_barchart.svg", width = width, height = height, path = tempdir1,  units = units, scale = scale, device = device, dpi = dpi)
 }
 if(save_all_plots == "Y" && device == "tiff"){
-  ggplot2::ggsave("holdout_vs_train_barchart.tiff", width = width, height = height, units = units, scale = scale, device = device, dpi = dpi)
+  ggplot2::ggsave("holdout_vs_train_barchart.tiff", width = width, height = height, path = tempdir1,  units = units, scale = scale, device = device, dpi = dpi)
 }
 
 #### Duration barchart ####
@@ -3904,22 +3906,22 @@ duration_barchart <- ggplot2::ggplot(Results, aes(x = reorder(Model, Duration), 
   ggplot2::geom_errorbar(aes(x = Model, ymin = Duration - Duration_St_Dev, ymax = Duration + Duration_St_Dev))
 
 if(save_all_plots == "Y" && device == "eps"){
-  ggplot2::ggsave("duration_barchart.eps", width = width, height = height, units = units, scale = scale, device = device, dpi = dpi)
+  ggplot2::ggsave("duration_barchart.eps", width = width, height = height, path = tempdir1,  units = units, scale = scale, device = device, dpi = dpi)
 }
 if(save_all_plots == "Y" && device == "jpeg"){
-  ggplot2::ggsave("duration_barchart.jpeg", width = width, height = height, units = units, scale = scale, device = device, dpi = dpi)
+  ggplot2::ggsave("duration_barchart.jpeg", width = width, height = height, path = tempdir1,  units = units, scale = scale, device = device, dpi = dpi)
 }
 if(save_all_plots == "Y" && device == "pdf"){
-  ggplot2::ggsave("duration_barchart.pdf", width = width, height = height, units = units, scale = scale, device = device, dpi = dpi)
+  ggplot2::ggsave("duration_barchart.pdf", width = width, height = height, path = tempdir1,  units = units, scale = scale, device = device, dpi = dpi)
 }
 if(save_all_plots == "Y" && device == "png"){
-  ggplot2::ggsave("duration_barchart.png", width = width, height = height, units = units, scale = scale, device = device, dpi = dpi)
+  ggplot2::ggsave("duration_barchart.png", width = width, height = height, path = tempdir1,  units = units, scale = scale, device = device, dpi = dpi)
 }
 if(save_all_plots == "Y" && device == "svg"){
-  ggplot2::ggsave("duration_barchart.svg", width = width, height = height, units = units, scale = scale, device = device, dpi = dpi)
+  ggplot2::ggsave("duration_barchart.svg", width = width, height = height, path = tempdir1,  units = units, scale = scale, device = device, dpi = dpi)
 }
 if(save_all_plots == "Y" && device == "tiff"){
-  ggplot2::ggsave("duration_barchart.tiff", width = width, height = height, units = units, scale = scale, device = device, dpi = dpi)
+  ggplot2::ggsave("duration_barchart.tiff", width = width, height = height, path = tempdir1,  units = units, scale = scale, device = device, dpi = dpi)
 }
 
 
