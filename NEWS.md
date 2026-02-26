@@ -1,3 +1,5 @@
+# ClassificationEnsembles 1.0.2
+
 # ClassificationEnsembles 1.0.1
 * Numerous bug fixes - corrected names in the plots, corrected saving trained models, removed reactablefmtr which is set to be archived on 2026-03-17 and replaced with htmlwidgets and htmltools.
 
