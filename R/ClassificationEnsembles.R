@@ -26,6 +26,8 @@
 #' @importFrom ggplot2 geom_boxplot geom_histogram ggplot facet_wrap labs theme_bw labs aes
 #' @importFrom graphics hist pairs panel.smooth par rect
 #' @importFrom gt gt
+#' @importFrom htmltools h2
+#' @importFrom htmlwidgets prependContent
 #' @importFrom ipred bagging
 #' @importFrom MachineShop fit
 #' @importFrom magrittr %>%
@@ -35,7 +37,6 @@
 #' @importFrom randomForest randomForest
 #' @importFrom ranger ranger
 #' @importFrom reactable reactable
-#' @importFrom reactablefmtr add_title
 #' @importFrom scales percent
 #' @importFrom stats complete.cases cor lm predict reorder sd
 #' @importFrom tidyr gather last_col pivot_longer
@@ -44,6 +45,7 @@
 
 #' @returns a full analysis, including data visualizations, statistical summaries, and a full report on the results of 35 models on the data
 #' @export Classification
+
 
 #### Function definition ####
 Classification <- function(data, colnum, numresamples, predict_on_new_data = c("Y", "N"), remove_VIF_above, scale_all_numeric_predictors_in_data,
@@ -82,23 +84,35 @@ for (i in 1:ncol(df)) {
 }
 
 
-VIF <- reactable::reactable(as.data.frame(VIF),
+VIF <- reactable::reactable(data.frame(VIF),
                             searchable = TRUE, pagination = FALSE, wrap = TRUE, rownames = TRUE, fullWidth = TRUE, filterable = TRUE, bordered = TRUE,
-                            striped = TRUE, highlight = TRUE, resizable = TRUE
-)%>%
-  reactablefmtr::add_title("Variance Inflation Factor")
+                            striped = TRUE, highlight = TRUE, resizable = TRUE,
+)
+
+htmltools::div(class = "table",
+               htmltools::div(class = "title", "VIF")
+)
+
+VIF_report <- htmlwidgets::prependContent(VIF, htmltools::h2(class = "title", "VIF"))
+
 
 head_df <- head(df) %>% dplyr::mutate_if(is.numeric, round, digits = 4)
 
 head_df <- reactable::reactable(head_df,
                                 searchable = TRUE, pagination = FALSE, wrap = TRUE, rownames = TRUE, fullWidth = TRUE, filterable = TRUE, bordered = TRUE,
                                 striped = TRUE, highlight = TRUE, resizable = TRUE
-)%>%
-  reactablefmtr::add_title("Head of the data frame")
+)
+
+htmltools::div(class = "table",
+               htmltools::div(class = "title", "Head of the data frame")
+)
+
+head_df <- htmlwidgets::prependContent(head_df, htmltools::h2(class = "title", "Head of the data frame"))
 
 data_summary <- summary(df)
 
 #### Save all plots ####
+
 if(save_all_plots == "Y"){
   width = as.numeric(readline("Width of the graphics: "))
   height = as.numeric(readline("Height of the graphics: "))
@@ -172,8 +186,13 @@ corrplot::corrplot(M1, method = "circle", title = title, mar = c(0, 0, 1, 0)) # 
 correlation_marix <- reactable::reactable(round(cor(df1), 4),
                                           searchable = TRUE, pagination = FALSE, wrap = TRUE, rownames = TRUE, fullWidth = TRUE, filterable = TRUE, bordered = TRUE,
                                           striped = TRUE, highlight = TRUE, resizable = TRUE
-)%>%
-  reactablefmtr::add_title("Correlation of the data")
+)
+htmltools::div(class = "table",
+               htmltools::div(class = "title", "Correlation matrix")
+)
+
+correlation_matrix <- htmlwidgets::prependContent(correlation_marix, htmltools::h2(class = "title", "Correlation matrix"))
+
 
 #### Boxplots of the numeric data ####
 boxplots <- df1 %>%
@@ -785,9 +804,6 @@ train_ratio_df <- data.frame()
 test_ratio_df <- data.frame()
 validation_ratio_df <- data.frame()
 stratified_sampling_report <- 0
-
-Percentage <- 0
-Variable <- 0
 accuracy_plot <- 0
 total_plot <- 0
 holdout_vs_train_plot <- 0
@@ -818,8 +834,13 @@ if(stratified_random_column > 0){
 
   stratified_sampling_report <- reactable::reactable(df1, searchable = TRUE, pagination = FALSE, wrap = TRUE, rownames = TRUE, fullWidth = TRUE, filterable = TRUE, bordered = TRUE,
                                                      striped = TRUE, highlight = TRUE, resizable = TRUE
-  )%>%
-    reactablefmtr::add_title("Stratified Random Sampling Report")
+  )
+
+  htmltools::div(class = "table",
+                 htmltools::div(class = "title", "stratified_sampling_report ")
+  )
+
+  stratified_sampling_report <- htmlwidgets::prependContent(stratified_sampling_report , htmltools::h2(class = "title", "Stratified sampling report"))
 }
 
 #### Random resampling starts here ####
@@ -1889,12 +1910,14 @@ for (i in 1:numresamples) {
   head_ensemble <- reactable::reactable(head(ensemble1),
                                         searchable = TRUE, pagination = FALSE, wrap = TRUE, rownames = TRUE, fullWidth = TRUE, filterable = TRUE, bordered = TRUE,
                                         striped = TRUE, highlight = TRUE, resizable = TRUE
-  )%>%
-    reactablefmtr::add_title("Head of the ensemble")
+  )
 
-  # if(save_all_plots == "Y"){
-  #   reactablefmtr::save_reactable_test(head_ensemble, "Head_of_the_ensemble.html")
-  # }
+  htmltools::div(class = "table",
+                 htmltools::div(class = "title", "head_ensemble")
+  )
+
+  head_ensemble <- htmlwidgets::prependContent(head_ensemble, htmltools::h2(class = "title", "Head of the ensemble"))
+
 
   ensemble_index <- sample(c(1:3), nrow(ensemble1), replace = TRUE, prob = c(train_amount, test_amount, validation_amount))
   ensemble_train <- ensemble1[ensemble_index == 1, ]
@@ -2801,12 +2824,13 @@ Results <- Results %>% dplyr::arrange(dplyr::desc(Mean_Holdout_Accuracy))
 Final_results <- reactable::reactable(Results,
                                       searchable = TRUE, pagination = FALSE, wrap = TRUE, fullWidth = TRUE, filterable = TRUE, bordered = TRUE,
                                       striped = TRUE, highlight = TRUE, rownames = TRUE, resizable = TRUE
-) %>%
-  reactablefmtr::add_title("Classification analysis, accuracy, duration, holdout_vs_train, sum of diagonals")
+)
 
-# if(save_all_plots == "Y"){
-#   reactablefmtr::save_reactable_test(Final_results, "Final_results.html")
-# }
+htmltools::div(class = "table",
+               htmltools::div(class = "title", "Final_results")
+)
+
+summary_report <- htmlwidgets::prependContent(Final_results, htmltools::h2(class = "title", "Summary report"))
 
 summary_tables <- list(
   "Bagging" = bagging_table_total, "Bagged Random Forest" = bag_rf_table_total, "C50" = C50_table_total,
@@ -3995,7 +4019,11 @@ if (predict_on_new_data == "Y") {
   )
 
   if(save_all_plots == "Y"){
-    reactablefmtr::save_reactable_test(New_Data_Results, "New_Data_Results.html")
+    htmltools::div(class = "table",
+                   htmltools::div(class = "title", "New_Data_Results")
+    )
+
+    new_data_results <- htmlwidgets::prependContent(New_Data_Results, htmltools::h2(class = "title", "New data results"))
   }
 
   if (save_all_trained_models == "Y") {
@@ -4142,19 +4170,19 @@ if (save_all_trained_models == "Y") {
 
 #### Return list of all reports ####
 return(list(
-  'Final results' = Final_results, 'Barchart values' = barchart, 'Barchart percent' = barchart_percentage, "Accuracy Barchart" = accuracy_barchart, "Holdout vs train barchart" = holdout_vs_train_barchart,
-  'True positive rate fixed scales' = true_positive_rate_fixed_scales, 'True positive rate free scales' = true_positive_rate_free_scales,
-  'True negative rate fixed scales' = true_negative_rate_fixed_scales, 'True negative rate free scales' = true_negative_rate_free_scales,
-  'False positive rate fixed scales' = false_positive_rate_fixed_scales, 'False positive rate free scales' = false_positive_rate_free_scales,
-  'False negative rate fixed scales' = false_negative_rate_fixed_scales, 'False negative rate free scales' = false_negative_rate_free_scales,
-  "Duration barchart" = duration_barchart,  'Data summary' = data_summary, 'Correlation matrix' = correlation_marix,
-  'VIF' = VIF, "Stratified sampling report" = stratified_sampling_report,
-  'Boxplots' = boxplots, 'Histograms' = histograms, 'Head of data' = head_df, 'Head of ensemble' = head_ensemble,
-  'Summary tables' = summary_tables, 'Accuracy_plot fixed scales' = accuracy_plot_fixed_scales, 'Accuracy plot free scales' = accuracy_plot_fixed_scales,
-  'Total plot fixed scales' = total_plot_fixed_scales, "Total plot free scales" = total_plot_free_scales,
-  'Classification error fixed scales' = classification_error_fixed_scales, 'Classification error free scales' = classification_error__free_scales,
-  'Residuals fixed scales' = residuals_plot_fixed_scales, 'Residuals free scales' = residuals_plot_free_scales,
-  "Holdout vs train fixed scales" = holdout_vs_train_fixed_scales, "Holdout vs train free scales" = holdout_vs_train_free_scales
+  'Final_results' = summary_report, 'Barchart_values' = barchart, 'Barchart_percent' = barchart_percentage, "Accuracy_Barchart" = accuracy_barchart, "holdout_vs_train_barchart" = holdout_vs_train_barchart,
+  'True_positive_rate_fixed_scales' = true_positive_rate_fixed_scales, 'True_positive_rate_free_scales' = true_positive_rate_free_scales,
+  'True_negative_rate_fixed_scales' = true_negative_rate_fixed_scales, 'True_negative_rate_free_scales' = true_negative_rate_free_scales,
+  'False_positive_rate_fixed_scales' = false_positive_rate_fixed_scales, 'False_positive_rate_free_scales' = false_positive_rate_free_scales,
+  'False_negative_rate_fixed_scales' = false_negative_rate_fixed_scales, 'False_negative_rate_free_scales' = false_negative_rate_free_scales,
+  "Duration_barchart" = duration_barchart,  'Data_summary' = data_summary, 'Correlation_matrix' = correlation_matrix,
+  'VIF' = VIF_report, "Stratified sampling report" = stratified_sampling_report,
+  'Boxplots' = boxplots, 'Histograms' = histograms, 'Head_of_data' = head_df, 'Head_of_ensemble' = head_ensemble,
+  'Summary_tables' = summary_tables, 'Accuracy_plot_fixed_scales' = accuracy_plot_fixed_scales, 'Accuracy_plot_free_scales' = accuracy_plot_fixed_scales,
+  'Total_plot_fixed_scales' = total_plot_fixed_scales, "Total_plot_free_scales" = total_plot_free_scales,
+  'Classification_error_fixed_scales' = classification_error_fixed_scales, 'Classification_error_free_scales' = classification_error__free_scales,
+  'Residuals_fixed_scales' = residuals_plot_fixed_scales, 'Residuals_free_scales' = residuals_plot_free_scales,
+  "Holdout_vs_train_fixed_scales" = holdout_vs_train_fixed_scales, "Holdout_vs_train_free_scales" = holdout_vs_train_free_scales
 )
 )
 }
