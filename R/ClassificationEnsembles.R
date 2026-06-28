@@ -642,7 +642,7 @@ Classification <- function(dataset = NULL,
     gbm_roc <- pROC::multiclass.roc(actual_test, gbm_pred_prob)
     gbm_auc <- as.numeric(pROC::auc(gbm_roc))
 
-    gbm_auc_low <- max(0, gbm_auc - 1.96 * se_auc_meta); gbm_auc_high = min(1, gbm_auc + 1.96 * se_auc_meta)
+    gbm_auc_low <- max(0, gbm_auc - 1.96 * meta_auc); gbm_auc_high = min(1, gbm_auc + 1.96 * meta_auc)
     gbm_correct <- sum(gbm_pred_class == actual_test)
     gbm_acc_low <- stats::qbeta(0.025, gbm_correct, n_test - gbm_correct + 1)
     gbm_acc_high <- stats::qbeta(0.975, gbm_correct + 1, n_test - gbm_correct)
