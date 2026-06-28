@@ -50,12 +50,8 @@ We run the core ensemble framework on our historical data to evaluate base archi
 Classification_pipeline <- Classification(
   dataset         = historical_training_data,
   target_col      = "RiskLevel",
-  cv_folds        = 3,
-  train_pct       = 0.70,
-  vif_threshold   = 5,
-  sampling_method = "none",
   palette_style   = "modern",
-  config          = ClassificationFastConfig(),
+  config          = ClassificationEnsemblesFastConfig(),
   verbose         = FALSE
 )
 ```

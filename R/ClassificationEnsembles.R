@@ -829,7 +829,7 @@ predict.classification_pipeline <- function(object, newdata, model_name = "best"
 
   if (model_name == "best") model_name <- object$performance_report$Model[1]
 
-  expected_variables := colnames(object$pipeline_meta$dummy_model$lvls)
+  expected_variables = colnames(object$pipeline_meta$dummy_model$lvls)
   if(is.null(expected_variables)) expected_variables <- setdiff(colnames(object$pipeline_meta$train_data_ref), object$pipeline_meta$target_col)
 
   for (v in expected_variables) { if (!(v %in% colnames(df_new))) df_new[[v]] <- 0 }
@@ -869,7 +869,7 @@ predict.classification_pipeline <- function(object, newdata, model_name = "best"
 
   if (model_name == "Meta_Stacking_GBM") {
     base_preds <- list()
-    active_independent_levels := object$pipeline_meta$target_levels[-length(object$pipeline_meta$target_levels)]
+    active_independent_levels = object$pipeline_meta$target_levels[-length(object$pipeline_meta$target_levels)]
     for (b_name in names(object$base_models)) {
       bp <- stats::predict(object$base_models[[b_name]], newdata = new_encoded, type = "prob")
       for (lvl in active_independent_levels) {
