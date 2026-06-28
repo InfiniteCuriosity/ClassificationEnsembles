@@ -555,7 +555,7 @@ Classification <- function(dataset = NULL,
     meta_roc <- pROC::multiclass.roc(actual_test, meta_pred_prob)
     meta_auc <- as.numeric(pROC::auc(meta_roc))
 
-    meta_auc_low <- max(0, meta_auc - 1.96 * se_auc_meta); meta_auc_high = min(1, meta_auc + 1.96 * se_auc_meta)
+    meta_auc_low <- max(0, meta_auc - 1.96 * auc_meta); meta_auc_high = min(1, meta_auc + 1.96 * auc_meta)
     meta_correct <- sum(meta_pred_class == actual_test)
     meta_acc_low <- stats::qbeta(0.025, meta_correct, n_test - meta_correct + 1)
     meta_acc_high <- stats::qbeta(0.975, meta_correct + 1, n_test - meta_correct)

@@ -19,21 +19,18 @@ LazyData: true
 Depends:
     R (>= 4.1.0)
 Imports:
-    arm,
     car,
     caret,
     doParallel,
     dplyr,
     foreach,
     ggplot2,
+    ggrepel,
     patchwork,
     pROC,
-    ROCR,
-    scales,
+    rstudioapi,
     shiny,
-    themis,
     tidyr,
-    tidyselect,
     utils,
     stats,
     grDevices
