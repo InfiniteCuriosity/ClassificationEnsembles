@@ -2,60 +2,30 @@
 % Please edit documentation in R/ClassificationEnsembles.R
 \name{Classification}
 \alias{Classification}
-\title{classification—function to perform classification analysis and return results to the user.}
+\title{Comprehensive Multi-Class Classification Ensemble Pipeline Engine}
 \usage{
 Classification(
-  data,
-  colnum,
-  numresamples,
-  predict_on_new_data = c("Y", "N"),
-  remove_VIF_above,
-  scale_all_numeric_predictors_in_data,
-  how_to_handle_strings = c(0("No strings"), 1("Strings as factors")),
-  set_seed = c("Y", "N"),
-  save_all_trained_models = c("Y", "N"),
-  save_all_plots,
-  stratified_random_column,
-  use_parallel = c("Y", "N"),
-  train_amount,
-  test_amount,
-  validation_amount
+  dataset = NULL,
+  target_col = NULL,
+  palette_style = c("standard", "viridis", "modern"),
+  config = ClassificationEnsemblesConfig(),
+  verbose = TRUE
 )
 }
 \arguments{
-\item{data}{a data set that includes classification data. For example, the Carseats data in the ISLR package}
+\item{dataset}{A data frame containing the predictors and target variable.}
 
-\item{colnum}{the number of the column. For example, in the Carseats data this is column 7, ShelveLoc with three values, Good, Medium and Bad}
+\item{target_col}{Character string specifying the name of the target categorical variable factor.}
 
-\item{numresamples}{the number of times to resample the analysis}
+\item{palette_style}{Character choice layout. Visual color scheme for plot vectors: "standard", "viridis", or "modern".}
 
-\item{predict_on_new_data}{asks if the user has new data to be analyzed using the trained models that were just developed}
+\item{config}{A pre-configured architecture configuration parameter matrix list from \code{ClassificationEnsemblesConfig()}.}
 
-\item{remove_VIF_above}{Removes columns with Variance Inflation Factors above the level chosen by the user}
-
-\item{scale_all_numeric_predictors_in_data}{Scales all numeric predictors in the original data}
-
-\item{how_to_handle_strings}{Option to convert strings to factor levels}
-
-\item{set_seed}{Option to set a seed}
-
-\item{save_all_trained_models}{Gives the user the option to save all trained models in the Environment}
-
-\item{save_all_plots}{Saves all plots in the user's chosen format}
-
-\item{stratified_random_column}{0 if no stratified random sampling, or column number for stratified random sampling}
-
-\item{use_parallel}{"Y" or "N" for parallel processing}
-
-\item{train_amount}{set the amount for the training data}
-
-\item{test_amount}{set the amount for the testing data}
-
-\item{validation_amount}{Set the amount for the validation data}
+\item{verbose}{Logical. If TRUE, logs operational pipeline milestones to console. Default is TRUE.}
 }
 \value{
-a full analysis, including data visualizations, statistical summaries, and a full report on the results of 35 models on the data
+An object of class \code{classification_pipeline} containing evaluation metrics matrices, models, data dictionaries, and plots.
 }
 \description{
-classification—function to perform classification analysis and return results to the user.
+Comprehensive Multi-Class Classification Ensemble Pipeline Engine
 }

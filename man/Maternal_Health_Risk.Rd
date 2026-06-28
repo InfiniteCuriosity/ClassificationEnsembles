@@ -7,15 +7,18 @@
 \format{
 Maternal_Health_Risk
 Age, Systolic Blood Pressure as SystolicBP, Diastolic BP as DiastolicBP, Blood Sugar as BS, Body Temperature as BodyTemp, HeartRate and RiskLevel. All these are the responsible and significant risk factors for maternal mortality, that is one of the main concern of SDG of UN.
+}
+\source{
+https://archive.ics.uci.edu/dataset/602/dry+bean+dataset
 
 \describe{
-\item{Age}{Any ages in years when a women during pregnant.}
-\item{SystolicBP}{Upper value of Blood Pressure in mmHg, another significant attribute during pregnancy.}
-\item{DiastolicBP}{Lower value of Blood Pressure in mmHg, another significant attribute during pregnancy.}
-\item{BS}{Blood glucose levels is in terms of a molar concentration}
-\item{BodyTemp}{Body temperature in Farenheit}
-\item{HeartRate}{A normal resting heart rate}
-\item{RiskLevel}{Predicted Risk Intensity Level during pregnancy considering the previous attribute.}
+ \item{Age}{Any ages in years when a women during pregnant.}
+ \item{SystolicBP}{Upper value of Blood Pressure in mmHg, another significant attribute during pregnancy.}
+ \item{DiastolicBP}{Lower value of Blood Pressure in mmHg, another significant attribute during pregnancy.}
+ \item{BS}{Blood glucose levels is in terms of a molar concentration}
+ \item{BodyTemp}{Body temperature in Farenheit}
+ \item{HeartRate}{A normal resting heart rate}
+ \item{RiskLevel}{Predicted Risk Intensity Level during pregnancy considering the previous attribute.}
 }
 }
 \usage{

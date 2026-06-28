@@ -6,3 +6,7 @@
 ^pkgdown$
 ^cran-comments\.md$
 ^CRAN-SUBMISSION$
+^\.positai$
+^\.claude$
+^README\.Rmd$
+^data-raw$

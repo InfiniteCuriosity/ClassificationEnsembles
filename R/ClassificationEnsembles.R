@@ -1,4188 +1,963 @@
-#' classification—function to perform classification analysis and return results to the user.
+# =========================================================================
+# COMPREHENSIVE CLASSIFICATION PIPELINE ENGINE WITH ADVANCED DIAGNOSTICS
+# =========================================================================
 
-#' @param data a data set that includes classification data. For example, the Carseats data in the ISLR package
-#' @param colnum the number of the column. For example, in the Carseats data this is column 7, ShelveLoc with three values, Good, Medium and Bad
-#' @param numresamples the number of times to resample the analysis
-#' @param how_to_handle_strings Option to convert strings to factor levels
-#' @param set_seed Option to set a seed
-#' @param predict_on_new_data asks if the user has new data to be analyzed using the trained models that were just developed
-#' @param remove_VIF_above Removes columns with Variance Inflation Factors above the level chosen by the user
-#' @param scale_all_numeric_predictors_in_data Scales all numeric predictors in the original data
-#' @param save_all_trained_models Gives the user the option to save all trained models in the Environment
-#' @param save_all_plots Saves all plots in the user's chosen format
-#' @param stratified_random_column 0 if no stratified random sampling, or column number for stratified random sampling
-#' @param use_parallel "Y" or "N" for parallel processing
-#' @param train_amount set the amount for the training data
-#' @param test_amount set the amount for the testing data
-#' @param validation_amount Set the amount for the validation data
-
-#' @importFrom C50 C5.0
+#' @importFrom dplyr select mutate across everything group_by summarise n rename arrange desc all_of
+#' @importFrom ggplot2 ggplot aes geom_point theme_minimal labs geom_abline geom_hline geom_col geom_histogram geom_boxplot geom_tile scale_fill_gradient2 scale_fill_identity scale_color_identity scale_y_continuous scale_color_viridis_c scale_color_gradient expansion element_text element_blank geom_errorbar geom_text annotate scale_fill_gradient scale_color_gradient2 geom_segment scale_color_manual geom_line
+#' @importFrom patchwork plot_layout wrap_plots plot_annotation
+#' @importFrom rstudioapi isAvailable viewer
+#' @importFrom shiny runApp fluidPage titlePanel sidebarLayout sidebarPanel helpText fileInput uiOutput sliderInput actionButton selectInput mainPanel tabsetPanel tabPanel verbatimTextOutput plotOutput tableOutput renderUI renderPrint renderPlot renderTable shinyApp numericInput p hr br req reactive eventReactive
+#' @importFrom stats na.omit var cor as.formula predict glm median sd rnorm runif rpois rgamma rbinom ks.test shapiro.test cor.test density lowess qqnorm qqline na.exclude lm reorder qbeta hatvalues residuals binom.test aggregate
+#' @importFrom utils globalVariables head write.csv txtProgressBar setTxtProgressBar read.csv combn
+#' @importFrom grDevices png dev.off devAskNewPage rainbow
+#' @importFrom ggrepel geom_text_repel
 #' @importFrom car vif
-#' @importFrom caret confusionMatrix
-#' @importFrom corrplot corrplot
-#' @importFrom dplyr across count mutate relocate select
+#' @importFrom caret train trainControl dummyVars createDataPartition varImp confusionMatrix multiClassSummary
 #' @importFrom doParallel registerDoParallel
-#' @importFrom e1071 svm
-#' @importFrom ggplot2 geom_boxplot geom_histogram ggplot facet_wrap labs theme_bw labs aes
-#' @importFrom graphics hist pairs panel.smooth par rect
-#' @importFrom gt gt
-#' @importFrom htmltools h2
-#' @importFrom htmlwidgets prependContent
-#' @importFrom ipred bagging
-#' @importFrom MachineShop fit
-#' @importFrom magrittr %>%
-#' @importFrom parallel makeCluster
-#' @importFrom pls plsr
-#' @importFrom purrr keep
-#' @importFrom randomForest randomForest
-#' @importFrom ranger ranger
-#' @importFrom reactable reactable
-#' @importFrom scales percent
-#' @importFrom stats complete.cases cor lm predict reorder sd
-#' @importFrom tidyr gather last_col pivot_longer
-#' @importFrom tree tree cv.tree prune.misclass
-#' @importFrom utils head read.csv str
-
-#' @returns a full analysis, including data visualizations, statistical summaries, and a full report on the results of 35 models on the data
-#' @export Classification
-
-
-#### Function definition ####
-Classification <- function(data, colnum, numresamples, predict_on_new_data = c("Y", "N"), remove_VIF_above, scale_all_numeric_predictors_in_data,
-                           how_to_handle_strings = c(0("No strings"), 1("Strings as factors")), set_seed = c("Y", "N"), save_all_trained_models = c("Y", "N"),
-                           save_all_plots, stratified_random_column, use_parallel = c("Y", "N"), train_amount, test_amount, validation_amount) {
-
-#### Set initial values to 0 ####
-use_parallel <- 0
-no_cores <- 0
-
-if(set_seed == "Y"){
-  seed = as.integer(readline("Which integer would you like to use for the seed? "))
-}
-
-if (use_parallel == "Y") {
-  cl <- parallel::makeCluster(no_cores, type = "FORK")
-  doParallel::registerDoParallel(cl)
-}
-
-if(stratified_random_column > 0) {
-  levels <- levels(as.factor((data[, stratified_random_column]))) # gets the levels for stratified data
-}
-
-y <- 0
-colnames(data)[colnum] <- "y"
-
-df <- data %>% dplyr::relocate(y, .after = tidyr::last_col()) # Moves the target column to the last column on the right
-df <- df[sample(nrow(df)), ]
-
-VIF <- car::vif(stats::lm(as.numeric(df$y) ~ ., data = df[, 1:ncol(df)]))
-for (i in 1:ncol(df)) {
-  if(max(VIF) > remove_VIF_above){
-    df <- df %>% dplyr::select(-which.max(VIF))
-    VIF <- car::vif(stats::lm(as.numeric(df$y) ~ ., data = df[, 1:ncol(df)]))
-  }
-}
-
-
-VIF <- reactable::reactable(data.frame(VIF),
-                            searchable = TRUE, pagination = FALSE, wrap = TRUE, rownames = TRUE, fullWidth = TRUE, filterable = TRUE, bordered = TRUE,
-                            striped = TRUE, highlight = TRUE, resizable = TRUE,
-)
-
-htmltools::div(class = "table",
-               htmltools::div(class = "title", "VIF")
-)
-
-VIF_report <- htmlwidgets::prependContent(VIF, htmltools::h2(class = "title", "VIF"))
-
-
-head_df <- head(df) %>% dplyr::mutate_if(is.numeric, round, digits = 4)
-
-head_df <- reactable::reactable(head_df,
-                                searchable = TRUE, pagination = FALSE, wrap = TRUE, rownames = TRUE, fullWidth = TRUE, filterable = TRUE, bordered = TRUE,
-                                striped = TRUE, highlight = TRUE, resizable = TRUE
-)
-
-htmltools::div(class = "table",
-               htmltools::div(class = "title", "Head of the data frame")
-)
-
-head_df <- htmlwidgets::prependContent(head_df, htmltools::h2(class = "title", "Head of the data frame"))
-
-data_summary <- summary(df)
-
-#### Save all plots ####
-
-if(save_all_plots == "Y"){
-  width = as.numeric(readline("Width of the graphics: "))
-  height = as.numeric(readline("Height of the graphics: "))
-  units = readline("Which units? You may use in, cm, mm or px. ")
-  scale = as.numeric(readline("What multiplicative scaling factor? "))
-  device = readline("Which device to use? You may enter eps, jpeg, pdf, png, svg or tiff: ")
-  dpi <- as.numeric(readline("Plot resolution. Applies only to raster output types (jpeg, png, tiff): "))
-}
-
-tempdir1 = tempdir()
-
-#### Barchart of the data against y ####
-barchart <- df %>%
-  dplyr::mutate(dplyr::across(-y, as.numeric)) %>%
-  tidyr::pivot_longer(!y) %>%
-  dplyr::summarise(dplyr::across(value, sum), .by = c(y, name)) %>%
-  dplyr::mutate(perc = proportions(value), .by = c(name)) %>%
-  ggplot2::ggplot(ggplot2::aes(x = y, y = value)) +
-  ggplot2::geom_col() +
-  ggplot2::geom_text(aes(label = round(value, 4)),
-                     vjust = -.5) +
-  ggplot2::theme(axis.text.x = ggplot2::element_text(angle = 90, vjust = 1, hjust=1)) +
-  ggplot2::facet_wrap(~ name, scales = "free") +
-  ggplot2::scale_y_continuous(expand = ggplot2::expansion(mult = c(0.1, 0.25)))
-
-barchart_percentage <- df %>%
-  dplyr::mutate(dplyr::across(-y, as.numeric)) %>%
-  tidyr::pivot_longer(!y) %>%
-  dplyr::summarise(dplyr::across(value, sum), .by = c(y, name)) %>%
-  dplyr::mutate(perc = proportions(value), .by = c(name)) %>%
-  ggplot2::ggplot(ggplot2::aes(x = y, y = value)) +
-  ggplot2::geom_col() +
-  ggplot2::geom_text(aes(label = scales::percent(round(perc, 3)),
-                         vjust = -0.5)) +
-  ggplot2::facet_wrap(~ name, scales = "free") +
-  ggplot2::theme(axis.text.x = ggplot2::element_text(angle = 90, vjust = 1, hjust=1)) +
-  ggplot2::scale_y_continuous(expand = ggplot2::expansion(mult = c(0.1, 0.25)))
-
-
-if(save_all_plots == "Y" && device == "eps"){
-  ggplot2::ggsave("barchart.eps", width = width, height = height, path = tempdir1, units = units, scale = scale, device = device, dpi = dpi)
-}
-if(save_all_plots == "Y" && device == "jpeg"){
-  ggplot2::ggsave("barchart.jpeg", width = width, height = height, path = tempdir1,  units = units, scale = scale, device = device, dpi = dpi)
-}
-if(save_all_plots == "Y" && device == "pdf"){
-  ggplot2::ggsave("barchart.pdf", width = width, height = height, path = tempdir1,  units = units, scale = scale, device = device, dpi = dpi)
-}
-if(save_all_plots == "Y" && device == "png"){
-  ggplot2::ggsave("barchart.png", width = width, height = height, path = tempdir1,  units = units, scale = scale, device = device, dpi = dpi)
-}
-if(save_all_plots == "Y" && device == "svg"){
-  ggplot2::ggsave("barchart.svg", width = width, height = height, path = tempdir1,  units = units, scale = scale, device = device, dpi = dpi)
-}
-if(save_all_plots == "Y" && device == "tiff"){
-  ggplot2::ggsave("barchart.tiff", width = width, height = height, path = tempdir1,  units = units, scale = scale, device = device, dpi = dpi)
-}
-
-data_summary <- summary(df)
-
-head_data <- head(df)
-
-#### Correlation plot of numeric data ####
-df1 <- df %>% purrr::keep(is.numeric)
-M1 <- cor(df1)
-title <- "Correlation plot of the numerical data"
-corrplot::corrplot(M1, method = "number", title = title, mar = c(0, 0, 1, 0)) # http://stackoverflow.com/a/14754408/54964)
-corrplot::corrplot(M1, method = "circle", title = title, mar = c(0, 0, 1, 0)) # http://stackoverflow.com/a/14754408/54964)
-
-#### Print correlation matrix of numeric data ####
-correlation_marix <- reactable::reactable(round(cor(df1), 4),
-                                          searchable = TRUE, pagination = FALSE, wrap = TRUE, rownames = TRUE, fullWidth = TRUE, filterable = TRUE, bordered = TRUE,
-                                          striped = TRUE, highlight = TRUE, resizable = TRUE
-)
-htmltools::div(class = "table",
-               htmltools::div(class = "title", "Correlation matrix")
-)
-
-correlation_matrix <- htmlwidgets::prependContent(correlation_marix, htmltools::h2(class = "title", "Correlation matrix"))
-
-
-#### Boxplots of the numeric data ####
-boxplots <- df1 %>%
-  tidyr::gather(key = "var", value = "value") %>%
-  ggplot2::ggplot(ggplot2::aes(x = "", y = value)) +
-  ggplot2::geom_boxplot(outlier.colour = "red", outlier.shape = 1) +
-  ggplot2::facet_wrap(~var, scales = "free") +
-  ggplot2::theme_bw() +
-  ggplot2::labs(title = "Boxplots of the numeric data")
-# Thanks to https://rstudio-pubs-static.s3.amazonaws.com/388596_e21196f1adf04e0ea7cd68edd9eba966.html
-
-if(save_all_plots == "Y" && device == "eps"){
-  ggplot2::ggsave("boxplots.eps", width = width, height = height, path = tempdir1,  units = units, scale = scale, device = device, dpi = dpi)
-}
-if(save_all_plots == "Y" && device == "jpeg"){
-  ggplot2::ggsave("boxplots.jpeg", width = width, height = height, path = tempdir1,  units = units, scale = scale, device = device, dpi = dpi)
-}
-if(save_all_plots == "Y" && device == "pdf"){
-  ggplot2::ggsave("boxplots.pdf", width = width, height = height, path = tempdir1,  units = units, scale = scale, device = device, dpi = dpi)
-}
-if(save_all_plots == "Y" && device == "png"){
-  ggplot2::ggsave("boxplots.png", width = width, height = height, path = tempdir1,  units = units, scale = scale, device = device, dpi = dpi)
-}
-if(save_all_plots == "Y" && device == "svg"){
-  ggplot2::ggsave("boxplots.svg", width = width, height = height, path = tempdir1,  units = units, scale = scale, device = device, dpi = dpi)
-}
-if(save_all_plots == "Y" && device == "tiff"){
-  ggplot2::ggsave("boxplots.tiff", width = width, height = height, path = tempdir1,  units = units, scale = scale, device = device, dpi = dpi)
-}
-
-#### Histograms of the numeric data ####
-histograms <- ggplot2::ggplot(tidyr::gather(df1, cols, value), ggplot2::aes(x = value)) +
-  ggplot2::geom_histogram(bins = round(nrow(df1) / 10)) +
-  ggplot2::facet_wrap(. ~ cols, scales = "free") +
-  ggplot2::labs(title = "Histograms of each numeric column. Each bar = 10 rows of data")
-
-if(save_all_plots == "Y" && device == "eps"){
-  ggplot2::ggsave("histograms.eps", width = width, height = height, path = tempdir1,  units = units, scale = scale, device = device, dpi = dpi)
-}
-if(save_all_plots == "Y" && device == "jpeg"){
-  ggplot2::ggsave("histograms.jpeg", width = width, height = height, path = tempdir1,  units = units, scale = scale, device = device, dpi = dpi)
-}
-if(save_all_plots == "Y" && device == "pdf"){
-  ggplot2::ggsave("histograms.pdf", width = width, height = height, path = tempdir1,  units = units, scale = scale, device = device, dpi = dpi)
-}
-if(save_all_plots == "Y" && device == "png"){
-  ggplot2::ggsave("histograms.png", width = width, height = height, path = tempdir1,  units = units, scale = scale, device = device, dpi = dpi)
-}
-if(save_all_plots == "Y" && device == "svg"){
-  ggplot2::ggsave("histograms.svg", width = width, height = height, path = tempdir1,  units = units, scale = scale, device = device, dpi = dpi)
-}
-if(save_all_plots == "Y" && device == "tiff"){
-  ggplot2::ggsave("histograms.tiff", width = width, height = height, path = tempdir1,  units = units, scale = scale, device = device, dpi = dpi)
-}
-
-if (use_parallel == "Y") {
-  cl <- parallel::makeCluster(no_cores, type = "FORK")
-  doParallel::registerDoParallel(cl)
-}
-
-#### How to handle strings, move target value to the last column on the right ####
-
-y <- 0
-colnames(data)[colnum] <- "y"
-
-df <- data %>% dplyr::relocate(y, .after = tidyr::last_col()) # Moves the target column to the last column on the right
-df <- df[sample(nrow(df)), ]
-
-if (how_to_handle_strings == 1) {
-  df <- dplyr::mutate_if(df, is.character, as.factor)
-}
-
-if (how_to_handle_strings == 2) {
-  df <- dplyr::mutate_if(df, is.character, as.factor)
-  df <- dplyr::mutate_if(df, is.factor, as.numeric)
-}
-
-if (predict_on_new_data == "Y") {
-  new_data <- readline("What is the URL of the new data? ")
-  new_data <- read.csv(new_data, stringsAsFactors = TRUE)
-
-  y <- 0
-  colnames(new_data)[colnum] <- "y"
-
-  new_data <- new_data %>% dplyr::relocate(y, .after = tidyr::last_col()) # Moves the target column to the last column on the right
-}
-
-if (predict_on_new_data == "Y") {
-  new_data <- readline("What is the URL of the new data? ")
-  new_data <- read.csv(new_data, stringsAsFactors = TRUE)
-
-  y <- 0
-  colnames(new_data)[colnum] <- "y"
-
-  new_data <- new_data %>% dplyr::relocate(y, .after = tidyr::last_col()) # Moves the target column to the last column on the right
-}
-
-if (scale_all_numeric_predictors_in_data == "Y"){
-  df <- as.data.frame(scale(df[, 1:ncol(df) -1]) %>% cbind(y = df$y))
-}
-
-
-#### Set initial values to zero ####
-
-bagging_train_accuracy <- 0
-bagging_test_accuracy <- 0
-bagging_validation_accuracy <- 0
-bagging_holdout_vs_train <- 0
-bagging_holdout <- 0
-bagging_residuals <- 0
-bagging_duration <- 0
-bagging_true_positive_rate <- 0
-bagging_true_negative_rate <- 0
-bagging_false_positive_rate <- 0
-bagging_false_negative_rate <- 0
-bagging_F1_score <- 0
-bagging_table_total <- 0
-bagging_classification_error <- 0
-bagging_classification_error_mean <- 0
-bagging_positive_pred_value <- 0
-bagging_negative_pred_value <- 0
-bagging_prevalence <- 0
-bagging_detection_rate <- 0
-bagging_detection_prevalence <- 0
-
-bag_rf_train_accuracy <- 0
-bag_rf_test_accuracy <- 0
-bag_rf_validation_accuracy <- 0
-bag_rf_holdout_vs_train <- 0
-bag_rf_holdout <- 0
-bag_rf_residuals <- 0
-bag_rf_duration <- 0
-bag_rf_true_positive_rate <- 0
-bag_rf_true_negative_rate <- 0
-bag_rf_false_positive_rate <- 0
-bag_rf_false_negative_rate <- 0
-bag_rf_F1_score <- 0
-bag_rf_table_total <- 0
-bag_rf_classification_error <- 0
-bag_rf_classification_error_mean <- 0
-bag_rf_positive_pred_value <- 0
-bag_rf_negative_pred_value <- 0
-bag_rf_prevalence <- 0
-bag_rf_detection_rate <- 0
-bag_rf_detection_prevalence <- 0
-
-C50_train_accuracy <- 0
-C50_test_accuracy <- 0
-C50_validation_accuracy <- 0
-C50_holdout_vs_train <- 0
-C50_holdout <- 0
-C50_residuals <- 0
-C50_duration <- 0
-C50_true_positive_rate <- 0
-C50_true_negative_rate <- 0
-C50_false_positive_rate <- 0
-C50_false_negative_rate <- 0
-C50_F1_score <- 0
-C50_table_total <- 0
-C50_classification_error <- 0
-C50_classification_error_mean <- 0
-C50_positive_pred_value <- 0
-C50_negative_pred_value <- 0
-C50_prevalence <- 0
-C50_detection_rate <- 0
-C50_detection_prevalence <- 0
-
-linear_train_accuracy <- 0
-linear_validation_accuracy <- 0
-linear_test_accuracy <- 0
-linear_test_accuracy_mean <- 0
-linear_validation_accuracy_mean <- 0
-linear_holdout_vs_train <- 0
-linear_holdout <- 0
-linear_residuals <- 0
-linear_duration <- 0
-linear_true_positive_rate <- 0
-linear_true_negative_rate <- 0
-linear_false_positive_rate <- 0
-linear_false_negative_rate <- 0
-linear_F1_score <- 0
-linear_table_total <- 0
-linear_classification_error <- 0
-linear_classification_error_mean <- 0
-linear_positive_pred_value <- 0
-linear_negative_pred_value <- 0
-linear_prevalence <- 0
-linear_detection_rate <- 0
-linear_detection_prevalence <- 0
-
-n_bayes_train_accuracy <- 0
-n_bayes_test_accuracy <- 0
-n_bayes_validation_accuracy <- 0
-n_bayes_accuracy <- 0
-n_bayes_test_accuracy_mean <- 0
-n_bayes_validation_accuracy_mean <- 0
-n_bayes_holdout_vs_train <- 0
-n_bayes_holdout <- 0
-n_bayes_residuals <- 0
-n_bayes_duration <- 0
-n_bayes_true_positive_rate <- 0
-n_bayes_true_negative_rate <- 0
-n_bayes_false_positive_rate <- 0
-n_bayes_false_negative_rate <- 0
-n_bayes_F1_score <- 0
-n_bayes_table_total <- 0
-n_bayes_classification_error <- 0
-n_bayes_classification_error_mean <- 0
-n_bayes_positive_pred_value <- 0
-n_bayes_negative_pred_value <- 0
-n_bayes_prevalence <- 0
-n_bayes_detection_rate <- 0
-n_bayes_detection_prevalence <- 0
-
-pls_train_accuracy <- 0
-pls_test_accuracy <- 0
-pls_test_accuracy_mean <- 0
-pls_validation_accuracy <- 0
-pls_validation_accuracy_mean <- 0
-pls_holdout_vs_train <- 0
-pls_holdout <- 0
-pls_residuals <- 0
-pls_duration <- 0
-pls_true_positive_rate <- 0
-pls_true_negative_rate <- 0
-pls_false_positive_rate <- 0
-pls_false_negative_rate <- 0
-pls_F1_score <- 0
-pls_table_total <- 0
-pls_classification_error <- 0
-pls_classification_error_mean <- 0
-pls_positive_pred_value <- 0
-pls_negative_pred_value <- 0
-pls_prevalence <- 0
-pls_detection_rate <- 0
-pls_detection_prevalence <- 0
-
-pda_train_accuracy <- 0
-pda_test_accuracy <- 0
-pda_test_accuracy_mean <- 0
-pda_validation_accuracy <- 0
-pda_validation_accuracy_mean <- 0
-pda_holdout_vs_train <- 0
-pda_holdout <- 0
-pda_residuals <- 0
-pda_duration <- 0
-pda_true_positive_rate <- 0
-pda_true_negative_rate <- 0
-pda_false_positive_rate <- 0
-pda_false_negative_rate <- 0
-pda_F1_score <- 0
-pda_table_total <- 0
-pda_classification_error <- 0
-pda_classification_error_mean <- 0
-pda_positive_pred_value <- 0
-pda_negative_pred_value <- 0
-pda_prevalence <- 0
-pda_detection_rate <- 0
-pda_detection_prevalence <- 0
-
-rf_train_accuracy <- 0
-rf_test_accuracy <- 0
-rf_test_accuracy_mean <- 0
-rf_validation_accuracy <- 0
-rf_validation_accuracy_mean <- 0
-rf_holdout_vs_train <- 0
-rf_holdout_vs_train_holdout <- 0
-rf_holdout <- 0
-rf_residuals <- 0
-rf_duration <- 0
-rf_true_positive_rate <- 0
-rf_true_negative_rate <- 0
-rf_false_positive_rate <- 0
-rf_false_negative_rate <- 0
-rf_F1_score <- 0
-rf_table_total <- 0
-rf_classification_error <- 0
-rf_classification_error_mean <- 0
-rf_positive_pred_value <- 0
-rf_negative_pred_value <- 0
-rf_prevalence <- 0
-rf_detection_rate <- 0
-rf_detection_prevalence <- 0
-
-ranger_train_accuracy <- 0
-ranger_test_accuracy <- 0
-ranger_test_accuracy_mean <- 0
-ranger_validation_accuracy <-
-  ranger_validation_accuracy_mean <- 0
-ranger_holdout_vs_train <- 0
-ranger_holdout <- 0
-ranger_residuals <- 0
-ranger_duration <- 0
-ranger_true_positive_rate <- 0
-ranger_true_negative_rate <- 0
-ranger_false_positive_rate <- 0
-ranger_false_negative_rate <- 0
-ranger_F1_score <- 0
-ranger_table_total <- 0
-ranger_classification_error <- 0
-ranger_classification_error_mean <- 0
-ranger_positive_pred_value <- 0
-ranger_negative_pred_value <- 0
-ranger_prevalence <- 0
-ranger_detection_rate <- 0
-ranger_detection_prevalence <- 0
-
-rpart_train_accuracy <- 0
-rpart_test_accuracy <- 0
-rpart_test_accuracy_mean <- 0
-rpart_validation_accuracy <- 0
-rpart_validation_accuracy_mean <- 0
-rpart_holdout_vs_train <- 0
-rpart_holdout <- 0
-rpart_residuals <- 0
-rpart_duration <- 0
-rpart_true_positive_rate <- 0
-rpart_true_negative_rate <- 0
-rpart_false_positive_rate <- 0
-rpart_false_negative_rate <- 0
-rpart_F1_score <- 0
-rpart_table_total <- 0
-rpart_classification_error <- 0
-rpart_classification_error_mean <- 0
-rpart_positive_pred_value <- 0
-rpart_negative_pred_value <- 0
-rpart_prevalence <- 0
-rpart_detection_rate <- 0
-rpart_detection_prevalence <- 0
-
-svm_train_accuracy <- 0
-svm_test_accuracy <- 0
-svm_test_accuracy_mean <- 0
-svm_validation_accuracy <- 0
-svm_validation_accuracy_mean <- 0
-svm_holdout_vs_train <- 0
-svm_holdout <- 0
-svm_residuals <- 0
-svm_duration <- 0
-svm_true_positive_rate <- 0
-svm_true_negative_rate <- 0
-svm_false_positive_rate <- 0
-svm_false_negative_rate <- 0
-svm_F1_score <- 0
-svm_table_total <- 0
-svm_classification_error <- 0
-svm_classification_error_mean <- 0
-svm_positive_pred_value <- 0
-svm_negative_pred_value <- 0
-svm_prevalence <- 0
-svm_detection_rate <- 0
-svm_detection_prevalence <- 0
-
-tree_train_accuracy <- 0
-tree_test_accuracy <- 0
-tree_test_accuracy_mean <- 0
-tree_validation_accuracy <- 0
-tree_validation_accuracy_mean <- 0
-tree_holdout_vs_train <- 0
-tree_holdout <- 0
-tree_residuals <- 0
-tree_duration <- 0
-tree_true_positive_rate <- 0
-tree_true_negative_rate <- 0
-tree_false_positive_rate <- 0
-tree_false_negative_rate <- 0
-tree_F1_score <- 0
-tree_table_total <- 0
-tree_classification_error <- 0
-tree_classification_error_mean <- 0
-tree_positive_pred_value <- 0
-tree_negative_pred_value <- 0
-tree_prevalence <- 0
-tree_detection_rate <- 0
-tree_detection_prevalence <- 0
-
-ensemble_adaboost_train_accuracy <- 0
-ensemble_adaboost_train_accuracy_mean <- 0
-ensemble_adaboost_test_accuracy <- 0
-ensemble_adaboost_test_accuracy_mean <- 0
-ensemble_adaboost_validation_accuracy <- 0
-ensemble_adaboost_validation_accuracy_mean <- 0
-ensemble_adaboost_holdout_vs_train <- 0
-ensemble_adaboost_holdout <- 0
-ensemble_adaboost_residuals <- 0
-ensemble_adaboost_duration <- 0
-ensemble_adaboost_true_positive_rate <- 0
-ensemble_adaboost_true_negative_rate <- 0
-ensemble_adaboost_false_positive_rate <- 0
-ensemble_adaboost_false_negative_rate <- 0
-ensemble_adaboost_F1_score <- 0
-ensemble_adaboost_table_total <- 0
-ensemble_adaboost_classification_error <- 0
-ensemble_adaboost_classification_error_mean <- 0
-ensemble_adaboost_positive_pred_value <- 0
-ensemble_adaboost_negative_pred_value <- 0
-ensemble_adaboost_prevalence <- 0
-ensemble_adaboost_detection_rate <- 0
-ensemble_adaboost_detection_prevalence <- 0
-
-ensemble_bag_cart_train_accuracy <- 0
-ensemble_bag_cart_train_accuracy_mean <- 0
-ensemble_bag_cart_test_accuracy <- 0
-ensemble_bag_cart_test_accuracy_mean <- 0
-ensemble_bag_cart_validation_accuracy <- 0
-ensemble_bag_cart_validation_accuracy_mean <- 0
-ensemble_bag_cart_holdout_vs_train <- 0
-ensemble_bag_cart_holdout <- 0
-ensemble_bag_cart_residuals <- 0
-ensemble_bag_cart_duration <- 0
-ensemble_bag_cart_true_positive_rate <- 0
-ensemble_bag_cart_true_negative_rate <- 0
-ensemble_bag_cart_false_positive_rate <- 0
-ensemble_bag_cart_false_negative_rate <- 0
-ensemble_bag_cart_F1_score <- 0
-ensemble_bag_cart_table_total <- 0
-ensemble_bag_cart_classification_error <- 0
-ensemble_bag_cart_classification_error_mean <- 0
-ensemble_bag_cart_positive_pred_value <- 0
-ensemble_bag_cart_negative_pred_value <- 0
-ensemble_bag_cart_prevalence <- 0
-ensemble_bag_cart_detection_rate <- 0
-ensemble_bag_cart_detection_prevalence <- 0
-
-ensemble_bag_rf_train_accuracy <- 0
-ensemble_bag_rf_train_accuracy_mean <- 0
-ensemble_bag_rf_test_accuracy <- 0
-ensemble_bag_rf_test_accuracy_mean <- 0
-ensemble_bag_rf_validation_accuracy <- 0
-ensemble_bag_rf_validation_accuracy_mean <- 0
-ensemble_bag_rf_holdout_vs_train <- 0
-ensemble_bag_rf_holdout <- 0
-ensemble_bag_rf_residuals <- 0
-ensemble_bag_rf_duration <- 0
-ensemble_bag_rf_true_positive_rate <- 0
-ensemble_bag_rf_true_negative_rate <- 0
-ensemble_bag_rf_false_positive_rate <- 0
-ensemble_bag_rf_false_negative_rate <- 0
-ensemble_bag_rf_F1_score <- 0
-ensemble_bag_rf_table_total <- 0
-ensemble_bag_rf_classification_error <- 0
-ensemble_bag_rf_classification_error_mean <- 0
-ensemble_bag_rf_positive_pred_value <- 0
-ensemble_bag_rf_negative_pred_value <- 0
-ensemble_bag_rf_prevalence <- 0
-ensemble_bag_rf_detection_rate <- 0
-ensemble_bag_rf_detection_prevalence <- 0
-
-ensemble_C50_train_accuracy <- 0
-ensemble_C50_train_accuracy_mean <- 0
-ensemble_C50_test_accuracy <- 0
-ensemble_C50_test_accuracy_mean <- 0
-ensemble_C50_validation_accuracy <- 0
-ensemble_C50_validation_accuracy_mean <- 0
-ensemble_C50_holdout_vs_train <- 0
-ensemble_C50_holdout <- 0
-ensemble_C50_residuals <- 0
-ensemble_C50_duration <- 0
-ensemble_C50_true_positive_rate <- 0
-ensemble_C50_true_negative_rate <- 0
-ensemble_C50_false_positive_rate <- 0
-ensemble_C50_false_negative_rate <- 0
-ensemble_C50_F1_score <- 0
-ensemble_C50_table_total <- 0
-ensemble_C50_classification_error <- 0
-ensemble_C50_classification_error_mean <- 0
-ensemble_C50_positive_pred_value <- 0
-ensemble_C50_negative_pred_value <- 0
-ensemble_C50_prevalence <- 0
-ensemble_C50_detection_rate <- 0
-ensemble_C50_detection_prevalence <- 0
-
-ensemble_n_bayes_train_accuracy <- 0
-ensemble_n_bayes_train_accuracy_mean <- 0
-ensemble_n_bayes_test_accuracy <- 0
-ensemble_n_bayes_test_accuracy_mean <- 0
-ensemble_n_bayes_validation_accuracy <- 0
-ensemble_n_bayes_validation_accuracy_mean <- 0
-ensemble_n_bayes_holdout_vs_train <- 0
-ensemble_n_bayes_holdout <- 0
-ensemble_n_bayes_residuals <- 0
-ensemble_n_bayes_duration <- 0
-ensemble_n_bayes_true_positive_rate <- 0
-ensemble_n_bayes_true_negative_rate <- 0
-ensemble_n_bayes_false_positive_rate <- 0
-ensemble_n_bayes_false_negative_rate <- 0
-ensemble_n_bayes_F1_score <- 0
-ensemble_n_bayes_table_total <- 0
-ensemble_n_bayes_classification_error <- 0
-ensemble_n_bayes_classification_error_mean <- 0
-ensemble_n_bayes_positive_pred_value <- 0
-ensemble_n_bayes_negative_pred_value <- 0
-ensemble_n_bayes_prevalence <- 0
-ensemble_n_bayes_detection_rate <- 0
-ensemble_n_bayes_detection_prevalence <- 0
-
-ensemble_ranger_train_accuracy <- 0
-ensemble_ranger_train_accuracy_mean <- 0
-ensemble_ranger_test_accuracy <- 0
-ensemble_ranger_test_accuracy_mean <- 0
-ensemble_ranger_validation_accuracy <- 0
-ensemble_ranger_validation_accuracy_mean <- 0
-ensemble_ranger_holdout_vs_train <- 0
-ensemble_ranger_holdout <- 0
-ensemble_ranger_residuals <- 0
-ensemble_ranger_duration <- 0
-ensemble_ranger_true_positive_rate <- 0
-ensemble_ranger_true_negative_rate <- 0
-ensemble_ranger_false_positive_rate <- 0
-ensemble_ranger_false_negative_rate <- 0
-ensemble_ranger_F1_score <- 0
-ensemble_ranger_table_total <- 0
-ensemble_ranger_classification_error <- 0
-ensemble_ranger_classification_error_mean <- 0
-ensemble_ranger_positive_pred_value <- 0
-ensemble_ranger_negative_pred_value <- 0
-ensemble_ranger_prevalence <- 0
-ensemble_ranger_detection_rate <- 0
-ensemble_ranger_detection_prevalence <- 0
-
-ensemble_rf_train_accuracy <- 0
-ensemble_rf_train_accuracy_mean <- 0
-ensemble_rf_test_accuracy <- 0
-ensemble_rf_test_accuracy_mean <- 0
-ensemble_rf_validation_accuracy <- 0
-ensemble_rf_validation_accuracy_mean <- 0
-ensemble_rf_holdout_vs_train <- 0
-ensemble_rf_holdout <- 0
-ensemble_rf_residuals <- 0
-ensemble_rf_duration <- 0
-ensemble_rf_true_positive_rate <- 0
-ensemble_rf_true_negative_rate <- 0
-ensemble_rf_false_positive_rate <- 0
-ensemble_rf_false_negative_rate <- 0
-ensemble_rf_F1_score <- 0
-ensemble_rf_table_total <- 0
-ensemble_rf_classification_error <- 0
-ensemble_rf_classification_error_mean <- 0
-ensemble_rf_positive_pred_value <- 0
-ensemble_rf_negative_pred_value <- 0
-ensemble_rf_prevalence <- 0
-ensemble_rf_detection_rate <- 0
-ensemble_rf_detection_prevalence <- 0
-
-ensemble_svm_train_accuracy <- 0
-ensemble_svm_train_accuracy_mean <- 0
-ensemble_svm_test_accuracy <- 0
-ensemble_svm_test_accuracy_mean <- 0
-ensemble_svm_validation_accuracy <- 0
-ensemble_svm_validation_accuracy_mean <- 0
-ensemble_svm_holdout_vs_train <- 0
-ensemble_svm_holdout <- 0
-ensemble_svm_residuals <- 0
-ensemble_svm_duration <- 0
-ensemble_svm_true_positive_rate <- 0
-ensemble_svm_true_negative_rate <- 0
-ensemble_svm_false_positive_rate <- 0
-ensemble_svm_false_negative_rate <- 0
-ensemble_svm_F1_score <- 0
-ensemble_svm_table_total <- 0
-ensemble_svm_classification_error <- 0
-ensemble_svm_classification_error_mean <- 0
-ensemble_svm_positive_pred_value <- 0
-ensemble_svm_negative_pred_value <- 0
-ensemble_svm_prevalence <- 0
-ensemble_svm_detection_rate <- 0
-ensemble_svm_detection_prevalence <- 0
-
-ensemble_tree_train_accuracy <- 0
-ensemble_tree_train_accuracy_mean <- 0
-ensemble_tree_test_accuracy <- 0
-ensemble_tree_test_accuracy_mean <- 0
-ensemble_tree_validation_accuracy <- 0
-ensemble_tree_validation_accuracy_mean <- 0
-ensemble_tree_holdout_vs_train <- 0
-ensemble_tree_holdout <- 0
-ensemble_tree_residuals <- 0
-ensemble_tree_duration <- 0
-ensemble_tree_true_positive_rate <- 0
-ensemble_tree_true_negative_rate <- 0
-ensemble_tree_false_positive_rate <- 0
-ensemble_tree_false_negative_rate <- 0
-ensemble_tree_F1_score <- 0
-ensemble_tree_table_total <- 0
-ensemble_tree_classification_error <- 0
-ensemble_tree_classification_error_mean <- 0
-ensemble_tree_positive_pred_value <- 0
-ensemble_tree_negative_pred_value <- 0
-ensemble_tree_prevalence <- 0
-ensemble_tree_detection_rate <- 0
-ensemble_tree_detection_prevalence <- 0
-
-value <- 0
-cols <- 0
-Mean_Holdout_Accuracy <- 0
-count <- 0
-model <- 0
-holdout <- 0
-name <- 0
-perc <- 0
-Model <- 0
-Holdout_vs_train <- 0
-Holdout_vs_train_St_Dev <- 0
-Duration <- 0
-Accuracy_Holdout_Std.Dev <- 0
-holdout_vs_train_St_Dev <- 0
-Duration_St_Dev <- 0
-train_ratio_df <- data.frame()
-test_ratio_df <- data.frame()
-validation_ratio_df <- data.frame()
-stratified_sampling_report <- 0
-accuracy_plot <- 0
-total_plot <- 0
-holdout_vs_train_plot <- 0
-
-if(stratified_random_column > 0){
-  df <- df[sample(nrow(df)),]
-  train <- as.data.frame(df %>% dplyr::group_by(colnames(df[, stratified_random_column])) %>% dplyr::sample_frac(train_amount))
-  train_ratio <- table(train[, stratified_random_column])/nrow(train)
-  train_ratio_df <- dplyr::bind_rows(train_ratio_df, train_ratio)
-  train_ratio_mean <- colMeans(train_ratio_df)
-
-  test <- as.data.frame(df %>% dplyr::group_by(colnames(df[, stratified_random_column])) %>% dplyr::sample_frac(test_amount))
-  test_ratio <- table(test[, stratified_random_column])/nrow(test)
-  test_ratio_df <- dplyr::bind_rows(test_ratio_df, test_ratio)
-  test_ratio_mean <- colMeans(test_ratio_df)
-
-  validation <- as.data.frame(df %>% dplyr::group_by(colnames(df[, stratified_random_column])) %>% dplyr::sample_frac(validation_amount))
-  validation_ratio <- table(validation[, stratified_random_column])/nrow(validation)
-  validation_ratio_df <- dplyr::bind_rows(validation_ratio_df, validation_ratio)
-  validation_ratio_mean <- colMeans(validation_ratio_df)
-
-  total_data_mean <- table(data[, stratified_random_column])/nrow(data)
-
-  df1 <- as.data.frame(rbind(total_data_mean, train_ratio_mean, test_ratio_mean, validation_ratio_mean))
-  df1 <- data.frame(lapply(df1, function(x) if(is.numeric(x)) round(x, 4) else x))
-  row.names(df1) = c('Mean total data ratios', 'Mean train data ratios', 'Mean test data ratio', 'Mean validation data ratios')
-  colnames(df1) <- levels
-
-  stratified_sampling_report <- reactable::reactable(df1, searchable = TRUE, pagination = FALSE, wrap = TRUE, rownames = TRUE, fullWidth = TRUE, filterable = TRUE, bordered = TRUE,
-                                                     striped = TRUE, highlight = TRUE, resizable = TRUE
-  )
-
-  htmltools::div(class = "table",
-                 htmltools::div(class = "title", "stratified_sampling_report ")
-  )
-
-  stratified_sampling_report <- htmlwidgets::prependContent(stratified_sampling_report , htmltools::h2(class = "title", "Stratified sampling report"))
-}
-
-#### Random resampling starts here ####
-
-for (i in 1:numresamples) {
-  print(noquote(""))
-  print(paste0("Resampling number ", i, " of ", numresamples, sep = ','))
-  print(noquote(""))
-  df <- df[sample(nrow(df)), ]
-
-  index <- sample(c(1:3), nrow(df), replace = TRUE, prob = c(train_amount, test_amount, validation_amount))
-
-  train <- df[index == 1, ]
-  test <- df[index == 2, ]
-  validation <- df[index == 3, ]
-
-  train01 <- train
-  test01 <- test
-  validation01 <- validation
-
-  y_train <- train$y
-  y_test <- test$y
-  y_validation <- validation$y
-
-  train <- df[index == 1, ] %>% dplyr::select(-y)
-  test <- df[index == 2, ] %>% dplyr::select(-y)
-  validation <- df[index == 3, ] %>% dplyr::select(-y)
-
-  #### 1. Bagging ####
-  bagging_start <- Sys.time()
-  message("Working on Bagging analysis")
-  if(set_seed == "Y"){
-    set.seed(seed = seed)
-    bagging_train_fit <- ipred::bagging(y ~ ., data = train01, coob = TRUE)
-  }
-  if(set_seed == "N"){
-    bagging_train_fit <- ipred::bagging(y ~ ., data = train01, coob = TRUE)
-  }
-  bagging_train_pred <- predict(object = bagging_train_fit, newdata = train)
-  bagging_train_table <- table(bagging_train_pred, y_train)
-  bagging_train_accuracy[i] <- sum(diag(bagging_train_table)) / sum(bagging_train_table)
-  bagging_train_accuracy_mean <- mean(bagging_train_accuracy)
-  bagging_train_mean <- mean(diag(bagging_train_table)) / mean(bagging_train_table)
-  bagging_train_sd <- sd(diag(bagging_train_table)) / sd(bagging_train_table)
-  bagging_train_diag <- sum(diag(bagging_train_table))
-  sum_diag_train_bagging <- sum(diag(bagging_train_table))
-  bagging_train_prop <- diag(prop.table(bagging_train_table))
-
-  bagging_test_pred <- predict(object = bagging_train_fit, newdata = test)
-  bagging_test_table <- table(bagging_test_pred, y_test)
-  bagging_test_accuracy[i] <- sum(diag(bagging_test_table)) / sum(bagging_test_table)
-  bagging_test_accuracy_mean <- mean(bagging_test_accuracy)
-  bagging_test_mean <- mean(diag(bagging_test_table)) / mean(bagging_test_table)
-  bagging_test_sd <- sd(diag(bagging_test_table)) / sd(bagging_test_table)
-  bagging_test_diag <- sum(diag(bagging_test_table))
-  sum_diag_test_bagging <- sum(diag(bagging_test_table))
-  bagging_test_prop <- diag(prop.table(bagging_test_table))
-
-  bagging_validation_pred <- predict(object = bagging_train_fit, newdata = validation)
-  bagging_validation_table <- table(bagging_validation_pred, y_validation)
-  bagging_validation_accuracy[i] <- sum(diag(bagging_validation_table)) / sum(bagging_validation_table)
-  bagging_validation_accuracy_mean <- mean(bagging_validation_accuracy)
-  bagging_validation_mean <- mean(diag(bagging_validation_table)) / mean(bagging_validation_table)
-  bagging_validation_sd <- sd(diag(bagging_validation_table)) / sd(bagging_validation_table)
-  bagging_validation_diag <- sum(diag(bagging_validation_table))
-  sum_diag_validation_bagging <- sum(diag(bagging_validation_table))
-  bagging_validation_prop <- diag(prop.table(bagging_validation_table))
-
-  bagging_holdout[i] <- mean(c(bagging_test_accuracy_mean, bagging_validation_accuracy_mean))
-  bagging_holdout_mean <- mean(bagging_holdout)
-  bagging_residuals[i] <- 1 - bagging_holdout[i]
-  bagging_residuals_mean <- mean(bagging_residuals)
-  bagging_holdout_sd <- sd(bagging_holdout)
-  bagging_holdout_vs_train[i] <- bagging_holdout_mean / bagging_train_accuracy_mean
-  bagging_holdout_vs_train_mean <- mean(bagging_holdout_vs_train)
-  bagging_holdout_vs_train_range <- range(bagging_holdout_vs_train)
-  bagging_holdout_vs_train_sd <- sd(bagging_holdout_vs_train)
-
-  bagging_table <- bagging_test_table + bagging_validation_table
-  bagging_table_total <- bagging_table_total + bagging_table
-  bagging_table_sum_diag <- sum(diag(bagging_table))
-
-  bagging_confusion_matrix <- caret::confusionMatrix(bagging_table_total)
-  bagging_confusion_matrix_summary <- colMeans(bagging_confusion_matrix$byClass, na.rm = TRUE)
-
-  bagging_true_positive_rate[i] <- bagging_confusion_matrix_summary[1]
-  bagging_true_positive_rate_mean <- mean(bagging_true_positive_rate[i])
-  bagging_true_negative_rate[i] <- bagging_confusion_matrix_summary[2]
-  bagging_true_negative_rate_mean <- mean(bagging_true_negative_rate)
-  bagging_false_negative_rate[i] <- 1 -  bagging_true_positive_rate[i]
-  bagging_false_negative_rate_mean <- mean(bagging_false_negative_rate)
-  bagging_false_positive_rate[i] <- 1 - bagging_true_negative_rate[i]
-  bagging_false_positive_rate_mean <- mean(bagging_false_positive_rate)
-  bagging_positive_pred_value[i] <- bagging_confusion_matrix_summary[3]
-  bagging_positive_pred_value_mean <- mean(bagging_positive_pred_value)
-  bagging_negative_pred_value[i] <- bagging_confusion_matrix_summary[4]
-  bagging_negative_pred_value_mean <- mean(bagging_negative_pred_value)
-  bagging_prevalence[i] <- bagging_confusion_matrix_summary[8]
-  bagging_prevalence_mean <- mean(bagging_prevalence)
-  bagging_detection_rate[i] <- bagging_confusion_matrix_summary[9]
-  bagging_detection_rate_mean <- mean(bagging_detection_rate)
-  bagging_detection_prevalence[i] <- bagging_confusion_matrix_summary[10]
-  bagging_detection_prevalence_mean <- mean(bagging_detection_prevalence)
-  bagging_classification_error[i] <- 1 - bagging_holdout[i]
-  bagging_classification_error_mean <- mean(bagging_classification_error)
-  bagging_F1_score[i] <- bagging_confusion_matrix_summary[7]
-  bagging_F1_score_mean <- mean(bagging_F1_score[i])
-
-  bagging_end <- Sys.time()
-  bagging_duration[i] <- bagging_end - bagging_start
-  bagging_duration_mean <- mean(bagging_duration)
-  bagging_duration_sd <- sd(bagging_duration)
-
-  #### 2. Bagged Random Forest ####
-  bag_rf_start <- Sys.time()
-  message("Working on Bagged Random Forest analysis")
-  if(set_seed == "Y"){
-    set.seed(seed = seed)
-    bag_rf_train_fit <- randomForest::randomForest(y ~ ., data = train01, mtry = ncol(train))
-  }
-  if(set_seed == "N"){
-    bag_rf_train_fit <- randomForest::randomForest(y ~ ., data = train01, mtry = ncol(train))
-  }
-  bag_rf_train_pred <- predict(bag_rf_train_fit, train, type = "class")
-  bag_rf_train_table <- table(bag_rf_train_pred, y_train)
-  bag_rf_train_accuracy[i] <- sum(diag(bag_rf_train_table)) / sum(bag_rf_train_table)
-  bag_rf_train_accuracy_mean <- mean(bag_rf_train_accuracy)
-  bag_rf_train_diag <- sum(bag_rf_train_table)
-  bag_rf_train_mean <- mean(diag(bag_rf_train_table)) / mean(bag_rf_train_table)
-  bag_rf_train_sd <- sd(diag(bag_rf_train_table)) / sd(bag_rf_train_table)
-  sum_diag_bag_train_rf <- sum(diag(bag_rf_train_table))
-  bag_rf_train_prop <- diag(prop.table(bag_rf_train_table, margin = 1))
-
-  bag_rf_test_pred <- predict(bag_rf_train_fit, test, type = "class")
-  bag_rf_test_table <- table(bag_rf_test_pred, y_test)
-  bag_rf_test_accuracy[i] <- sum(diag(bag_rf_test_table)) / sum(bag_rf_test_table)
-  bag_rf_test_accuracy_mean <- mean(bag_rf_test_accuracy)
-  bag_rf_test_diag <- sum(bag_rf_test_table)
-  bag_rf_test_mean <- mean(diag(bag_rf_test_table)) / mean(bag_rf_test_table)
-  bag_rf_test_sd <- sd(diag(bag_rf_test_table)) / sd(bag_rf_test_table)
-  sum_diag_bag_test_rf <- sum(diag(bag_rf_test_table))
-  bag_rf_test_prop <- diag(prop.table(bag_rf_test_table, margin = 1))
-
-  bag_rf_validation_pred <- predict(bag_rf_train_fit, validation, type = "class")
-  bag_rf_validation_table <- table(bag_rf_validation_pred, y_validation)
-  bag_rf_validation_accuracy[i] <- sum(diag(bag_rf_validation_table)) / sum(bag_rf_validation_table)
-  bag_rf_validation_accuracy_mean <- mean(bag_rf_validation_accuracy)
-  bag_rf_validation_diag <- sum(bag_rf_validation_table)
-  bag_rf_validation_mean <- mean(diag(bag_rf_validation_table)) / mean(bag_rf_validation_table)
-  bag_rf_validation_sd <- sd(diag(bag_rf_validation_table)) / sd(bag_rf_validation_table)
-  sum_diag_bag_validation_rf <- sum(diag(bag_rf_validation_table))
-  bag_rf_validation_prop <- diag(prop.table(bag_rf_validation_table, margin = 1))
-
-  bag_rf_holdout[i] <- mean(c(bag_rf_test_accuracy_mean, bag_rf_validation_accuracy_mean))
-  bag_rf_holdout_mean <- mean(bag_rf_holdout)
-  bag_rf_residuals[i] <- 1 - bag_rf_holdout[i]
-  bag_rf_residuals_mean <- mean(bag_rf_residuals)
-  bag_rf_holdout_sd <- sd(bag_rf_holdout)
-  bag_rf_holdout_vs_train[i] <- bag_rf_holdout_mean / bag_rf_train_accuracy_mean
-  bag_rf_holdout_vs_train_mean <- mean(bag_rf_holdout_vs_train)
-  bag_rf_holdout_vs_train_range <- range(bag_rf_holdout_vs_train)
-  bag_rf_holdout_vs_train_sd <- sd(bag_rf_holdout_vs_train)
-
-  bag_rf_table <- bag_rf_test_table + bag_rf_validation_table
-  bag_rf_table_total <- bag_rf_table_total + bag_rf_table
-  bag_rf_table_sum_diag <- sum(diag(bag_rf_table))
-
-  bag_rf_confusion_matrix <- caret::confusionMatrix(bag_rf_table_total)
-  bag_rf_confusion_matrix_summary <- colMeans(bag_rf_confusion_matrix$byClass, na.rm = TRUE)
-
-  bag_rf_true_positive_rate[i] <- bag_rf_confusion_matrix_summary[1]
-  bag_rf_true_positive_rate_mean <- mean(bag_rf_true_positive_rate[i])
-  bag_rf_true_negative_rate[i] <- bag_rf_confusion_matrix_summary[2]
-  bag_rf_true_negative_rate_mean <- mean(bag_rf_true_negative_rate)
-  bag_rf_false_negative_rate[i] <- 1 -  bag_rf_true_positive_rate[i]
-  bag_rf_false_negative_rate_mean <- mean(bag_rf_false_negative_rate)
-  bag_rf_false_positive_rate[i] <- 1 - bag_rf_true_negative_rate[i]
-  bag_rf_false_positive_rate_mean <- mean(bag_rf_false_positive_rate)
-  bag_rf_positive_pred_value[i] <- bag_rf_confusion_matrix_summary[3]
-  bag_rf_positive_pred_value_mean <- mean(bag_rf_positive_pred_value)
-  bag_rf_negative_pred_value[i] <- bag_rf_confusion_matrix_summary[4]
-  bag_rf_negative_pred_value_mean <- mean(bag_rf_negative_pred_value)
-  bag_rf_prevalence[i] <- bag_rf_confusion_matrix_summary[8]
-  bag_rf_prevalence_mean <- mean(bag_rf_prevalence)
-  bag_rf_detection_rate[i] <- bag_rf_confusion_matrix_summary[9]
-  bag_rf_detection_rate_mean <- mean(bag_rf_detection_rate)
-  bag_rf_detection_prevalence[i] <- bag_rf_confusion_matrix_summary[10]
-  bag_rf_detection_prevalence_mean <- mean(bag_rf_detection_prevalence)
-  bag_rf_classification_error[i] <- 1 - bag_rf_holdout[i]
-  bag_rf_classification_error_mean <- mean(bag_rf_classification_error)
-  bag_rf_F1_score[i] <- bag_rf_confusion_matrix_summary[7]
-  bag_rf_F1_score_mean <- mean(bag_rf_F1_score[i])
-
-  bag_rf_end <- Sys.time()
-  bag_rf_duration[i] <- bag_rf_end - bag_rf_start
-  bag_rf_duration_mean <- mean(bag_rf_duration)
-  bag_rf_duration_sd <- sd(bag_rf_duration)
-
-  #### 3. C50 ####
-  C50_start <- Sys.time()
-  message("Working on C50 analysis")
-  if(set_seed == "Y"){
-    set.seed(seed = seed)
-    C50_train_fit <- C50::C5.0(as.factor(y_train) ~ ., data = train)
-  }
-  if(set_seed == "N"){
-    C50_train_fit <- C50::C5.0(as.factor(y_train) ~ ., data = train)
-  }
-  C50_train_pred <- predict(C50_train_fit, train)
-  C50_train_table <- table(C50_train_pred, y_train)
-  C50_train_accuracy[i] <- sum(diag(C50_train_table)) / sum(C50_train_table)
-  C50_train_accuracy_mean <- mean(C50_train_accuracy)
-  C50_train_mean <- mean(diag(C50_train_table)) / mean(C50_train_table)
-  C50_train_sd <- sd(diag(C50_train_table)) / sd(C50_train_table)
-  sum_diag_train_C50 <- sum(diag(C50_train_table))
-  C50_train_prop <- diag(prop.table(C50_train_table, margin = 1))
-
-  C50_test_pred <- predict(C50_train_fit, test)
-  C50_test_table <- table(C50_test_pred, y_test)
-  C50_test_accuracy[i] <- sum(diag(C50_test_table)) / sum(C50_test_table)
-  C50_test_accuracy_mean <- mean(C50_test_accuracy)
-  C50_test_mean <- mean(diag(C50_test_table)) / mean(C50_test_table)
-  C50_test_sd <- sd(diag(C50_test_table)) / sd(C50_test_table)
-  sum_diag_test_C50 <- sum(diag(C50_test_table))
-  C50_test_prop <- diag(prop.table(C50_test_table, margin = 1))
-
-  C50_validation_pred <- predict(C50_train_fit, validation)
-  C50_validation_table <- table(C50_validation_pred, y_validation)
-  C50_validation_accuracy[i] <- sum(diag(C50_validation_table)) / sum(C50_validation_table)
-  C50_validation_accuracy_mean <- mean(C50_validation_accuracy)
-  C50_validation_mean <- mean(diag(C50_validation_table)) / mean(C50_validation_table)
-  C50_validation_sd <- sd(diag(C50_validation_table)) / sd(C50_validation_table)
-  sum_diag_validation_C50 <- sum(diag(C50_validation_table))
-  C50_validation_prop <- diag(prop.table(C50_validation_table, margin = 1))
-
-  C50_holdout[i] <- mean(c(C50_test_accuracy_mean, C50_validation_accuracy_mean))
-  C50_holdout_mean <- mean(C50_holdout)
-  C50_residuals[i] <- 1 - C50_holdout[i]
-  C50_residuals_mean <- mean(C50_residuals)
-  C50_holdout_sd <- sd(C50_holdout)
-  C50_holdout_vs_train[i] <- C50_holdout_mean / C50_train_accuracy_mean
-  C50_holdout_vs_train_mean <- mean(C50_holdout_vs_train)
-  C50_holdout_vs_train_range <- range(C50_holdout_vs_train)
-  C50_holdout_vs_train_sd <- sd(C50_holdout_vs_train)
-
-  C50_table <- C50_test_table + C50_validation_table
-  C50_table_total <- C50_table_total + C50_table
-  C50_table_sum_diag <- sum(diag(C50_table))
-
-  C50_confusion_matrix <- caret::confusionMatrix(C50_table_total)
-  C50_confusion_matrix_summary <- colMeans(C50_confusion_matrix$byClass, na.rm = TRUE)
-
-  C50_true_positive_rate[i] <- C50_confusion_matrix_summary[1]
-  C50_true_positive_rate_mean <- mean(C50_true_positive_rate[i])
-  C50_true_negative_rate[i] <- C50_confusion_matrix_summary[2]
-  C50_true_negative_rate_mean <- mean(C50_true_negative_rate)
-  C50_false_negative_rate[i] <- 1 -  C50_true_positive_rate[i]
-  C50_false_negative_rate_mean <- mean(C50_false_negative_rate)
-  C50_false_positive_rate[i] <- 1 - C50_true_negative_rate[i]
-  C50_false_positive_rate_mean <- mean(C50_false_positive_rate)
-  C50_positive_pred_value[i] <- C50_confusion_matrix_summary[3]
-  C50_positive_pred_value_mean <- mean(C50_positive_pred_value)
-  C50_negative_pred_value[i] <- C50_confusion_matrix_summary[4]
-  C50_negative_pred_value_mean <- mean(C50_negative_pred_value)
-  C50_prevalence[i] <- C50_confusion_matrix_summary[8]
-  C50_prevalence_mean <- mean(C50_prevalence)
-  C50_detection_rate[i] <- C50_confusion_matrix_summary[9]
-  C50_detection_rate_mean <- mean(C50_detection_rate)
-  C50_detection_prevalence[i] <- C50_confusion_matrix_summary[10]
-  C50_detection_prevalence_mean <- mean(C50_detection_prevalence)
-  C50_classification_error[i] <- 1 - C50_holdout[i]
-  C50_classification_error_mean <- mean(C50_classification_error)
-  C50_F1_score[i] <- C50_confusion_matrix_summary[7]
-  C50_F1_score_mean <- mean(C50_F1_score[i])
-
-  C50_end <- Sys.time()
-  C50_duration[i] <- C50_end - C50_start
-  C50_duration_mean <- mean(C50_duration)
-  C50_duration_sd <- sd(C50_duration)
-
-  #### 4. Linear Model ####
-  linear_start <- Sys.time()
-  message("Working on Linear analysis")
-  if(set_seed == "Y"){
-    set.seed(seed = seed)
-    linear_train_fit <- MachineShop::fit(y ~ ., data = train01, model = "LMModel")
-  }
-  if(set_seed == "N"){
-    linear_train_fit <- MachineShop::fit(y ~ ., data = train01, model = "LMModel")
-  }
-  linear_train_pred <- predict(object = linear_train_fit, newdata = train01)
-  linear_train_table <- table(linear_train_pred, y_train)
-  linear_train_accuracy[i] <- sum(diag(linear_train_table)) / sum(linear_train_table)
-  linear_train_accuracy_mean <- mean(linear_train_accuracy)
-  linear_train_mean <- mean(diag(linear_train_table)) / mean(linear_train_table)
-  linear_train_sd <- sd(diag(linear_train_table)) / sd(linear_train_table)
-  sum_diag_train_linear <- sum(diag(linear_train_table))
-  linear_train_prop <- diag(prop.table(linear_train_table, margin = 1))
-
-  linear_test_pred <- predict(object = linear_train_fit, newdata = test01)
-  linear_test_table <- table(linear_test_pred, y_test)
-  linear_test_accuracy[i] <- sum(diag(linear_test_table)) / sum(linear_test_table)
-  linear_test_accuracy_mean <- mean(linear_test_accuracy)
-  linear_test_mean <- mean(diag(linear_test_table)) / mean(linear_test_table)
-  linear_test_sd <- sd(diag(linear_test_table)) / sd(linear_test_table)
-  sum_diag_test_linear <- sum(diag(linear_test_table))
-  linear_test_prop <- diag(prop.table(linear_test_table, margin = 1))
-
-  linear_validation_pred <- predict(object = linear_train_fit, newdata = validation01)
-  linear_validation_table <- table(linear_validation_pred, y_validation)
-  linear_validation_accuracy[i] <- sum(diag(linear_validation_table)) / sum(linear_validation_table)
-  linear_validation_accuracy_mean <- mean(linear_validation_accuracy)
-  linear_validation_mean <- mean(diag(linear_validation_table)) / mean(linear_validation_table)
-  linear_validation_sd <- sd(diag(linear_validation_table)) / sd(linear_validation_table)
-  sum_diag_validation_linear <- sum(diag(linear_validation_table))
-  linear_validation_prop <- diag(prop.table(linear_validation_table, margin = 1))
-
-  linear_holdout[i] <- mean(c(linear_test_accuracy_mean, linear_validation_accuracy_mean))
-  linear_holdout_mean <- mean(linear_holdout)
-  linear_residuals[i] <- 1 - linear_holdout[i]
-  linear_residuals_mean <- mean(linear_residuals)
-  linear_holdout_sd <- sd(linear_holdout)
-  linear_holdout_vs_train[i] <- linear_holdout_mean / linear_train_accuracy_mean
-  linear_holdout_vs_train_mean <- mean(linear_holdout_vs_train)
-  linear_holdout_vs_train_range <- range(linear_holdout_vs_train)
-  linear_holdout_vs_train_sd <- sd(linear_holdout_vs_train)
-
-  linear_table <- linear_test_table + linear_validation_table
-  linear_table_total <- linear_table_total + linear_table
-  linear_table_sum_diag <- sum(diag(linear_table))
-
-  linear_confusion_matrix <- caret::confusionMatrix(linear_table_total)
-  linear_confusion_matrix_summary <- colMeans(linear_confusion_matrix$byClass, na.rm = TRUE)
-
-  linear_true_positive_rate[i] <- linear_confusion_matrix_summary[1]
-  linear_true_positive_rate_mean <- mean(linear_true_positive_rate[i])
-  linear_true_negative_rate[i] <- linear_confusion_matrix_summary[2]
-  linear_true_negative_rate_mean <- mean(linear_true_negative_rate)
-  linear_false_negative_rate[i] <- 1 -  linear_true_positive_rate[i]
-  linear_false_negative_rate_mean <- mean(linear_false_negative_rate)
-  linear_false_positive_rate[i] <- 1 - linear_true_negative_rate[i]
-  linear_false_positive_rate_mean <- mean(linear_false_positive_rate)
-  linear_positive_pred_value[i] <- linear_confusion_matrix_summary[3]
-  linear_positive_pred_value_mean <- mean(linear_positive_pred_value)
-  linear_negative_pred_value[i] <- linear_confusion_matrix_summary[4]
-  linear_negative_pred_value_mean <- mean(linear_negative_pred_value)
-  linear_prevalence[i] <- linear_confusion_matrix_summary[8]
-  linear_prevalence_mean <- mean(linear_prevalence)
-  linear_detection_rate[i] <- linear_confusion_matrix_summary[9]
-  linear_detection_rate_mean <- mean(linear_detection_rate)
-  linear_detection_prevalence[i] <- linear_confusion_matrix_summary[10]
-  linear_detection_prevalence_mean <- mean(linear_detection_prevalence)
-  linear_classification_error[i] <- 1 - linear_holdout[i]
-  linear_classification_error_mean <- mean(linear_classification_error)
-  linear_F1_score[i] <- linear_confusion_matrix_summary[7]
-  linear_F1_score_mean <- mean(linear_F1_score[i])
-
-  linear_end <- Sys.time()
-  linear_duration[i] <- linear_end - linear_start
-  linear_duration_mean <- mean(linear_duration)
-  linear_duration_sd <- sd(linear_duration)
-
-  #### 5. Naive Bayes ####
-  n_bayes_start <- Sys.time()
-  message("Working on Naive Bayes analysis")
-  if(set_seed == "Y"){
-    set.seed(seed = seed)
-    n_bayes_train_fit <- e1071::naiveBayes(y_train ~ ., data = train)
-  }
-  if(set_seed == "N"){
-    n_bayes_train_fit <- e1071::naiveBayes(y_train ~ ., data = train)
-  }
-  n_bayes_train_pred <- predict(n_bayes_train_fit, train)
-  n_bayes_train_table <- table(n_bayes_train_pred, y_train)
-  n_bayes_train_accuracy[i] <- sum(diag(n_bayes_train_table)) / sum(n_bayes_train_table)
-  n_bayes_train_accuracy_mean <- mean(n_bayes_train_accuracy)
-  n_bayes_train_diag <- sum(diag(n_bayes_train_table))
-  n_bayes_train_mean <- mean(diag(n_bayes_train_table)) / mean(n_bayes_train_table)
-  n_bayes_train_sd <- sd(diag(n_bayes_train_table)) / sd(n_bayes_train_table)
-  sum_diag_n_train_bayes <- sum(diag(n_bayes_train_table))
-  n_bayes_train_prop <- diag(prop.table(n_bayes_train_table, margin = 1))
-
-  n_bayes_test_pred <- predict(n_bayes_train_fit, test)
-  n_bayes_test_table <- table(n_bayes_test_pred, y_test)
-  n_bayes_test_accuracy[i] <- sum(diag(n_bayes_test_table)) / sum(n_bayes_test_table)
-  n_bayes_test_accuracy_mean <- mean(n_bayes_test_accuracy)
-  n_bayes_test_diag <- sum(diag(n_bayes_test_table))
-  n_bayes_test_mean <- mean(diag(n_bayes_test_table)) / mean(n_bayes_test_table)
-  n_bayes_test_sd <- sd(diag(n_bayes_test_table)) / sd(n_bayes_test_table)
-  sum_diag_n_test_bayes <- sum(diag(n_bayes_test_table))
-  n_bayes_test_prop <- diag(prop.table(n_bayes_test_table, margin = 1))
-
-  n_bayes_validation_pred <- predict(n_bayes_train_fit, validation)
-  n_bayes_validation_table <- table(n_bayes_validation_pred, y_validation)
-  n_bayes_validation_accuracy[i] <- sum(diag(n_bayes_validation_table)) / sum(n_bayes_validation_table)
-  n_bayes_validation_accuracy_mean <- mean(n_bayes_validation_accuracy)
-  n_bayes_validation_diag <- sum(diag(n_bayes_validation_table))
-  n_bayes_validation_mean <- mean(diag(n_bayes_validation_table)) / mean(n_bayes_validation_table)
-  n_bayes_validation_sd <- sd(diag(n_bayes_validation_table)) / sd(n_bayes_validation_table)
-  sum_diag_n_validation_bayes <- sum(diag(n_bayes_validation_table))
-  n_bayes_validation_prop <- diag(prop.table(n_bayes_validation_table, margin = 1))
-
-  n_bayes_holdout[i] <- mean(c(n_bayes_test_accuracy_mean, n_bayes_validation_accuracy_mean))
-  n_bayes_holdout_mean <- mean(n_bayes_holdout)
-  n_bayes_residuals[i] <- 1 - n_bayes_holdout[i]
-  n_bayes_residuals_mean <- mean(n_bayes_residuals)
-  n_bayes_holdout_sd <- sd(n_bayes_holdout)
-  n_bayes_holdout_vs_train[i] <- n_bayes_holdout_mean / n_bayes_train_accuracy_mean
-  n_bayes_holdout_vs_train_mean <- mean(n_bayes_holdout_vs_train)
-  n_bayes_holdout_vs_train_range <- range(n_bayes_holdout_vs_train)
-  n_bayes_holdout_vs_train_sd <- sd(n_bayes_holdout_vs_train)
-
-  n_bayes_table <- n_bayes_test_table + n_bayes_validation_table
-  n_bayes_table_total <- n_bayes_table_total + n_bayes_table
-  n_bayes_table_sum_diag <- sum(diag(n_bayes_table))
-
-  n_bayes_confusion_matrix <- caret::confusionMatrix(n_bayes_table_total)
-  n_bayes_confusion_matrix_summary <- colMeans(n_bayes_confusion_matrix$byClass, na.rm = TRUE)
-
-  n_bayes_true_positive_rate[i] <- n_bayes_confusion_matrix_summary[1]
-  n_bayes_true_positive_rate_mean <- mean(n_bayes_true_positive_rate[i])
-  n_bayes_true_negative_rate[i] <- n_bayes_confusion_matrix_summary[2]
-  n_bayes_true_negative_rate_mean <- mean(n_bayes_true_negative_rate)
-  n_bayes_false_negative_rate[i] <- 1 -  n_bayes_true_positive_rate[i]
-  n_bayes_false_negative_rate_mean <- mean(n_bayes_false_negative_rate)
-  n_bayes_false_positive_rate[i] <- 1 - n_bayes_true_negative_rate[i]
-  n_bayes_false_positive_rate_mean <- mean(n_bayes_false_positive_rate)
-  n_bayes_positive_pred_value[i] <- n_bayes_confusion_matrix_summary[3]
-  n_bayes_positive_pred_value_mean <- mean(n_bayes_positive_pred_value)
-  n_bayes_negative_pred_value[i] <- n_bayes_confusion_matrix_summary[4]
-  n_bayes_negative_pred_value_mean <- mean(n_bayes_negative_pred_value)
-  n_bayes_prevalence[i] <- n_bayes_confusion_matrix_summary[8]
-  n_bayes_prevalence_mean <- mean(n_bayes_prevalence)
-  n_bayes_detection_rate[i] <- n_bayes_confusion_matrix_summary[9]
-  n_bayes_detection_rate_mean <- mean(n_bayes_detection_rate)
-  n_bayes_detection_prevalence[i] <- n_bayes_confusion_matrix_summary[10]
-  n_bayes_detection_prevalence_mean <- mean(n_bayes_detection_prevalence)
-  n_bayes_classification_error[i] <- 1 - n_bayes_holdout[i]
-  n_bayes_classification_error_mean <- mean(n_bayes_classification_error)
-  n_bayes_F1_score[i] <- n_bayes_confusion_matrix_summary[7]
-  n_bayes_F1_score_mean <- mean(n_bayes_F1_score[i])
-
-  n_bayes_end <- Sys.time()
-  n_bayes_duration[i] <- n_bayes_end - n_bayes_start
-  n_bayes_duration_mean <- mean(n_bayes_duration)
-  n_bayes_duration_sd <- sd(n_bayes_duration)
-
-  #### 6. Partial Least Squares ####
-  pls_start <- Sys.time()
-  message("Working on Partial Least Squares analysis")
-  if(set_seed == "Y"){
-    set.seed(seed = seed)
-    pls_train_fit <- MachineShop::fit(y ~ ., data = train01, model = "PLSModel")
-  }
-  if(set_seed == "N"){
-    pls_train_fit <- MachineShop::fit(y ~ ., data = train01, model = "PLSModel")
-  }
-  pls_train_predict <- predict(object = pls_train_fit, newdata = train01)
-  pls_train_table <- table(pls_train_predict, y_train)
-  pls_train_accuracy[i] <- sum(diag(pls_train_table)) / sum(pls_train_table)
-  pls_train_accuracy_mean <- mean(pls_train_accuracy)
-  pls_train_pred <- pls_train_predict
-  pls_train_mean <- mean(diag(pls_train_table)) / sum(pls_train_table)
-  pls_train_sd <- sd(diag(pls_train_table)) / sd(pls_train_table)
-  sum_diag_train_pls <- sum(diag(pls_train_table))
-  pls_train_prop <- diag(prop.table(pls_train_table, margin = 1))
-
-  pls_test_predict <- predict(object = pls_train_fit, newdata = test01)
-  pls_test_table <- table(pls_test_predict, y_test)
-  pls_test_accuracy[i] <- sum(diag(pls_test_table)) / sum(pls_test_table)
-  pls_test_accuracy_mean <- mean(pls_test_accuracy)
-  pls_test_pred <- pls_test_predict
-  pls_test_mean <- mean(diag(pls_test_table)) / sum(pls_test_table)
-  pls_test_sd <- sd(diag(pls_test_table)) / sd(pls_test_table)
-  sum_diag_test_pls <- sum(diag(pls_test_table))
-  pls_test_prop <- diag(prop.table(pls_test_table, margin = 1))
-
-  pls_validation_predict <- predict(object = pls_train_fit, newdata = validation01)
-  pls_validation_table <- table(pls_validation_predict, y_validation)
-  pls_validation_accuracy[i] <- sum(diag(pls_validation_table)) / sum(pls_validation_table)
-  pls_validation_accuracy_mean <- mean(pls_validation_accuracy)
-  pls_validation_pred <- pls_validation_predict
-  pls_validation_mean <- mean(diag(pls_validation_table)) / sum(pls_validation_table)
-  pls_validation_sd <- sd(diag(pls_validation_table)) / sd(pls_validation_table)
-  sum_diag_validation_pls <- sum(diag(pls_validation_table))
-  pls_validation_prop <- diag(prop.table(pls_validation_table, margin = 1))
-
-  pls_holdout[i] <- mean(c(pls_test_accuracy_mean, pls_validation_accuracy_mean))
-  pls_holdout_mean <- mean(pls_holdout)
-  pls_residuals[i] <- 1 - pls_holdout[i]
-  pls_residuals_mean <- mean(pls_residuals)
-  pls_holdout_sd <- sd(pls_holdout)
-  pls_holdout_vs_train[i] <- pls_holdout_mean / pls_train_accuracy_mean
-  pls_holdout_vs_train_mean <- mean(pls_holdout_vs_train)
-  pls_holdout_vs_train_range <- range(pls_holdout_vs_train)
-  pls_holdout_vs_train_sd <- sd(pls_holdout_vs_train)
-
-  pls_table <- pls_test_table + pls_validation_table
-  pls_table_total <- pls_table_total + pls_table
-  pls_table_sum_diag <- sum(diag(pls_table))
-
-  pls_confusion_matrix <- caret::confusionMatrix(pls_table_total)
-  pls_confusion_matrix_summary <- colMeans(pls_confusion_matrix$byClass, na.rm = TRUE)
-
-  pls_true_positive_rate[i] <- pls_confusion_matrix_summary[1]
-  pls_true_positive_rate_mean <- mean(pls_true_positive_rate[i])
-  pls_true_negative_rate[i] <- pls_confusion_matrix_summary[2]
-  pls_true_negative_rate_mean <- mean(pls_true_negative_rate)
-  pls_false_negative_rate[i] <- 1 -  pls_true_positive_rate[i]
-  pls_false_negative_rate_mean <- mean(pls_false_negative_rate)
-  pls_false_positive_rate[i] <- 1 - pls_true_negative_rate[i]
-  pls_false_positive_rate_mean <- mean(pls_false_positive_rate)
-  pls_positive_pred_value[i] <- pls_confusion_matrix_summary[3]
-  pls_positive_pred_value_mean <- mean(pls_positive_pred_value)
-  pls_negative_pred_value[i] <- pls_confusion_matrix_summary[4]
-  pls_negative_pred_value_mean <- mean(pls_negative_pred_value)
-  pls_prevalence[i] <- pls_confusion_matrix_summary[8]
-  pls_prevalence_mean <- mean(pls_prevalence)
-  pls_detection_rate[i] <- pls_confusion_matrix_summary[9]
-  pls_detection_rate_mean <- mean(pls_detection_rate)
-  pls_detection_prevalence[i] <- pls_confusion_matrix_summary[10]
-  pls_detection_prevalence_mean <- mean(pls_detection_prevalence)
-  pls_classification_error[i] <- 1 - pls_holdout[i]
-  pls_classification_error_mean <- mean(pls_classification_error)
-  pls_F1_score[i] <- pls_confusion_matrix_summary[7]
-  pls_F1_score_mean <- mean(pls_F1_score[i])
-
-  pls_end <- Sys.time()
-  pls_duration[i] <- pls_end - pls_start
-  pls_duration_mean <- mean(pls_duration)
-  pls_duration_sd <- sd(pls_duration)
-
-  #### 7. Penalized Discriminant Analysis Model ####
-  pda_start <- Sys.time()
-  message("Working on Penalized Discriminant analysis")
-  if(set_seed == "Y"){
-    set.seed(seed = seed)
-    pda_train_fit <- MachineShop::fit(y ~ ., data = train01, model = "PDAModel")
-  }
-  if(set_seed == "N"){
-    pda_train_fit <- MachineShop::fit(y ~ ., data = train01, model = "PDAModel")
-  }
-  pda_train_predict <- predict(object = pda_train_fit, newdata = train01)
-  pda_train_table <- table(pda_train_predict, y_train)
-  pda_train_accuracy[i] <- sum(diag(pda_train_table)) / sum(pda_train_table)
-  pda_train_accuracy_mean <- mean(pda_train_accuracy)
-  pda_train_pred <- pda_train_predict
-  pda_train_mean <- mean(diag(pda_train_table)) / sum(pda_train_table)
-  pda_train_sd <- sd(diag(pda_train_table)) / sd(pda_train_table)
-  sum_diag_train_pda <- sum(diag(pda_train_table))
-  pda_train_prop <- diag(prop.table(pda_train_table, margin = 1))
-
-  pda_test_predict <- predict(object = pda_train_fit, newdata = test01)
-  pda_test_table <- table(pda_test_predict, y_test)
-  pda_test_accuracy[i] <- sum(diag(pda_test_table)) / sum(pda_test_table)
-  pda_test_accuracy_mean <- mean(pda_test_accuracy)
-  pda_test_pred <- pda_test_predict
-  pda_test_mean <- mean(diag(pda_test_table)) / sum(pda_test_table)
-  pda_test_sd <- sd(diag(pda_test_table)) / sd(pda_test_table)
-  sum_diag_test_pda <- sum(diag(pda_test_table))
-  pda_test_prop <- diag(prop.table(pda_test_table, margin = 1))
-
-  pda_validation_predict <- predict(object = pda_train_fit, newdata = validation01)
-  pda_validation_table <- table(pda_validation_predict, y_validation)
-  pda_validation_accuracy[i] <- sum(diag(pda_validation_table)) / sum(pda_validation_table)
-  pda_validation_accuracy_mean <- mean(pda_validation_accuracy)
-  pda_validation_pred <- pda_validation_predict
-  pda_validation_mean <- mean(diag(pda_validation_table)) / sum(pda_validation_table)
-  pda_validation_sd <- sd(diag(pda_validation_table)) / sd(pda_validation_table)
-  sum_diag_validation_pda <- sum(diag(pda_validation_table))
-  pda_validation_prop <- diag(prop.table(pda_validation_table, margin = 1))
-
-  pda_holdout[i] <- mean(c(pda_test_accuracy_mean, pda_validation_accuracy_mean))
-  pda_holdout_mean <- mean(pda_holdout)
-  pda_residuals[i] <- 1 - pda_holdout[i]
-  pda_residuals_mean <- mean(pda_residuals)
-  pda_holdout_sd <- sd(pda_holdout)
-  pda_holdout_vs_train[i] <- pda_holdout_mean / pda_train_accuracy_mean
-  pda_holdout_vs_train_mean <- mean(pda_holdout_vs_train)
-  pda_holdout_vs_train_range <- range(pda_holdout_vs_train)
-  pda_holdout_vs_train_sd <- sd(pda_holdout_vs_train)
-
-  pda_table <- pda_test_table + pda_validation_table
-  pda_table_total <- pda_table_total + pda_table
-  pda_table_sum_diag <- sum(diag(pda_table))
-
-  pda_confusion_matrix <- caret::confusionMatrix(pda_table_total)
-  pda_confusion_matrix_summary <- colMeans(pda_confusion_matrix$byClass, na.rm = TRUE)
-
-  pda_true_positive_rate[i] <- pda_confusion_matrix_summary[1]
-  pda_true_positive_rate_mean <- mean(pda_true_positive_rate[i])
-  pda_true_negative_rate[i] <- pda_confusion_matrix_summary[2]
-  pda_true_negative_rate_mean <- mean(pda_true_negative_rate)
-  pda_false_negative_rate[i] <- 1 -  pda_true_positive_rate[i]
-  pda_false_negative_rate_mean <- mean(pda_false_negative_rate)
-  pda_false_positive_rate[i] <- 1 - pda_true_negative_rate[i]
-  pda_false_positive_rate_mean <- mean(pda_false_positive_rate)
-  pda_positive_pred_value[i] <- pda_confusion_matrix_summary[3]
-  pda_positive_pred_value_mean <- mean(pda_positive_pred_value)
-  pda_negative_pred_value[i] <- pda_confusion_matrix_summary[4]
-  pda_negative_pred_value_mean <- mean(pda_negative_pred_value)
-  pda_prevalence[i] <- pda_confusion_matrix_summary[8]
-  pda_prevalence_mean <- mean(pda_prevalence)
-  pda_detection_rate[i] <- pda_confusion_matrix_summary[9]
-  pda_detection_rate_mean <- mean(pda_detection_rate)
-  pda_detection_prevalence[i] <- pda_confusion_matrix_summary[10]
-  pda_detection_prevalence_mean <- mean(pda_detection_prevalence)
-  pda_classification_error[i] <- 1 - pda_holdout[i]
-  pda_classification_error_mean <- mean(pda_classification_error)
-  pda_F1_score[i] <- pda_confusion_matrix_summary[7]
-  pda_F1_score_mean <- mean(pda_F1_score[i])
-
-  pda_end <- Sys.time()
-  pda_duration[i] <- pda_end - pda_start
-  pda_duration_mean <- mean(pda_duration)
-  pda_duration_sd <- sd(pda_duration)
-
-  #### 8. Random Forest ####
-  rf_start <- Sys.time()
-  message("Working on Random Forest analysis")
-  if(set_seed == "Y"){
-    set.seed(seed = seed)
-    rf_train_fit <- randomForest::randomForest(x = train, y = y_train, data = df)
-  }
-  if(set_seed == "N"){
-    rf_train_fit <- randomForest::randomForest(x = train, y = y_train, data = df)
-  }
-  rf_train_pred <- predict(rf_train_fit, train, type = "class")
-  rf_train_table <- table(rf_train_pred, y_train)
-  rf_train_accuracy[i] <- sum(diag(rf_train_table)) / sum(rf_train_table)
-  rf_train_accuracy_mean <- mean(rf_train_accuracy)
-  rf_train_diag <- sum(diag(rf_train_table))
-  rf_train_mean <- mean(diag(rf_train_table)) / mean(rf_train_table)
-  rf_train_sd <- sd(diag(rf_train_table)) / sd(rf_train_table)
-  sum_diag_train_rf <- sum(diag(rf_train_table))
-  rf_train_prop <- diag(prop.table(rf_train_table, margin = 1))
-
-  rf_test_pred <- predict(rf_train_fit, test, type = "class")
-  rf_test_table <- table(rf_test_pred, y_test)
-  rf_test_accuracy[i] <- sum(diag(rf_test_table)) / sum(rf_test_table)
-  rf_test_accuracy_mean <- mean(rf_test_accuracy)
-  rf_test_diag <- sum(diag(rf_test_table))
-  rf_test_mean <- mean(diag(rf_test_table)) / mean(rf_test_table)
-  rf_test_sd <- sd(diag(rf_test_table)) / sd(rf_test_table)
-  sum_diag_test_rf <- sum(diag(rf_test_table))
-  rf_test_prop <- diag(prop.table(rf_test_table, margin = 1))
-
-  rf_validation_pred <- predict(rf_train_fit, validation, type = "class")
-  rf_validation_table <- table(rf_validation_pred, y_validation)
-  rf_validation_accuracy[i] <- sum(diag(rf_validation_table)) / sum(rf_validation_table)
-  rf_validation_accuracy_mean <- mean(rf_validation_accuracy)
-  rf_validation_diag <- sum(diag(rf_validation_table))
-  rf_validation_mean <- mean(diag(rf_validation_table)) / mean(rf_validation_table)
-  rf_validation_sd <- sd(diag(rf_validation_table)) / sd(rf_validation_table)
-  sum_diag_validation_rf <- sum(diag(rf_validation_table))
-  rf_validation_prop <- diag(prop.table(rf_validation_table, margin = 1))
-
-  rf_holdout[i] <- mean(c(rf_test_accuracy_mean, rf_validation_accuracy_mean))
-  rf_holdout_mean <- mean(rf_holdout)
-  rf_residuals[i] <- 1 - rf_holdout[i]
-  rf_residuals_mean <- mean(rf_residuals)
-  rf_holdout_sd <- sd(rf_holdout)
-  rf_holdout_vs_train[i] <- rf_holdout_mean / rf_train_accuracy_mean
-  rf_holdout_vs_train_mean <- mean(rf_holdout_vs_train)
-  rf_holdout_vs_train_range <- range(rf_holdout_vs_train)
-  rf_holdout_vs_train_sd <- sd(rf_holdout_vs_train)
-
-  rf_table <- rf_test_table + rf_validation_table
-  rf_table_total <- rf_table_total + rf_table
-  rf_table_sum_diag <- sum(diag(rf_table))
-
-  rf_confusion_matrix <- caret::confusionMatrix(rf_table_total)
-  rf_confusion_matrix_summary <- colMeans(rf_confusion_matrix$byClass, na.rm = TRUE)
-
-  rf_true_positive_rate[i] <- rf_confusion_matrix_summary[1]
-  rf_true_positive_rate_mean <- mean(rf_true_positive_rate[i])
-  rf_true_negative_rate[i] <- rf_confusion_matrix_summary[2]
-  rf_true_negative_rate_mean <- mean(rf_true_negative_rate)
-  rf_false_negative_rate[i] <- 1 -  rf_true_positive_rate[i]
-  rf_false_negative_rate_mean <- mean(rf_false_negative_rate)
-  rf_false_positive_rate[i] <- 1 - rf_true_negative_rate[i]
-  rf_false_positive_rate_mean <- mean(rf_false_positive_rate)
-  rf_positive_pred_value[i] <- rf_confusion_matrix_summary[3]
-  rf_positive_pred_value_mean <- mean(rf_positive_pred_value)
-  rf_negative_pred_value[i] <- rf_confusion_matrix_summary[4]
-  rf_negative_pred_value_mean <- mean(rf_negative_pred_value)
-  rf_prevalence[i] <- rf_confusion_matrix_summary[8]
-  rf_prevalence_mean <- mean(rf_prevalence)
-  rf_detection_rate[i] <- rf_confusion_matrix_summary[9]
-  rf_detection_rate_mean <- mean(rf_detection_rate)
-  rf_detection_prevalence[i] <- rf_confusion_matrix_summary[10]
-  rf_detection_prevalence_mean <- mean(rf_detection_prevalence)
-  rf_classification_error[i] <- 1 - rf_holdout[i]
-  rf_classification_error_mean <- mean(rf_classification_error)
-  rf_F1_score[i] <- rf_confusion_matrix_summary[7]
-  rf_F1_score_mean <- mean(rf_F1_score[i])
-
-  rf_end <- Sys.time()
-  rf_duration[i] <- rf_end - rf_start
-  rf_duration_mean <- mean(rf_duration)
-  rf_duration_sd <- sd(rf_duration)
-
-  #### 9. Ranger Model ####
-  ranger_start <- Sys.time()
-  message("Working on Ranger analysis")
-  if(set_seed == "Y"){
-    set.seed(seed = seed)
-    ranger_train_fit <- MachineShop::fit(y ~ ., data = train01, model = "RangerModel")
-  }
-  if(set_seed == "N"){
-    ranger_train_fit <- MachineShop::fit(y ~ ., data = train01, model = "RangerModel")
-  }
-  ranger_train_predict <- predict(object = ranger_train_fit, newdata = train01)
-  ranger_train_table <- table(ranger_train_predict, y_train)
-  ranger_train_accuracy[i] <- sum(diag(ranger_train_table)) / sum(ranger_train_table)
-  ranger_train_accuracy_mean <- mean(ranger_train_accuracy)
-  ranger_train_pred <- ranger_train_predict
-  ranger_train_mean <- mean(diag(ranger_train_table)) / sum(ranger_train_table)
-  ranger_train_sd <- sd(diag(ranger_train_table)) / sd(ranger_train_table)
-  sum_diag_train_ranger <- sum(diag(ranger_train_table))
-  ranger_train_prop <- diag(prop.table(ranger_train_table, margin = 1))
-
-  ranger_test_predict <- predict(object = ranger_train_fit, newdata = test01)
-  ranger_test_table <- table(ranger_test_predict, y_test)
-  ranger_test_accuracy[i] <- sum(diag(ranger_test_table)) / sum(ranger_test_table)
-  ranger_test_accuracy_mean <- mean(ranger_test_accuracy)
-  ranger_test_pred <- ranger_test_predict
-  ranger_test_mean <- mean(diag(ranger_test_table)) / sum(ranger_test_table)
-  ranger_test_sd <- sd(diag(ranger_test_table)) / sd(ranger_test_table)
-  sum_diag_test_ranger <- sum(diag(ranger_test_table))
-  ranger_test_prop <- diag(prop.table(ranger_test_table, margin = 1))
-
-  ranger_validation_predict <- predict(object = ranger_train_fit, newdata = validation01)
-  ranger_validation_table <- table(ranger_validation_predict, y_validation)
-  ranger_validation_accuracy[i] <- sum(diag(ranger_validation_table)) / sum(ranger_validation_table)
-  ranger_validation_accuracy_mean <- mean(ranger_validation_accuracy)
-  ranger_validation_pred <- ranger_validation_predict
-  ranger_validation_mean <- mean(diag(ranger_validation_table)) / sum(ranger_validation_table)
-  ranger_validation_sd <- sd(diag(ranger_validation_table)) / sd(ranger_validation_table)
-  sum_diag_validation_ranger <- sum(diag(ranger_validation_table))
-  ranger_validation_prop <- diag(prop.table(ranger_validation_table, margin = 1))
-
-  ranger_holdout[i] <- mean(c(ranger_test_accuracy_mean, ranger_validation_accuracy_mean))
-  ranger_holdout_mean <- mean(ranger_holdout)
-  ranger_residuals[i] <- 1 - ranger_holdout[i]
-  ranger_residuals_mean <- mean(ranger_residuals)
-  ranger_holdout_sd <- sd(ranger_holdout)
-  ranger_holdout_vs_train[i] <- ranger_holdout_mean / ranger_train_accuracy_mean
-  ranger_holdout_vs_train_mean <- mean(ranger_holdout_vs_train)
-  ranger_holdout_vs_train_range <- range(ranger_holdout_vs_train)
-  ranger_holdout_vs_train_sd <- sd(ranger_holdout_vs_train)
-
-  ranger_table <- ranger_test_table + ranger_validation_table
-  ranger_table_total <- ranger_table_total + ranger_table
-  ranger_table_sum_diag <- sum(diag(ranger_table))
-
-  ranger_confusion_matrix <- caret::confusionMatrix(ranger_table_total)
-  ranger_confusion_matrix_summary <- colMeans(ranger_confusion_matrix$byClass, na.rm = TRUE)
-
-  ranger_true_positive_rate[i] <- ranger_confusion_matrix_summary[1]
-  ranger_true_positive_rate_mean <- mean(ranger_true_positive_rate[i])
-  ranger_true_negative_rate[i] <- ranger_confusion_matrix_summary[2]
-  ranger_true_negative_rate_mean <- mean(ranger_true_negative_rate)
-  ranger_false_negative_rate[i] <- 1 -  ranger_true_positive_rate[i]
-  ranger_false_negative_rate_mean <- mean(ranger_false_negative_rate)
-  ranger_false_positive_rate[i] <- 1 - ranger_true_negative_rate[i]
-  ranger_false_positive_rate_mean <- mean(ranger_false_positive_rate)
-  ranger_positive_pred_value[i] <- ranger_confusion_matrix_summary[3]
-  ranger_positive_pred_value_mean <- mean(ranger_positive_pred_value)
-  ranger_negative_pred_value[i] <- ranger_confusion_matrix_summary[4]
-  ranger_negative_pred_value_mean <- mean(ranger_negative_pred_value)
-  ranger_prevalence[i] <- ranger_confusion_matrix_summary[8]
-  ranger_prevalence_mean <- mean(ranger_prevalence)
-  ranger_detection_rate[i] <- ranger_confusion_matrix_summary[9]
-  ranger_detection_rate_mean <- mean(ranger_detection_rate)
-  ranger_detection_prevalence[i] <- ranger_confusion_matrix_summary[10]
-  ranger_detection_prevalence_mean <- mean(ranger_detection_prevalence)
-  ranger_classification_error[i] <- 1 - ranger_holdout[i]
-  ranger_classification_error_mean <- mean(ranger_classification_error)
-  ranger_F1_score[i] <- ranger_confusion_matrix_summary[7]
-  ranger_F1_score_mean <- mean(ranger_F1_score[i])
-
-  ranger_end <- Sys.time()
-  ranger_duration[i] <- ranger_end - ranger_start
-  ranger_duration_mean <- mean(ranger_duration)
-  ranger_duration_sd <- sd(ranger_duration)
-
-  #### 10. RPart Model ####
-  rpart_start <- Sys.time()
-  message("Working on RPart analysis")
-  if(set_seed == "Y"){
-    set.seed(seed = seed)
-    rpart_train_fit <- MachineShop::fit(y ~ ., data = train01, model = "RPartModel")
-  }
-  if(set_seed == "N"){
-    rpart_train_fit <- MachineShop::fit(y ~ ., data = train01, model = "RPartModel")
-  }
-  rpart_train_predict <- predict(object = rpart_train_fit, newdata = train01)
-  rpart_train_table <- table(rpart_train_predict, y_train)
-  rpart_train_accuracy[i] <- sum(diag(rpart_train_table)) / sum(rpart_train_table)
-  rpart_train_accuracy_mean <- mean(rpart_train_accuracy)
-  rpart_train_pred <- rpart_train_predict
-  rpart_train_mean <- mean(diag(rpart_train_table)) / sum(rpart_train_table)
-  rpart_train_sd <- sd(diag(rpart_train_table)) / sd(rpart_train_table)
-  sum_diag_train_rpart <- sum(diag(rpart_train_table))
-  rpart_train_prop <- diag(prop.table(rpart_train_table, margin = 1))
-
-  rpart_test_predict <- predict(object = rpart_train_fit, newdata = test01)
-  rpart_test_table <- table(rpart_test_predict, y_test)
-  rpart_test_accuracy[i] <- sum(diag(rpart_test_table)) / sum(rpart_test_table)
-  rpart_test_accuracy_mean <- mean(rpart_test_accuracy)
-  rpart_test_pred <- rpart_test_predict
-  rpart_test_mean <- mean(diag(rpart_test_table)) / sum(rpart_test_table)
-  rpart_test_sd <- sd(diag(rpart_test_table)) / sd(rpart_test_table)
-  sum_diag_test_rpart <- sum(diag(rpart_test_table))
-  rpart_test_prop <- diag(prop.table(rpart_test_table, margin = 1))
-
-  rpart_validation_predict <- predict(object = rpart_train_fit, newdata = validation01)
-  rpart_validation_table <- table(rpart_validation_predict, y_validation)
-  rpart_validation_accuracy[i] <- sum(diag(rpart_validation_table)) / sum(rpart_validation_table)
-  rpart_validation_accuracy_mean <- mean(rpart_validation_accuracy)
-  rpart_validation_pred <- rpart_validation_predict
-  rpart_validation_mean <- mean(diag(rpart_validation_table)) / sum(rpart_validation_table)
-  rpart_validation_sd <- sd(diag(rpart_validation_table)) / sd(rpart_validation_table)
-  sum_diag_validation_rpart <- sum(diag(rpart_validation_table))
-  rpart_validation_prop <- diag(prop.table(rpart_validation_table, margin = 1))
-
-  rpart_holdout[i] <- mean(c(rpart_test_accuracy_mean, rpart_validation_accuracy_mean))
-  rpart_holdout_mean <- mean(rpart_holdout)
-  rpart_residuals[i] <- 1 - rpart_holdout[i]
-  rpart_residuals_mean <- mean(rpart_residuals)
-  rpart_holdout_sd <- sd(rpart_holdout)
-  rpart_holdout_vs_train[i] <- rpart_holdout_mean / rpart_train_accuracy_mean
-  rpart_holdout_vs_train_mean <- mean(rpart_holdout_vs_train)
-  rpart_holdout_vs_train_range <- range(rpart_holdout_vs_train)
-  rpart_holdout_vs_train_sd <- sd(rpart_holdout_vs_train)
-
-  rpart_table <- rpart_test_table + rpart_validation_table
-  rpart_table_total <- rpart_table_total + rpart_table
-  rpart_table_sum_diag <- sum(diag(rpart_table))
-
-  rpart_confusion_matrix <- caret::confusionMatrix(rpart_table_total)
-  rpart_confusion_matrix_summary <- colMeans(rpart_confusion_matrix$byClass, na.rm = TRUE)
-
-  rpart_true_positive_rate[i] <- rpart_confusion_matrix_summary[1]
-  rpart_true_positive_rate_mean <- mean(rpart_true_positive_rate[i])
-  rpart_true_negative_rate[i] <- rpart_confusion_matrix_summary[2]
-  rpart_true_negative_rate_mean <- mean(rpart_true_negative_rate)
-  rpart_false_negative_rate[i] <- 1 -  rpart_true_positive_rate[i]
-  rpart_false_negative_rate_mean <- mean(rpart_false_negative_rate)
-  rpart_false_positive_rate[i] <- 1 - rpart_true_negative_rate[i]
-  rpart_false_positive_rate_mean <- mean(rpart_false_positive_rate)
-  rpart_positive_pred_value[i] <- rpart_confusion_matrix_summary[3]
-  rpart_positive_pred_value_mean <- mean(rpart_positive_pred_value)
-  rpart_negative_pred_value[i] <- rpart_confusion_matrix_summary[4]
-  rpart_negative_pred_value_mean <- mean(rpart_negative_pred_value)
-  rpart_prevalence[i] <- rpart_confusion_matrix_summary[8]
-  rpart_prevalence_mean <- mean(rpart_prevalence)
-  rpart_detection_rate[i] <- rpart_confusion_matrix_summary[9]
-  rpart_detection_rate_mean <- mean(rpart_detection_rate)
-  rpart_detection_prevalence[i] <- rpart_confusion_matrix_summary[10]
-  rpart_detection_prevalence_mean <- mean(rpart_detection_prevalence)
-  rpart_classification_error[i] <- 1 - rpart_holdout[i]
-  rpart_classification_error_mean <- mean(rpart_classification_error)
-  rpart_F1_score[i] <- rpart_confusion_matrix_summary[7]
-  rpart_F1_score_mean <- mean(rpart_F1_score[i])
-
-  rpart_end <- Sys.time()
-  rpart_duration[i] <- rpart_end - rpart_start
-  rpart_duration_mean <- mean(rpart_duration)
-  rpart_duration_sd <- sd(rpart_duration)
-
-
-  #### 11. Support Vector Machines ####
-  svm_start <- Sys.time()
-  message("Working on Support Vector Machine analysis")
-  if(set_seed == "Y"){
-    set.seed(seed = seed)
-    svm_train_fit <- e1071::svm(y_train ~ ., data = train, kernel = "radial", gamma = 1, cost = 1)
-  }
-  if(set_seed == "N"){
-    svm_train_fit <- e1071::svm(y_train ~ ., data = train, kernel = "radial", gamma = 1, cost = 1)
-  }
-  svm_train_pred <- predict(svm_train_fit, train, type = "class")
-  svm_train_table <- table(svm_train_pred, y_train)
-  svm_train_accuracy[i] <- sum(diag(svm_train_table)) / sum(svm_train_table)
-  svm_train_accuracy_mean <- mean(svm_train_accuracy)
-  svm_train_diag <- sum(diag(svm_train_table))
-  svm_train_mean <- mean(diag(svm_train_table)) / mean(svm_train_table)
-  svm_train_sd <- sd(diag(svm_train_table)) / sd(svm_train_table)
-  sum_diag_train_svm <- sum(diag(svm_train_table))
-  svm_train_prop <- diag(prop.table(svm_train_table, margin = 1))
-
-  svm_test_pred <- predict(svm_train_fit, test, type = "class")
-  svm_test_table <- table(svm_test_pred, y_test)
-  svm_test_accuracy[i] <- sum(diag(svm_test_table)) / sum(svm_test_table)
-  svm_test_accuracy_mean <- mean(svm_test_accuracy)
-  svm_test_diag <- sum(diag(svm_test_table))
-  svm_test_mean <- mean(diag(svm_test_table)) / mean(svm_test_table)
-  svm_test_sd <- sd(diag(svm_test_table)) / sd(svm_test_table)
-  sum_diag_test_svm <- sum(diag(svm_test_table))
-  svm_test_prop <- diag(prop.table(svm_test_table, margin = 1))
-
-  svm_validation_pred <- predict(svm_train_fit, validation, type = "class")
-  svm_validation_table <- table(svm_validation_pred, y_validation)
-  svm_validation_accuracy[i] <- sum(diag(svm_validation_table)) / sum(svm_validation_table)
-  svm_validation_accuracy_mean <- mean(svm_validation_accuracy)
-  svm_validation_diag <- sum(diag(svm_validation_table))
-  svm_validation_mean <- mean(diag(svm_validation_table)) / mean(svm_validation_table)
-  svm_validation_sd <- sd(diag(svm_validation_table)) / sd(svm_validation_table)
-  sum_diag_validation_svm <- sum(diag(svm_validation_table))
-  svm_validation_prop <- diag(prop.table(svm_validation_table, margin = 1))
-  svm_holdout[i] <- mean(c(svm_test_accuracy_mean, svm_validation_accuracy_mean))
-  svm_holdout_mean <- mean(svm_holdout)
-  svm_residuals[i] <- 1 - svm_holdout[i]
-  svm_residuals_mean <- mean(svm_residuals)
-  svm_holdout_sd <- sd(svm_holdout)
-  svm_holdout_vs_train[i] <- svm_holdout_mean / svm_train_accuracy_mean
-  svm_holdout_vs_train_mean <- mean(svm_holdout_vs_train)
-  svm_holdout_vs_train_range <- range(svm_holdout_vs_train)
-  svm_holdout_vs_train_sd <- sd(svm_holdout_vs_train)
-
-  svm_table <- svm_test_table + svm_validation_table
-  svm_table_total <- svm_table_total + svm_table
-  svm_table_sum_diag <- sum(diag(svm_table))
-
-  svm_confusion_matrix <- caret::confusionMatrix(svm_table_total)
-  svm_confusion_matrix_summary <- colMeans(svm_confusion_matrix$byClass, na.rm = TRUE)
-
-  svm_true_positive_rate[i] <- svm_confusion_matrix_summary[1]
-  svm_true_positive_rate_mean <- mean(svm_true_positive_rate[i])
-  svm_true_negative_rate[i] <- svm_confusion_matrix_summary[2]
-  svm_true_negative_rate_mean <- mean(svm_true_negative_rate)
-  svm_false_negative_rate[i] <- 1 -  svm_true_positive_rate[i]
-  svm_false_negative_rate_mean <- mean(svm_false_negative_rate)
-  svm_false_positive_rate[i] <- 1 - svm_true_negative_rate[i]
-  svm_false_positive_rate_mean <- mean(svm_false_positive_rate)
-  svm_positive_pred_value[i] <- svm_confusion_matrix_summary[3]
-  svm_positive_pred_value_mean <- mean(svm_positive_pred_value)
-  svm_negative_pred_value[i] <- svm_confusion_matrix_summary[4]
-  svm_negative_pred_value_mean <- mean(svm_negative_pred_value)
-  svm_prevalence[i] <- svm_confusion_matrix_summary[8]
-  svm_prevalence_mean <- mean(svm_prevalence)
-  svm_detection_rate[i] <- svm_confusion_matrix_summary[9]
-  svm_detection_rate_mean <- mean(svm_detection_rate)
-  svm_detection_prevalence[i] <- svm_confusion_matrix_summary[10]
-  svm_detection_prevalence_mean <- mean(svm_detection_prevalence)
-  svm_classification_error[i] <- 1 - svm_holdout[i]
-  svm_classification_error_mean <- mean(svm_classification_error)
-  svm_F1_score[i] <- svm_confusion_matrix_summary[7]
-  svm_F1_score_mean <- mean(svm_F1_score[i])
-
-  svm_end <- Sys.time()
-  svm_duration[i] <- svm_end - svm_start
-  svm_duration_mean <- mean(svm_duration)
-  svm_duration_sd <- sd(svm_duration)
-
-
-  #### 12. Trees ####
-  tree_start <- Sys.time()
-  message("Working on Trees analysis")
-  if(set_seed == "Y"){
-    set.seed(seed = seed)
-    tree_train_fit <- tree::tree(y_train ~ ., data = train)
-  }
-  if(set_seed == "N"){
-    tree_train_fit <- tree::tree(y_train ~ ., data = train)
-  }
-  tree_train_pred <- predict(tree_train_fit, train, type = "class")
-  tree_train_table <- table(tree_train_pred, y_train)
-  tree_train_accuracy[i] <- sum(diag(tree_train_table)) / sum(tree_train_table)
-  tree_train_accuracy_mean <- mean(tree_train_accuracy)
-  tree_train_diag <- sum(diag(tree_train_table))
-  tree_train_mean <- mean(diag(tree_train_table)) / mean(tree_train_table)
-  tree_train_sd <- sd(diag(tree_train_table)) / sd(tree_train_table)
-  sum_diag_train_tree <- sum(diag(tree_train_table))
-  tree_train_prop <- diag(prop.table(tree_train_table, margin = 1))
-
-  tree_test_pred <- predict(tree_train_fit, test, type = "class")
-  tree_test_table <- table(tree_test_pred, y_test)
-  tree_test_accuracy[i] <- sum(diag(tree_test_table)) / sum(tree_test_table)
-  tree_test_accuracy_mean <- mean(tree_test_accuracy)
-  tree_test_diag <- sum(diag(tree_test_table))
-  tree_test_mean <- mean(diag(tree_test_table)) / mean(tree_test_table)
-  tree_test_sd <- sd(diag(tree_test_table)) / sd(tree_test_table)
-  sum_diag_test_tree <- sum(diag(tree_test_table))
-  tree_test_prop <- diag(prop.table(tree_test_table, margin = 1))
-
-  tree_validation_pred <- predict(tree_train_fit, validation, type = "class")
-  tree_validation_table <- table(tree_validation_pred, y_validation)
-  tree_validation_accuracy[i] <- sum(diag(tree_validation_table)) / sum(tree_validation_table)
-  tree_validation_accuracy_mean <- mean(tree_validation_accuracy)
-  tree_validation_diag <- sum(diag(tree_validation_table))
-  tree_validation_mean <- mean(diag(tree_validation_table)) / mean(tree_validation_table)
-  tree_validation_sd <- sd(diag(tree_validation_table)) / sd(tree_validation_table)
-  sum_diag_validation_tree <- sum(diag(tree_validation_table))
-  tree_validation_prop <- diag(prop.table(tree_validation_table, margin = 1))
-
-  tree_holdout[i] <- mean(c(tree_test_accuracy_mean, tree_validation_accuracy_mean))
-  tree_holdout_mean <- mean(tree_holdout)
-  tree_residuals[i] <- 1 - tree_holdout[i]
-  tree_residuals_mean <- mean(tree_residuals)
-  tree_holdout_sd <- sd(tree_holdout)
-  tree_holdout_vs_train[i] <- tree_holdout_mean / tree_train_accuracy_mean
-  tree_holdout_vs_train_mean <- mean(tree_holdout_vs_train)
-  tree_holdout_vs_train_range <- range(tree_holdout_vs_train)
-  tree_holdout_vs_train_sd <- sd(tree_holdout_vs_train)
-
-  tree_table <- tree_test_table + tree_validation_table
-  tree_table_total <- tree_table_total + tree_table
-  tree_table_sum_diag <- sum(diag(tree_table))
-
-  tree_confusion_matrix <- caret::confusionMatrix(tree_table_total)
-  tree_confusion_matrix_summary <- colMeans(tree_confusion_matrix$byClass, na.rm = TRUE)
-
-  tree_true_positive_rate[i] <- tree_confusion_matrix_summary[1]
-  tree_true_positive_rate_mean <- mean(tree_true_positive_rate[i])
-  tree_true_negative_rate[i] <- tree_confusion_matrix_summary[2]
-  tree_true_negative_rate_mean <- mean(tree_true_negative_rate)
-  tree_false_negative_rate[i] <- 1 -  tree_true_positive_rate[i]
-  tree_false_negative_rate_mean <- mean(tree_false_negative_rate)
-  tree_false_positive_rate[i] <- 1 - tree_true_negative_rate[i]
-  tree_false_positive_rate_mean <- mean(tree_false_positive_rate)
-  tree_positive_pred_value[i] <- tree_confusion_matrix_summary[3]
-  tree_positive_pred_value_mean <- mean(tree_positive_pred_value)
-  tree_negative_pred_value[i] <- tree_confusion_matrix_summary[4]
-  tree_negative_pred_value_mean <- mean(tree_negative_pred_value)
-  tree_prevalence[i] <- tree_confusion_matrix_summary[8]
-  tree_prevalence_mean <- mean(tree_prevalence)
-  tree_detection_rate[i] <- tree_confusion_matrix_summary[9]
-  tree_detection_rate_mean <- mean(tree_detection_rate)
-  tree_detection_prevalence[i] <- tree_confusion_matrix_summary[10]
-  tree_detection_prevalence_mean <- mean(tree_detection_prevalence)
-  tree_classification_error[i] <- 1 - tree_holdout[i]
-  tree_classification_error_mean <- mean(tree_classification_error)
-  tree_F1_score[i] <- tree_confusion_matrix_summary[7]
-  tree_F1_score_mean <- mean(tree_F1_score[i])
-
-  tree_end <- Sys.time()
-  tree_duration[i] <- tree_end - tree_start
-  tree_duration_mean <- mean(tree_duration)
-  tree_duration_sd <- sd(tree_duration)
-
-
-
-  #### Ensembles start here ####
-  ensemble1 <- data.frame(
-    "Bagged_Random_Forest" = c(bag_rf_test_pred, bag_rf_validation_pred),
-    "Bagging" = c(bagging_test_pred, bagging_validation_pred),
-    "C50" = c(C50_test_pred, C50_validation_pred),
-    "Linear" = c(linear_test_pred, linear_validation_pred),
-    "Naive_Bayes" = c(n_bayes_test_pred, n_bayes_validation_pred),
-    "Partial_Least_Squares" = c(pls_test_pred, pls_validation_pred),
-    "Penalized_Discriminant_Analysis" = c(pda_test_pred, pda_validation_pred),
-    "Random_Forest" = c(rf_test_pred, rf_validation_pred),
-    "Ranger" = c(ranger_test_pred, ranger_validation_pred),
-    "RPart" = c(rpart_test_pred, rpart_validation_pred),
-    "Support_Vector_Machines" = c(svm_test_pred, svm_validation_pred),
-    "Trees" = c(tree_test_pred, tree_validation_pred)
-  )
-
-  ensemble_row_numbers <- as.numeric(row.names(ensemble1))
-  ensemble1$y <- df[ensemble_row_numbers, "y"]
-
-  ensemble1 <- ensemble1[complete.cases(ensemble1), ]
-
-  head_ensemble <- reactable::reactable(head(ensemble1),
-                                        searchable = TRUE, pagination = FALSE, wrap = TRUE, rownames = TRUE, fullWidth = TRUE, filterable = TRUE, bordered = TRUE,
-                                        striped = TRUE, highlight = TRUE, resizable = TRUE
-  )
-
-  htmltools::div(class = "table",
-                 htmltools::div(class = "title", "head_ensemble")
-  )
-
-  head_ensemble <- htmlwidgets::prependContent(head_ensemble, htmltools::h2(class = "title", "Head of the ensemble"))
-
-
-  ensemble_index <- sample(c(1:3), nrow(ensemble1), replace = TRUE, prob = c(train_amount, test_amount, validation_amount))
-  ensemble_train <- ensemble1[ensemble_index == 1, ]
-  ensemble_test <- ensemble1[ensemble_index == 2, ]
-  ensemble_validation <- ensemble1[ensemble_index == 3, ]
-  ensemble_y_train <- ensemble_train$y
-  ensemble_y_test <- ensemble_test$y
-  ensemble_y_validation <- ensemble_validation$y
-
-  print(noquote(""))
-  print("Working on the Ensembles section")
-  print(noquote(""))
-
-  #### 13. Ensemble Bagged CART ####
-  ensemble_bag_cart_start <- Sys.time()
-  message("Working on Ensemble Bagged CART analysis")
-  if(set_seed == "Y"){
-    set.seed(seed = seed)
-    ensemble_bag_cart_train_fit <- ipred::bagging(y ~ ., data = ensemble_train)
-  }
-  if(set_seed == "N"){
-    ensemble_bag_cart_train_fit <- ipred::bagging(y ~ ., data = ensemble_train)
-  }
-  ensemble_bag_cart_train_pred <- predict(ensemble_bag_cart_train_fit, ensemble_train)
-  ensemble_bag_cart_train_table <- table(ensemble_bag_cart_train_pred, ensemble_train$y)
-  ensemble_bag_cart_train_accuracy[i] <- sum(diag(ensemble_bag_cart_train_table)) / sum(ensemble_bag_cart_train_table)
-  ensemble_bag_cart_train_accuracy_mean <- mean(ensemble_bag_cart_train_accuracy)
-  ensemble_bag_cart_train_mean <- mean(diag(ensemble_bag_cart_train_table)) / mean(ensemble_bag_cart_train_table)
-  ensemble_bag_cart_train_sd <- sd(diag(ensemble_bag_cart_train_table)) / sd(ensemble_bag_cart_train_table)
-  ensemble_sum_diag_bag_train_cart <- sum(diag(ensemble_bag_cart_train_table))
-  ensemble_bag_cart_train_prop <- diag(prop.table(ensemble_bag_cart_train_table, margin = 1))
-
-  ensemble_bag_cart_test_pred <- predict(ensemble_bag_cart_train_fit, ensemble_test)
-  ensemble_bag_cart_test_table <- table(ensemble_bag_cart_test_pred, ensemble_test$y)
-  ensemble_bag_cart_test_accuracy[i] <- sum(diag(ensemble_bag_cart_test_table)) / sum(ensemble_bag_cart_test_table)
-  ensemble_bag_cart_test_accuracy_mean <- mean(ensemble_bag_cart_test_accuracy)
-  ensemble_bag_cart_test_mean <- mean(diag(ensemble_bag_cart_test_table)) / mean(ensemble_bag_cart_test_table)
-  ensemble_bag_cart_test_sd <- sd(diag(ensemble_bag_cart_test_table)) / sd(ensemble_bag_cart_test_table)
-  ensemble_sum_diag_bag_test_cart <- sum(diag(ensemble_bag_cart_test_table))
-  ensemble_bag_cart_test_prop <- diag(prop.table(ensemble_bag_cart_test_table, margin = 1))
-
-  ensemble_bag_cart_validation_pred <- predict(ensemble_bag_cart_train_fit, ensemble_validation)
-  ensemble_bag_cart_validation_table <- table(ensemble_bag_cart_validation_pred, ensemble_validation$y)
-  ensemble_bag_cart_validation_accuracy[i] <- sum(diag(ensemble_bag_cart_validation_table)) / sum(ensemble_bag_cart_validation_table)
-  ensemble_bag_cart_validation_accuracy_mean <- mean(ensemble_bag_cart_validation_accuracy)
-  ensemble_bag_cart_validation_mean <- mean(diag(ensemble_bag_cart_validation_table)) / mean(ensemble_bag_cart_validation_table)
-  ensemble_bag_cart_validation_sd <- sd(diag(ensemble_bag_cart_validation_table)) / sd(ensemble_bag_cart_validation_table)
-  ensemble_sum_diag_bag_validation_cart <- sum(diag(ensemble_bag_cart_validation_table))
-  ensemble_bag_cart_validation_prop <- diag(prop.table(ensemble_bag_cart_validation_table, margin = 1))
-
-  ensemble_bag_cart_holdout[i] <- mean(c(ensemble_bag_cart_test_accuracy_mean, ensemble_bag_cart_validation_accuracy_mean))
-  ensemble_bag_cart_holdout_mean <- mean(ensemble_bag_cart_holdout)
-  ensemble_bag_cart_residuals[i] <- 1-ensemble_bag_cart_holdout[i]
-  ensemble_bag_cart_residuals_mean <- mean(ensemble_bag_cart_residuals)
-  ensemble_bag_cart_holdout_sd <- sd(ensemble_bag_cart_holdout)
-  ensemble_bag_cart_holdout_vs_train[i] <- ensemble_bag_cart_holdout_mean / ensemble_bag_cart_train_accuracy_mean
-  ensemble_bag_cart_holdout_vs_train_mean <- mean(ensemble_bag_cart_holdout_vs_train)
-  ensemble_bag_cart_holdout_vs_train_range <- range(ensemble_bag_cart_holdout_vs_train)
-  ensemble_bag_cart_holdout_vs_train_sd <- sd(ensemble_bag_cart_holdout_vs_train)
-
-  ensemble_bag_cart_table <- ensemble_bag_cart_test_table + ensemble_bag_cart_validation_table
-  ensemble_bag_cart_table_total <- ensemble_bag_cart_table_total + ensemble_bag_cart_table
-  ensemble_bag_cart_table_sum_diag <- sum(diag(ensemble_bag_cart_table))
-
-  ensemble_bag_cart_confusion_matrix <- caret::confusionMatrix(ensemble_bag_cart_table_total)
-  ensemble_bag_cart_confusion_matrix_summary <- colMeans(ensemble_bag_cart_confusion_matrix$byClass, na.rm = TRUE)
-
-  ensemble_bag_cart_true_positive_rate[i] <- ensemble_bag_cart_confusion_matrix_summary[1]
-  ensemble_bag_cart_true_positive_rate_mean <- mean(ensemble_bag_cart_true_positive_rate[i])
-  ensemble_bag_cart_true_negative_rate[i] <- ensemble_bag_cart_confusion_matrix_summary[2]
-  ensemble_bag_cart_true_negative_rate_mean <- mean(ensemble_bag_cart_true_negative_rate)
-  ensemble_bag_cart_false_negative_rate[i] <- 1 -  ensemble_bag_cart_true_positive_rate[i]
-  ensemble_bag_cart_false_negative_rate_mean <- mean(ensemble_bag_cart_false_negative_rate)
-  ensemble_bag_cart_false_positive_rate[i] <- 1 - ensemble_bag_cart_true_negative_rate[i]
-  ensemble_bag_cart_false_positive_rate_mean <- mean(ensemble_bag_cart_false_positive_rate)
-  ensemble_bag_cart_positive_pred_value[i] <- ensemble_bag_cart_confusion_matrix_summary[3]
-  ensemble_bag_cart_positive_pred_value_mean <- mean(ensemble_bag_cart_positive_pred_value)
-  ensemble_bag_cart_negative_pred_value[i] <- ensemble_bag_cart_confusion_matrix_summary[4]
-  ensemble_bag_cart_negative_pred_value_mean <- mean(ensemble_bag_cart_negative_pred_value)
-  ensemble_bag_cart_prevalence[i] <- ensemble_bag_cart_confusion_matrix_summary[8]
-  ensemble_bag_cart_prevalence_mean <- mean(ensemble_bag_cart_prevalence)
-  ensemble_bag_cart_detection_rate[i] <- ensemble_bag_cart_confusion_matrix_summary[9]
-  ensemble_bag_cart_detection_rate_mean <- mean(ensemble_bag_cart_detection_rate)
-  ensemble_bag_cart_detection_prevalence[i] <- ensemble_bag_cart_confusion_matrix_summary[10]
-  ensemble_bag_cart_detection_prevalence_mean <- mean(ensemble_bag_cart_detection_prevalence)
-  ensemble_bag_cart_classification_error[i] <- 1 - ensemble_bag_cart_holdout[i]
-  ensemble_bag_cart_classification_error_mean <- mean(ensemble_bag_cart_classification_error)
-  ensemble_bag_cart_F1_score[i] <- ensemble_bag_cart_confusion_matrix_summary[7]
-  ensemble_bag_cart_F1_score_mean <- mean(ensemble_bag_cart_F1_score[i])
-
-  ensemble_bag_cart_end <- Sys.time()
-  ensemble_bag_cart_duration[i] <- ensemble_bag_cart_end - ensemble_bag_cart_start
-  ensemble_bag_cart_duration_mean <- mean(ensemble_bag_cart_duration)
-  ensemble_bag_cart_duration_sd <- sd(ensemble_bag_cart_duration)
-
-  #### 14. Ensemble Bagged Random Forest ####
-  ensemble_bag_rf_start <- Sys.time()
-  message("Working on Ensemble Bagged Random Forest analysis")
-  if(set_seed == "Y"){
-    set.seed(seed = seed)
-    ensemble_bag_train_rf <- randomForest::randomForest(ensemble_y_train ~ ., data = ensemble_train, mtry = ncol(ensemble_train) - 1)
-  }
-  if(set_seed == "N"){
-    ensemble_bag_train_rf <- randomForest::randomForest(ensemble_y_train ~ ., data = ensemble_train, mtry = ncol(ensemble_train) - 1)
-  }
-  ensemble_bag_rf_train_pred <- predict(ensemble_bag_train_rf, ensemble_train, type = "class")
-  ensemble_bag_rf_train_table <- table(ensemble_bag_rf_train_pred, ensemble_train$y)
-  ensemble_bag_rf_train_accuracy[i] <- sum(diag(ensemble_bag_rf_train_table)) / sum(ensemble_bag_rf_train_table)
-  ensemble_bag_rf_train_accuracy_mean <- mean(ensemble_bag_rf_train_accuracy)
-  ensemble_bag_rf_train_diag <- sum(diag(ensemble_bag_rf_train_table))
-  ensemble_bag_rf_train_mean <- mean(diag(ensemble_bag_rf_train_table)) / mean(ensemble_bag_rf_train_table)
-  ensemble_bag_rf_train_sd <- sd(diag(ensemble_bag_rf_train_table)) / sd(ensemble_bag_rf_train_table)
-  sum_ensemble_bag_train_rf <- sum(diag(ensemble_bag_rf_train_table))
-  ensemble_bag_rf_train_prop <- diag(prop.table(ensemble_bag_rf_train_table, margin = 1))
-
-  ensemble_bag_rf_test_pred <- predict(ensemble_bag_train_rf, ensemble_test, type = "class")
-  ensemble_bag_rf_test_table <- table(ensemble_bag_rf_test_pred, ensemble_test$y)
-  ensemble_bag_rf_test_accuracy[i] <- sum(diag(ensemble_bag_rf_test_table)) / sum(ensemble_bag_rf_test_table)
-  ensemble_bag_rf_test_accuracy_mean <- mean(ensemble_bag_rf_test_accuracy)
-  ensemble_bag_rf_test_diag <- sum(diag(ensemble_bag_rf_test_table))
-  ensemble_bag_rf_test_mean <- mean(diag(ensemble_bag_rf_test_table)) / mean(ensemble_bag_rf_test_table)
-  ensemble_bag_rf_test_sd <- sd(diag(ensemble_bag_rf_test_table)) / sd(ensemble_bag_rf_test_table)
-  sum_ensemble_bag_test_rf <- sum(diag(ensemble_bag_rf_test_table))
-  ensemble_bag_rf_test_prop <- diag(prop.table(ensemble_bag_rf_test_table, margin = 1))
-
-  ensemble_bag_rf_validation_pred <- predict(ensemble_bag_train_rf, ensemble_validation, type = "class")
-  ensemble_bag_rf_validation_table <- table(ensemble_bag_rf_validation_pred, ensemble_validation$y)
-  ensemble_bag_rf_validation_accuracy[i] <- sum(diag(ensemble_bag_rf_validation_table)) / sum(ensemble_bag_rf_validation_table)
-  ensemble_bag_rf_validation_accuracy_mean <- mean(ensemble_bag_rf_validation_accuracy)
-  ensemble_bag_rf_validation_diag <- sum(diag(ensemble_bag_rf_validation_table))
-  ensemble_bag_rf_validation_mean <- mean(diag(ensemble_bag_rf_validation_table)) / mean(ensemble_bag_rf_validation_table)
-  ensemble_bag_rf_validation_sd <- sd(diag(ensemble_bag_rf_validation_table)) / sd(ensemble_bag_rf_validation_table)
-  sum_ensemble_bag_validation_rf <- sum(diag(ensemble_bag_rf_validation_table))
-  ensemble_bag_rf_validation_prop <- diag(prop.table(ensemble_bag_rf_validation_table, margin = 1))
-
-  ensemble_bag_rf_holdout[i] <- mean(c(ensemble_bag_rf_test_accuracy_mean, ensemble_bag_rf_validation_accuracy_mean))
-  ensemble_bag_rf_holdout_mean <- mean(ensemble_bag_rf_holdout)
-  ensemble_bag_rf_residuals[i] <- 1 - ensemble_bag_rf_holdout[i]
-  ensemble_bag_rf_residuals_mean <- mean(ensemble_bag_rf_residuals)
-
-  ensemble_bag_rf_holdout_sd <- sd(ensemble_bag_rf_holdout)
-  ensemble_bag_rf_holdout_vs_train[i] <- ensemble_bag_rf_holdout_mean / ensemble_bag_rf_train_accuracy_mean
-  ensemble_bag_rf_holdout_vs_train_mean <- mean(ensemble_bag_rf_holdout_vs_train)
-  ensemble_bag_rf_holdout_vs_train_range <- range(ensemble_bag_rf_holdout_vs_train)
-  ensemble_bag_rf_holdout_vs_train_sd <- sd(ensemble_bag_rf_holdout_vs_train)
-
-  ensemble_bag_rf_table <- ensemble_bag_rf_test_table + ensemble_bag_rf_validation_table
-  ensemble_bag_rf_table_total <- ensemble_bag_rf_table_total + ensemble_bag_rf_table
-  ensemble_bag_rf_table_sum_diag <- sum(diag(ensemble_bag_rf_table))
-
-  ensemble_bag_rf_confusion_matrix <- caret::confusionMatrix(ensemble_bag_rf_table_total)
-  ensemble_bag_rf_confusion_matrix_summary <- colMeans(ensemble_bag_rf_confusion_matrix$byClass, na.rm = TRUE)
-
-  ensemble_bag_rf_true_positive_rate[i] <- ensemble_bag_rf_confusion_matrix_summary[1]
-  ensemble_bag_rf_true_positive_rate_mean <- mean(ensemble_bag_rf_true_positive_rate[i])
-  ensemble_bag_rf_true_negative_rate[i] <- ensemble_bag_rf_confusion_matrix_summary[2]
-  ensemble_bag_rf_true_negative_rate_mean <- mean(ensemble_bag_rf_true_negative_rate)
-  ensemble_bag_rf_false_negative_rate[i] <- 1 -  ensemble_bag_rf_true_positive_rate[i]
-  ensemble_bag_rf_false_negative_rate_mean <- mean(ensemble_bag_rf_false_negative_rate)
-  ensemble_bag_rf_false_positive_rate[i] <- 1 - ensemble_bag_rf_true_negative_rate[i]
-  ensemble_bag_rf_false_positive_rate_mean <- mean(ensemble_bag_rf_false_positive_rate)
-  ensemble_bag_rf_positive_pred_value[i] <- ensemble_bag_rf_confusion_matrix_summary[3]
-  ensemble_bag_rf_positive_pred_value_mean <- mean(ensemble_bag_rf_positive_pred_value)
-  ensemble_bag_rf_negative_pred_value[i] <- ensemble_bag_rf_confusion_matrix_summary[4]
-  ensemble_bag_rf_negative_pred_value_mean <- mean(ensemble_bag_rf_negative_pred_value)
-  ensemble_bag_rf_prevalence[i] <- ensemble_bag_rf_confusion_matrix_summary[8]
-  ensemble_bag_rf_prevalence_mean <- mean(ensemble_bag_rf_prevalence)
-  ensemble_bag_rf_detection_rate[i] <- ensemble_bag_rf_confusion_matrix_summary[9]
-  ensemble_bag_rf_detection_rate_mean <- mean(ensemble_bag_rf_detection_rate)
-  ensemble_bag_rf_detection_prevalence[i] <- ensemble_bag_rf_confusion_matrix_summary[10]
-  ensemble_bag_rf_detection_prevalence_mean <- mean(ensemble_bag_rf_detection_prevalence)
-  ensemble_bag_rf_classification_error[i] <- 1 - ensemble_bag_rf_holdout[i]
-  ensemble_bag_rf_classification_error_mean <- mean(ensemble_bag_rf_classification_error)
-  ensemble_bag_rf_F1_score[i] <- ensemble_bag_rf_confusion_matrix_summary[7]
-  ensemble_bag_rf_F1_score_mean <- mean(ensemble_bag_rf_F1_score[i])
-
-  ensemble_bag_rf_end <- Sys.time()
-  ensemble_bag_rf_duration[i] <- ensemble_bag_rf_end - ensemble_bag_rf_start
-  ensemble_bag_rf_duration_mean <- mean(ensemble_bag_rf_duration)
-  ensemble_bag_rf_duration_sd <- sd(ensemble_bag_rf_duration)
-
-  #### 15. Ensemble C50 ####
-  ensemble_C50_start <- Sys.time()
-  message("Working on Ensemble C50 analysis")
-  if(set_seed == "Y"){
-    set.seed(seed = seed)
-    ensemble_C50_train_fit <- C50::C5.0(ensemble_y_train ~ ., data = ensemble_train)
-  }
-  if(set_seed == "N"){
-    ensemble_C50_train_fit <- C50::C5.0(ensemble_y_train ~ ., data = ensemble_train)
-  }
-  ensemble_C50_train_pred <- predict(ensemble_C50_train_fit, ensemble_train)
-  ensemble_C50_train_table <- table(ensemble_C50_train_pred, ensemble_y_train)
-  ensemble_C50_train_accuracy[i] <- sum(diag(ensemble_C50_train_table)) / sum(ensemble_C50_train_table)
-  ensemble_C50_train_accuracy_mean <- mean(ensemble_C50_train_accuracy)
-  ensemble_C50_train_mean <- mean(diag(ensemble_C50_train_table)) / mean(ensemble_C50_train_table)
-  ensemble_C50_train_sd <- sd(diag(ensemble_C50_train_table)) / sd(ensemble_C50_train_table)
-  sum_diag_ensemble_train_C50 <- sum(diag(ensemble_C50_train_table))
-  ensemble_C50_train_prop <- diag(prop.table(ensemble_C50_train_table, margin = 1))
-
-  ensemble_C50_test_pred <- predict(ensemble_C50_train_fit, ensemble_test)
-  ensemble_C50_test_table <- table(ensemble_C50_test_pred, ensemble_y_test)
-  ensemble_C50_test_accuracy[i] <- sum(diag(ensemble_C50_test_table)) / sum(ensemble_C50_test_table)
-  ensemble_C50_test_accuracy_mean <- mean(ensemble_C50_test_accuracy)
-  ensemble_C50_test_mean <- mean(diag(ensemble_C50_test_table)) / mean(ensemble_C50_test_table)
-  ensemble_C50_test_sd <- sd(diag(ensemble_C50_test_table)) / sd(ensemble_C50_test_table)
-  sum_diag_ensemble_test_C50 <- sum(diag(ensemble_C50_test_table))
-  ensemble_C50_test_prop <- diag(prop.table(ensemble_C50_test_table, margin = 1))
-
-  ensemble_C50_validation_pred <- predict(ensemble_C50_train_fit, ensemble_validation)
-  ensemble_C50_validation_table <- table(ensemble_C50_validation_pred, ensemble_y_validation)
-  ensemble_C50_validation_accuracy[i] <- sum(diag(ensemble_C50_validation_table)) / sum(ensemble_C50_validation_table)
-  ensemble_C50_validation_accuracy_mean <- mean(ensemble_C50_validation_accuracy)
-  ensemble_C50_validation_mean <- mean(diag(ensemble_C50_validation_table)) / mean(ensemble_C50_validation_table)
-  ensemble_C50_validation_sd <- sd(diag(ensemble_C50_validation_table)) / sd(ensemble_C50_validation_table)
-  sum_diag_ensemble_validation_C50 <- sum(diag(ensemble_C50_validation_table))
-  ensemble_C50_validation_prop <- diag(prop.table(ensemble_C50_validation_table, margin = 1))
-
-  ensemble_C50_holdout[i] <- mean(c(ensemble_C50_test_accuracy_mean, ensemble_C50_validation_accuracy_mean))
-  ensemble_C50_holdout_mean <- mean(ensemble_C50_holdout)
-  ensemble_C50_residuals[i] <- 1 - ensemble_C50_holdout[i]
-  ensemble_C50_residuals_mean <- mean(ensemble_C50_residuals)
-  ensemble_C50_holdout_sd <- sd(ensemble_C50_holdout)
-  ensemble_C50_holdout_vs_train[i] <- ensemble_C50_holdout_mean / ensemble_C50_train_accuracy_mean
-  ensemble_C50_holdout_vs_train_mean <- mean(ensemble_C50_holdout_vs_train)
-  ensemble_C50_holdout_vs_train_range <- range(ensemble_C50_holdout_vs_train)
-  ensemble_C50_holdout_vs_train_sd <- sd(ensemble_C50_holdout_vs_train)
-
-  ensemble_C50_table <- ensemble_C50_test_table + ensemble_C50_validation_table
-  ensemble_C50_table_total <- ensemble_C50_table_total + ensemble_C50_table
-  ensemble_C50_table_sum_diag <- sum(diag(ensemble_C50_table))
-
-  ensemble_C50_confusion_matrix <- caret::confusionMatrix(ensemble_C50_table_total)
-  ensemble_C50_confusion_matrix_summary <- colMeans(ensemble_C50_confusion_matrix$byClass, na.rm = TRUE)
-
-  ensemble_C50_true_positive_rate[i] <- ensemble_C50_confusion_matrix_summary[1]
-  ensemble_C50_true_positive_rate_mean <- mean(ensemble_C50_true_positive_rate[i])
-  ensemble_C50_true_negative_rate[i] <- ensemble_C50_confusion_matrix_summary[2]
-  ensemble_C50_true_negative_rate_mean <- mean(ensemble_C50_true_negative_rate)
-  ensemble_C50_false_negative_rate[i] <- 1 -  ensemble_C50_true_positive_rate[i]
-  ensemble_C50_false_negative_rate_mean <- mean(ensemble_C50_false_negative_rate)
-  ensemble_C50_false_positive_rate[i] <- 1 - ensemble_C50_true_negative_rate[i]
-  ensemble_C50_false_positive_rate_mean <- mean(ensemble_C50_false_positive_rate)
-  ensemble_C50_positive_pred_value[i] <- ensemble_C50_confusion_matrix_summary[3]
-  ensemble_C50_positive_pred_value_mean <- mean(ensemble_C50_positive_pred_value)
-  ensemble_C50_negative_pred_value[i] <- ensemble_C50_confusion_matrix_summary[4]
-  ensemble_C50_negative_pred_value_mean <- mean(ensemble_C50_negative_pred_value)
-  ensemble_C50_prevalence[i] <- ensemble_C50_confusion_matrix_summary[8]
-  ensemble_C50_prevalence_mean <- mean(ensemble_C50_prevalence)
-  ensemble_C50_detection_rate[i] <- ensemble_C50_confusion_matrix_summary[9]
-  ensemble_C50_detection_rate_mean <- mean(ensemble_C50_detection_rate)
-  ensemble_C50_detection_prevalence[i] <- ensemble_C50_confusion_matrix_summary[10]
-  ensemble_C50_detection_prevalence_mean <- mean(ensemble_C50_detection_prevalence)
-  ensemble_C50_classification_error[i] <- 1 - ensemble_C50_holdout[i]
-  ensemble_C50_classification_error_mean <- mean(ensemble_C50_classification_error)
-  ensemble_C50_F1_score[i] <- ensemble_C50_confusion_matrix_summary[7]
-  ensemble_C50_F1_score_mean <- mean(ensemble_C50_F1_score[i])
-
-  ensemble_C50_end <- Sys.time()
-  ensemble_C50_duration[i] <- ensemble_C50_end - ensemble_C50_start
-  ensemble_C50_duration_mean <- mean(ensemble_C50_duration)
-  ensemble_C50_duration_sd <- sd(ensemble_C50_duration)
-
-
-  #### 16. Ensemble Naive Bayes ####
-  ensemble_n_bayes_start <- Sys.time()
-  message("Working on Ensembles using Naive Bayes analysis")
-  if(set_seed == "Y"){
-    set.seed(seed = seed)
-    ensemble_n_bayes_train_fit <- e1071::naiveBayes(ensemble_y_train ~ ., data = ensemble_train)
-  }
-  if(set_seed == "N"){
-    ensemble_n_bayes_train_fit <- e1071::naiveBayes(ensemble_y_train ~ ., data = ensemble_train)
-  }
-  ensemble_n_bayes_train_pred <- predict(ensemble_n_bayes_train_fit, ensemble_train)
-  ensemble_n_bayes_train_table <- table(ensemble_n_bayes_train_pred, ensemble_y_train)
-  ensemble_n_bayes_train_accuracy[i] <- sum(diag(ensemble_n_bayes_train_table)) / sum(ensemble_n_bayes_train_table)
-  ensemble_n_bayes_train_accuracy_mean <- mean(ensemble_n_bayes_train_accuracy)
-  ensemble_n_bayes_train_diag <- sum(diag(ensemble_n_bayes_train_table))
-  ensemble_n_bayes_train_mean <- mean(diag(ensemble_n_bayes_train_table)) / mean(ensemble_n_bayes_train_table)
-  ensemble_n_bayes_train_sd <- sd(diag(ensemble_n_bayes_train_table)) / sd(ensemble_n_bayes_train_table)
-  sum_ensemble_n_train_bayes <- sum(diag(ensemble_n_bayes_train_table))
-  ensemble_n_bayes_train_prop <- diag(prop.table(ensemble_n_bayes_train_table, margin = 1))
-
-  ensemble_n_bayes_test_fit <- e1071::naiveBayes(ensemble_y_train ~ ., data = ensemble_train)
-  ensemble_n_bayes_test_pred <- predict(ensemble_n_bayes_test_fit, ensemble_test)
-  ensemble_n_bayes_test_table <- table(ensemble_n_bayes_test_pred, ensemble_y_test)
-  ensemble_n_bayes_test_accuracy[i] <- sum(diag(ensemble_n_bayes_test_table)) / sum(ensemble_n_bayes_test_table)
-  ensemble_n_bayes_test_accuracy_mean <- mean(ensemble_n_bayes_test_accuracy)
-  ensemble_n_bayes_test_diag <- sum(diag(ensemble_n_bayes_test_table))
-  ensemble_n_bayes_test_mean <- mean(diag(ensemble_n_bayes_test_table)) / mean(ensemble_n_bayes_test_table)
-  ensemble_n_bayes_test_sd <- sd(diag(ensemble_n_bayes_test_table)) / sd(ensemble_n_bayes_test_table)
-  sum_ensemble_n_test_bayes <- sum(diag(ensemble_n_bayes_test_table))
-  ensemble_n_bayes_test_prop <- diag(prop.table(ensemble_n_bayes_test_table, margin = 1))
-
-  ensemble_n_bayes_validation_fit <- e1071::naiveBayes(ensemble_y_train ~ ., data = ensemble_train)
-  ensemble_n_bayes_validation_pred <- predict(ensemble_n_bayes_validation_fit, ensemble_validation)
-  ensemble_n_bayes_validation_table <- table(ensemble_n_bayes_validation_pred, ensemble_y_validation)
-  ensemble_n_bayes_validation_accuracy[i] <- sum(diag(ensemble_n_bayes_validation_table)) / sum(ensemble_n_bayes_validation_table)
-  ensemble_n_bayes_validation_accuracy_mean <- mean(ensemble_n_bayes_validation_accuracy)
-  ensemble_n_bayes_validation_diag <- sum(diag(ensemble_n_bayes_validation_table))
-  ensemble_n_bayes_validation_mean <- mean(diag(ensemble_n_bayes_validation_table)) / mean(ensemble_n_bayes_validation_table)
-  ensemble_n_bayes_validation_sd <- sd(diag(ensemble_n_bayes_validation_table)) / sd(ensemble_n_bayes_validation_table)
-  sum_ensemble_n_validation_bayes <- sum(diag(ensemble_n_bayes_validation_table))
-  ensemble_n_bayes_validation_prop <- diag(prop.table(ensemble_n_bayes_validation_table, margin = 1))
-
-  ensemble_n_bayes_holdout[i] <- mean(c(ensemble_n_bayes_test_accuracy_mean, ensemble_n_bayes_validation_accuracy_mean))
-  ensemble_n_bayes_holdout_mean <- mean(ensemble_n_bayes_holdout)
-  ensemble_n_bayes_residuals[i] <- 1 - ensemble_n_bayes_holdout[i]
-  ensemble_n_bayes_residuals_mean <- mean(ensemble_n_bayes_residuals)
-  ensemble_n_bayes_holdout_sd <- sd(ensemble_n_bayes_holdout)
-  ensemble_n_bayes_holdout_vs_train[i] <- ensemble_n_bayes_holdout_mean / ensemble_n_bayes_train_accuracy_mean
-  ensemble_n_bayes_holdout_vs_train_mean <- mean(ensemble_n_bayes_holdout_vs_train)
-  ensemble_n_bayes_holdout_vs_train_range <- range(ensemble_n_bayes_holdout_vs_train)
-  ensemble_n_bayes_holdout_vs_train_sd <- sd(ensemble_n_bayes_holdout_vs_train)
-
-  ensemble_n_bayes_table <- ensemble_n_bayes_test_table + ensemble_n_bayes_validation_table
-  ensemble_n_bayes_table_total <- ensemble_n_bayes_table_total + ensemble_n_bayes_table
-  ensemble_n_bayes_table_sum_diag <- sum(diag(ensemble_n_bayes_table))
-
-  ensemble_n_bayes_confusion_matrix <- caret::confusionMatrix(ensemble_n_bayes_table_total)
-  ensemble_n_bayes_confusion_matrix_summary <- colMeans(ensemble_n_bayes_confusion_matrix$byClass, na.rm = TRUE)
-
-  ensemble_n_bayes_true_positive_rate[i] <- ensemble_n_bayes_confusion_matrix_summary[1]
-  ensemble_n_bayes_true_positive_rate_mean <- mean(ensemble_n_bayes_true_positive_rate[i])
-  ensemble_n_bayes_true_negative_rate[i] <- ensemble_n_bayes_confusion_matrix_summary[2]
-  ensemble_n_bayes_true_negative_rate_mean <- mean(ensemble_n_bayes_true_negative_rate)
-  ensemble_n_bayes_false_negative_rate[i] <- 1 -  ensemble_n_bayes_true_positive_rate[i]
-  ensemble_n_bayes_false_negative_rate_mean <- mean(ensemble_n_bayes_false_negative_rate)
-  ensemble_n_bayes_false_positive_rate[i] <- 1 - ensemble_n_bayes_true_negative_rate[i]
-  ensemble_n_bayes_false_positive_rate_mean <- mean(ensemble_n_bayes_false_positive_rate)
-  ensemble_n_bayes_positive_pred_value[i] <- ensemble_n_bayes_confusion_matrix_summary[3]
-  ensemble_n_bayes_positive_pred_value_mean <- mean(ensemble_n_bayes_positive_pred_value)
-  ensemble_n_bayes_negative_pred_value[i] <- ensemble_n_bayes_confusion_matrix_summary[4]
-  ensemble_n_bayes_negative_pred_value_mean <- mean(ensemble_n_bayes_negative_pred_value)
-  ensemble_n_bayes_prevalence[i] <- ensemble_n_bayes_confusion_matrix_summary[8]
-  ensemble_n_bayes_prevalence_mean <- mean(ensemble_n_bayes_prevalence)
-  ensemble_n_bayes_detection_rate[i] <- ensemble_n_bayes_confusion_matrix_summary[9]
-  ensemble_n_bayes_detection_rate_mean <- mean(ensemble_n_bayes_detection_rate)
-  ensemble_n_bayes_detection_prevalence[i] <- ensemble_n_bayes_confusion_matrix_summary[10]
-  ensemble_n_bayes_detection_prevalence_mean <- mean(ensemble_n_bayes_detection_prevalence)
-  ensemble_n_bayes_classification_error[i] <- 1 - ensemble_n_bayes_holdout[i]
-  ensemble_n_bayes_classification_error_mean <- mean(ensemble_n_bayes_classification_error)
-  ensemble_n_bayes_F1_score[i] <- ensemble_n_bayes_confusion_matrix_summary[7]
-  ensemble_n_bayes_F1_score_mean <- mean(ensemble_n_bayes_F1_score[i])
-
-  ensemble_n_bayes_end <- Sys.time()
-  ensemble_n_bayes_duration[i] <- ensemble_n_bayes_end - ensemble_n_bayes_start
-  ensemble_n_bayes_duration_mean <- mean(ensemble_n_bayes_duration)
-  ensemble_n_bayes_duration_sd <- sd(ensemble_n_bayes_duration)
-
-  #### 17. Ensemble Ranger Model #####
-  ensemble_ranger_start <- Sys.time()
-  message("Working on Ensembles using Ranger analysis")
-  if(set_seed == "Y"){
-    set.seed(seed = seed)
-    ensemble_ranger_train_fit <- MachineShop::fit(y ~ ., data = ensemble_train, model = "RangerModel")
-  }
-  if(set_seed == "N"){
-    ensemble_ranger_train_fit <- MachineShop::fit(y ~ ., data = ensemble_train, model = "RangerModel")
-  }
-  ensemble_ranger_train_pred <- predict(ensemble_ranger_train_fit, newdata = ensemble_train)
-  ensemble_ranger_train_table <- table(ensemble_ranger_train_pred, ensemble_y_train)
-  ensemble_ranger_train_accuracy[i] <- sum(diag(ensemble_ranger_train_table)) / sum(ensemble_ranger_train_table)
-  ensemble_ranger_train_accuracy_mean <- mean(ensemble_ranger_train_accuracy)
-  ensemble_ranger_train_diag <- sum(diag(ensemble_ranger_train_table))
-  ensemble_ranger_train_mean <- mean(diag(ensemble_ranger_train_table)) / mean(ensemble_ranger_train_table)
-  ensemble_ranger_train_sd <- sd(diag(ensemble_ranger_train_table)) / sd(diag(ensemble_ranger_train_table))
-  sum_ensemble_train_ranger <- sum(diag(ensemble_ranger_train_table))
-  ensemble_ranger_train_prop <- diag(prop.table(ensemble_ranger_train_table, margin = 1))
-
-  ensemble_ranger_test_fit <- MachineShop::fit(y ~ ., data = ensemble_train, model = "RangerModel")
-  ensemble_ranger_test_pred <- predict(ensemble_ranger_test_fit, newdata = ensemble_test)
-  ensemble_ranger_test_table <- table(ensemble_ranger_test_pred, ensemble_y_test)
-  ensemble_ranger_test_accuracy[i] <- sum(diag(ensemble_ranger_test_table)) / sum(ensemble_ranger_test_table)
-  ensemble_ranger_test_accuracy_mean <- mean(ensemble_ranger_test_accuracy)
-  ensemble_ranger_test_diag <- sum(diag(ensemble_ranger_test_table))
-  ensemble_ranger_test_mean <- mean(diag(ensemble_ranger_test_table)) / mean(ensemble_ranger_test_table)
-  ensemble_ranger_test_sd <- sd(diag(ensemble_ranger_test_table)) / sd(diag(ensemble_ranger_test_table))
-  sum_ensemble_test_ranger <- sum(diag(ensemble_ranger_test_table))
-  ensemble_ranger_test_prop <- diag(prop.table(ensemble_ranger_test_table, margin = 1))
-
-  ensemble_ranger_validation_fit <- MachineShop::fit(y ~ ., data = ensemble_train, model = "RangerModel")
-  ensemble_ranger_validation_pred <- predict(ensemble_ranger_validation_fit, newdata = ensemble_validation)
-  ensemble_ranger_validation_table <- table(ensemble_ranger_validation_pred, ensemble_y_validation)
-  ensemble_ranger_validation_accuracy[i] <- sum(diag(ensemble_ranger_validation_table)) / sum(ensemble_ranger_validation_table)
-  ensemble_ranger_validation_accuracy_mean <- mean(ensemble_ranger_validation_accuracy)
-  ensemble_ranger_validation_diag <- sum(diag(ensemble_ranger_validation_table))
-  ensemble_ranger_validation_mean <- mean(diag(ensemble_ranger_validation_table)) / mean(ensemble_ranger_validation_table)
-  ensemble_ranger_validation_sd <- sd(diag(ensemble_ranger_validation_table)) / sd(diag(ensemble_ranger_validation_table))
-  sum_ensemble_validation_ranger <- sum(diag(ensemble_ranger_validation_table))
-  ensemble_ranger_validation_prop <- diag(prop.table(ensemble_ranger_validation_table, margin = 1))
-
-  ensemble_ranger_holdout[i] <- mean(c(ensemble_ranger_test_accuracy_mean, ensemble_ranger_validation_accuracy_mean))
-  ensemble_ranger_holdout_mean <- mean(ensemble_ranger_holdout)
-  ensemble_ranger_residuals[i] <- 1 - ensemble_ranger_holdout[i]
-  ensemble_ranger_residuals_mean <- mean(ensemble_ranger_residuals)
-  ensemble_ranger_holdout_sd <- sd(ensemble_ranger_holdout)
-  ensemble_ranger_holdout_vs_train[i] <- ensemble_ranger_holdout_mean / ensemble_ranger_train_accuracy_mean
-  ensemble_ranger_holdout_vs_train_mean <- mean(ensemble_ranger_holdout_vs_train)
-  ensemble_ranger_holdout_vs_train_range <- range(ensemble_ranger_holdout_vs_train)
-  ensemble_ranger_holdout_vs_train_sd <- sd(ensemble_ranger_holdout_vs_train)
-
-  ensemble_ranger_table <- ensemble_ranger_test_table + ensemble_ranger_validation_table
-  ensemble_ranger_table_total <- ensemble_ranger_table_total + ensemble_ranger_table
-  ensemble_ranger_table_sum_diag <- sum(diag(ensemble_ranger_table))
-
-  ensemble_ranger_confusion_matrix <- caret::confusionMatrix(ensemble_ranger_table_total)
-  ensemble_ranger_confusion_matrix_summary <- colMeans(ensemble_ranger_confusion_matrix$byClass, na.rm = TRUE)
-
-  ensemble_ranger_true_positive_rate[i] <- ensemble_ranger_confusion_matrix_summary[1]
-  ensemble_ranger_true_positive_rate_mean <- mean(ensemble_ranger_true_positive_rate[i])
-  ensemble_ranger_true_negative_rate[i] <- ensemble_ranger_confusion_matrix_summary[2]
-  ensemble_ranger_true_negative_rate_mean <- mean(ensemble_ranger_true_negative_rate)
-  ensemble_ranger_false_negative_rate[i] <- 1 -  ensemble_ranger_true_positive_rate[i]
-  ensemble_ranger_false_negative_rate_mean <- mean(ensemble_ranger_false_negative_rate)
-  ensemble_ranger_false_positive_rate[i] <- 1 - ensemble_ranger_true_negative_rate[i]
-  ensemble_ranger_false_positive_rate_mean <- mean(ensemble_ranger_false_positive_rate)
-  ensemble_ranger_positive_pred_value[i] <- ensemble_ranger_confusion_matrix_summary[3]
-  ensemble_ranger_positive_pred_value_mean <- mean(ensemble_ranger_positive_pred_value)
-  ensemble_ranger_negative_pred_value[i] <- ensemble_ranger_confusion_matrix_summary[4]
-  ensemble_ranger_negative_pred_value_mean <- mean(ensemble_ranger_negative_pred_value)
-  ensemble_ranger_prevalence[i] <- ensemble_ranger_confusion_matrix_summary[8]
-  ensemble_ranger_prevalence_mean <- mean(ensemble_ranger_prevalence)
-  ensemble_ranger_detection_rate[i] <- ensemble_ranger_confusion_matrix_summary[9]
-  ensemble_ranger_detection_rate_mean <- mean(ensemble_ranger_detection_rate)
-  ensemble_ranger_detection_prevalence[i] <- ensemble_ranger_confusion_matrix_summary[10]
-  ensemble_ranger_detection_prevalence_mean <- mean(ensemble_ranger_detection_prevalence)
-  ensemble_ranger_classification_error[i] <- 1 - ensemble_ranger_holdout[i]
-  ensemble_ranger_classification_error_mean <- mean(ensemble_ranger_classification_error)
-  ensemble_ranger_F1_score[i] <- ensemble_ranger_confusion_matrix_summary[7]
-  ensemble_ranger_F1_score_mean <- mean(ensemble_ranger_F1_score[i])
-
-  ensemble_ranger_end <- Sys.time()
-  ensemble_ranger_duration[i] <- ensemble_ranger_end - ensemble_ranger_start
-  ensemble_ranger_duration_mean <- mean(ensemble_ranger_duration)
-  ensemble_ranger_duration_sd <- sd(ensemble_ranger_duration)
-
-  #### 18. Ensemble Random Forest ####
-  ensemble_rf_start <- Sys.time()
-  message("Working on Ensembles using Random Forest analysis")
-  if(set_seed == "Y"){
-    set.seed(seed = seed)
-    ensemble_train_rf_fit <- randomForest::randomForest(x = ensemble_train, y = ensemble_y_train)
-  }
-  if(set_seed == "N"){
-    ensemble_train_rf_fit <- randomForest::randomForest(x = ensemble_train, y = ensemble_y_train)
-  }
-  ensemble_rf_train_pred <- predict(ensemble_train_rf_fit, ensemble_train, type = "class")
-  ensemble_rf_train_table <- table(ensemble_rf_train_pred, ensemble_y_train)
-  ensemble_rf_train_accuracy[i] <- sum(diag(ensemble_rf_train_table)) / sum(ensemble_rf_train_table)
-  ensemble_rf_train_accuracy_mean <- mean(ensemble_rf_train_accuracy)
-  ensemble_rf_train_diag <- sum(diag(ensemble_rf_train_table))
-  ensemble_rf_train_mean <- mean(diag(ensemble_rf_train_table)) / mean(ensemble_rf_train_table)
-  ensemble_rf_train_sd <- sd(diag(ensemble_rf_train_table)) / sd(ensemble_rf_train_table)
-  sum_ensemble_train_rf <- sum(diag(ensemble_rf_train_table))
-  ensemble_rf_train_prop <- diag(prop.table(ensemble_rf_train_table, margin = 1))
-
-  ensemble_rf_test_pred <- predict(ensemble_train_rf_fit, ensemble_test, type = "class")
-  ensemble_rf_test_table <- table(ensemble_rf_test_pred, ensemble_y_test)
-  ensemble_rf_test_accuracy[i] <- sum(diag(ensemble_rf_test_table)) / sum(ensemble_rf_test_table)
-  ensemble_rf_test_accuracy_mean <- mean(ensemble_rf_test_accuracy)
-  ensemble_rf_test_diag <- sum(diag(ensemble_rf_test_table))
-  ensemble_rf_test_mean <- mean(diag(ensemble_rf_test_table)) / mean(ensemble_rf_test_table)
-  ensemble_rf_test_sd <- sd(diag(ensemble_rf_test_table)) / sd(ensemble_rf_test_table)
-  sum_ensemble_test_rf <- sum(diag(ensemble_rf_test_table))
-  ensemble_rf_test_prop <- diag(prop.table(ensemble_rf_test_table, margin = 1))
-
-  ensemble_rf_validation_pred <- predict(ensemble_train_rf_fit, ensemble_validation, type = "class")
-  ensemble_rf_validation_table <- table(ensemble_rf_validation_pred, ensemble_y_validation)
-  ensemble_rf_validation_accuracy[i] <- sum(diag(ensemble_rf_validation_table)) / sum(ensemble_rf_validation_table)
-  ensemble_rf_validation_accuracy_mean <- mean(ensemble_rf_validation_accuracy)
-  ensemble_rf_validation_diag <- sum(diag(ensemble_rf_validation_table))
-  ensemble_rf_validation_mean <- mean(diag(ensemble_rf_validation_table)) / mean(ensemble_rf_validation_table)
-  ensemble_rf_validation_sd <- sd(diag(ensemble_rf_validation_table)) / sd(ensemble_rf_validation_table)
-  sum_ensemble_validation_rf <- sum(diag(ensemble_rf_validation_table))
-  ensemble_rf_validation_prop <- diag(prop.table(ensemble_rf_validation_table, margin = 1))
-
-  ensemble_rf_holdout[i] <- mean(c(ensemble_rf_test_accuracy_mean, ensemble_rf_validation_accuracy_mean))
-  ensemble_rf_holdout_mean <- mean(ensemble_rf_holdout)
-  ensemble_rf_residuals[i] <- 1 - ensemble_rf_holdout[i]
-  ensemble_rf_residuals_mean <- mean(ensemble_rf_residuals)
-  ensemble_rf_holdout_sd <- sd(ensemble_rf_holdout)
-  ensemble_rf_holdout_vs_train[i] <- ensemble_rf_holdout_mean / ensemble_rf_train_accuracy_mean
-  ensemble_rf_holdout_vs_train_mean <- mean(ensemble_rf_holdout_vs_train)
-  ensemble_rf_holdout_vs_train_range <- range(ensemble_rf_holdout_vs_train)
-  ensemble_rf_holdout_vs_train_sd <- sd(ensemble_rf_holdout_vs_train)
-
-  ensemble_rf_table <- ensemble_rf_test_table + ensemble_rf_validation_table
-  ensemble_rf_table_total <- ensemble_rf_table_total + ensemble_rf_table
-  ensemble_rf_table_sum_diag <- sum(diag(ensemble_rf_table))
-
-  ensemble_rf_confusion_matrix <- caret::confusionMatrix(ensemble_rf_table_total)
-  ensemble_rf_confusion_matrix_summary <- colMeans(ensemble_rf_confusion_matrix$byClass, na.rm = TRUE)
-
-  ensemble_rf_true_positive_rate[i] <- ensemble_rf_confusion_matrix_summary[1]
-  ensemble_rf_true_positive_rate_mean <- mean(ensemble_rf_true_positive_rate[i])
-  ensemble_rf_true_negative_rate[i] <- ensemble_rf_confusion_matrix_summary[2]
-  ensemble_rf_true_negative_rate_mean <- mean(ensemble_rf_true_negative_rate)
-  ensemble_rf_false_negative_rate[i] <- 1 -  ensemble_rf_true_positive_rate[i]
-  ensemble_rf_false_negative_rate_mean <- mean(ensemble_rf_false_negative_rate)
-  ensemble_rf_false_positive_rate[i] <- 1 - ensemble_rf_true_negative_rate[i]
-  ensemble_rf_false_positive_rate_mean <- mean(ensemble_rf_false_positive_rate)
-  ensemble_rf_positive_pred_value[i] <- ensemble_rf_confusion_matrix_summary[3]
-  ensemble_rf_positive_pred_value_mean <- mean(ensemble_rf_positive_pred_value)
-  ensemble_rf_negative_pred_value[i] <- ensemble_rf_confusion_matrix_summary[4]
-  ensemble_rf_negative_pred_value_mean <- mean(ensemble_rf_negative_pred_value)
-  ensemble_rf_prevalence[i] <- ensemble_rf_confusion_matrix_summary[8]
-  ensemble_rf_prevalence_mean <- mean(ensemble_rf_prevalence)
-  ensemble_rf_detection_rate[i] <- ensemble_rf_confusion_matrix_summary[9]
-  ensemble_rf_detection_rate_mean <- mean(ensemble_rf_detection_rate)
-  ensemble_rf_detection_prevalence[i] <- ensemble_rf_confusion_matrix_summary[10]
-  ensemble_rf_detection_prevalence_mean <- mean(ensemble_rf_detection_prevalence)
-  ensemble_rf_classification_error[i] <- 1 - ensemble_rf_holdout[i]
-  ensemble_rf_classification_error_mean <- mean(ensemble_rf_classification_error)
-  ensemble_rf_F1_score[i] <- ensemble_rf_confusion_matrix_summary[7]
-  ensemble_rf_F1_score_mean <- mean(ensemble_rf_F1_score[i])
-
-  ensemble_rf_end <- Sys.time()
-  ensemble_rf_duration[i] <- ensemble_rf_end - ensemble_rf_start
-  ensemble_rf_duration_mean <- mean(ensemble_rf_duration)
-  ensemble_rf_duration_sd <- sd(ensemble_rf_duration)
-
-  #### 19. Ensemble Support Vector Machines ####
-  ensemble_svm_start <- Sys.time()
-  message("Working on Ensembles using Support Vector Machines analysis")
-  if(set_seed == "Y"){
-    set.seed(seed = seed)
-    ensemble_svm_train_fit <- e1071::svm(ensemble_y_train ~ ., data = ensemble_train, kernel = "radial", gamma = 1, cost = 1)
-  }
-  if(set_seed == "N"){
-    ensemble_svm_train_fit <- e1071::svm(ensemble_y_train ~ ., data = ensemble_train, kernel = "radial", gamma = 1, cost = 1)
-  }
-  ensemble_svm_train_pred <- predict(ensemble_svm_train_fit, ensemble_train, type = "class")
-  ensemble_svm_train_table <- table(ensemble_svm_train_pred, ensemble_y_train)
-  ensemble_svm_train_accuracy[i] <- sum(diag(ensemble_svm_train_table)) / sum(ensemble_svm_train_table)
-  ensemble_svm_train_accuracy_mean <- mean(ensemble_svm_train_accuracy)
-  ensemble_svm_train_diag <- sum(diag(ensemble_svm_train_table))
-  ensemble_svm_train_mean <- mean(diag(ensemble_svm_train_table)) / mean(ensemble_svm_train_table)
-  ensemble_svm_train_sd <- sd(diag(ensemble_svm_train_table)) / sd(ensemble_svm_train_table)
-  sum_ensemble_train_svm <- sum(diag(ensemble_svm_train_table))
-  ensemble_svm_train_prop <- diag(prop.table(ensemble_svm_train_table, margin = 1))
-
-  ensemble_svm_test_fit <- e1071::svm(ensemble_y_train ~ ., data = ensemble_train, kernel = "radial", gamma = 1, cost = 1)
-  ensemble_svm_test_pred <- predict(ensemble_svm_test_fit, ensemble_test, type = "class")
-  ensemble_svm_test_table <- table(ensemble_svm_test_pred, ensemble_y_test)
-  ensemble_svm_test_accuracy[i] <- sum(diag(ensemble_svm_test_table)) / sum(ensemble_svm_test_table)
-  ensemble_svm_test_accuracy_mean <- mean(ensemble_svm_test_accuracy)
-  ensemble_svm_test_diag <- sum(diag(ensemble_svm_test_table))
-  ensemble_svm_test_mean <- mean(diag(ensemble_svm_test_table)) / mean(ensemble_svm_test_table)
-  ensemble_svm_test_sd <- sd(diag(ensemble_svm_test_table)) / sd(ensemble_svm_test_table)
-  sum_ensemble_test_svm <- sum(diag(ensemble_svm_test_table))
-  ensemble_svm_test_prop <- diag(prop.table(ensemble_svm_test_table, margin = 1))
-
-  ensemble_svm_validation_fit <- e1071::svm(ensemble_y_train ~ ., data = ensemble_train, kernel = "radial", gamma = 1, cost = 1)
-  ensemble_svm_validation_pred <- predict(ensemble_svm_validation_fit, ensemble_validation, type = "class")
-  ensemble_svm_validation_table <- table(ensemble_svm_validation_pred, ensemble_y_validation)
-  ensemble_svm_validation_accuracy[i] <- sum(diag(ensemble_svm_validation_table)) / sum(ensemble_svm_validation_table)
-  ensemble_svm_validation_accuracy_mean <- mean(ensemble_svm_validation_accuracy)
-  ensemble_svm_validation_diag <- sum(diag(ensemble_svm_validation_table))
-  ensemble_svm_validation_mean <- mean(diag(ensemble_svm_validation_table)) / mean(ensemble_svm_validation_table)
-  ensemble_svm_validation_sd <- sd(diag(ensemble_svm_validation_table)) / sd(ensemble_svm_validation_table)
-  sum_ensemble_validation_svm <- sum(diag(ensemble_svm_validation_table))
-  ensemble_svm_validation_prop <- diag(prop.table(ensemble_svm_validation_table, margin = 1))
-
-  ensemble_svm_holdout[i] <- mean(c(ensemble_svm_test_accuracy_mean, ensemble_svm_validation_accuracy_mean))
-  ensemble_svm_holdout_mean <- mean(ensemble_svm_holdout)
-  ensemble_svm_residuals[i] <- 1 - ensemble_svm_holdout[i]
-  ensemble_svm_residuals_mean <- mean(ensemble_svm_residuals)
-  ensemble_svm_holdout_sd <- sd(ensemble_svm_holdout)
-  ensemble_svm_holdout_vs_train[i] <- ensemble_svm_holdout_mean / ensemble_svm_train_accuracy_mean
-  ensemble_svm_holdout_vs_train_mean <- mean(ensemble_svm_holdout_vs_train)
-  ensemble_svm_holdout_vs_train_range <- range(ensemble_svm_holdout_vs_train)
-  ensemble_svm_holdout_vs_train_sd <- sd(ensemble_svm_holdout_vs_train)
-
-  ensemble_svm_table <- ensemble_svm_test_table + ensemble_svm_validation_table
-  ensemble_svm_table_total <- ensemble_svm_table_total + ensemble_svm_table
-  ensemble_svm_table_sum_diag <- sum(diag(ensemble_svm_table))
-
-  ensemble_svm_confusion_matrix <- caret::confusionMatrix(ensemble_svm_table_total)
-  ensemble_svm_confusion_matrix_summary <- colMeans(ensemble_svm_confusion_matrix$byClass, na.rm = TRUE)
-
-  ensemble_svm_true_positive_rate[i] <- ensemble_svm_confusion_matrix_summary[1]
-  ensemble_svm_true_positive_rate_mean <- mean(ensemble_svm_true_positive_rate[i])
-  ensemble_svm_true_negative_rate[i] <- ensemble_svm_confusion_matrix_summary[2]
-  ensemble_svm_true_negative_rate_mean <- mean(ensemble_svm_true_negative_rate)
-  ensemble_svm_false_negative_rate[i] <- 1 -  ensemble_svm_true_positive_rate[i]
-  ensemble_svm_false_negative_rate_mean <- mean(ensemble_svm_false_negative_rate)
-  ensemble_svm_false_positive_rate[i] <- 1 - ensemble_svm_true_negative_rate[i]
-  ensemble_svm_false_positive_rate_mean <- mean(ensemble_svm_false_positive_rate)
-  ensemble_svm_positive_pred_value[i] <- ensemble_svm_confusion_matrix_summary[3]
-  ensemble_svm_positive_pred_value_mean <- mean(ensemble_svm_positive_pred_value)
-  ensemble_svm_negative_pred_value[i] <- ensemble_svm_confusion_matrix_summary[4]
-  ensemble_svm_negative_pred_value_mean <- mean(ensemble_svm_negative_pred_value)
-  ensemble_svm_prevalence[i] <- ensemble_svm_confusion_matrix_summary[8]
-  ensemble_svm_prevalence_mean <- mean(ensemble_svm_prevalence)
-  ensemble_svm_detection_rate[i] <- ensemble_svm_confusion_matrix_summary[9]
-  ensemble_svm_detection_rate_mean <- mean(ensemble_svm_detection_rate)
-  ensemble_svm_detection_prevalence[i] <- ensemble_svm_confusion_matrix_summary[10]
-  ensemble_svm_detection_prevalence_mean <- mean(ensemble_svm_detection_prevalence)
-  ensemble_svm_classification_error[i] <- 1 - ensemble_svm_holdout[i]
-  ensemble_svm_classification_error_mean <- mean(ensemble_svm_classification_error)
-  ensemble_svm_F1_score[i] <- ensemble_svm_confusion_matrix_summary[7]
-  ensemble_svm_F1_score_mean <- mean(ensemble_svm_F1_score[i])
-
-  ensemble_svm_end <- Sys.time()
-  ensemble_svm_duration[i] <- ensemble_svm_end - ensemble_svm_start
-  ensemble_svm_duration_mean <- mean(ensemble_svm_duration)
-  ensemble_svm_duration_sd <- sd(ensemble_svm_duration)
-
-  #### 20. Ensemble Trees ####
-  ensemble_tree_start <- Sys.time()
-  message("Working on Ensembles using Trees analysis")
-  if(set_seed == "Y"){
-    set.seed(seed = seed)
-    ensemble_tree_train_fit <- tree::tree(y ~ ., data = ensemble_train)
-  }
-  if(set_seed == "N"){
-    ensemble_tree_train_fit <- tree::tree(y ~ ., data = ensemble_train)
-  }
-  ensemble_tree_train_pred <- predict(ensemble_tree_train_fit, ensemble_train, type = "class")
-  ensemble_tree_train_table <- table(ensemble_tree_train_pred, ensemble_y_train)
-  ensemble_tree_train_accuracy[i] <- sum(diag(ensemble_tree_train_table)) / sum(ensemble_tree_train_table)
-  ensemble_tree_train_accuracy_mean <- mean(ensemble_tree_train_accuracy)
-  ensemble_tree_train_diag <- sum(diag(ensemble_tree_train_table))
-  ensemble_tree_train_mean <- mean(diag(ensemble_tree_train_table)) / mean(ensemble_tree_train_table)
-  ensemble_tree_train_sd <- sd(diag(ensemble_tree_train_table)) / sd(ensemble_tree_train_table)
-  sum_ensemble_train_tree <- sum(diag(ensemble_tree_train_table))
-  ensemble_tree_train_prop <- diag(prop.table(ensemble_tree_train_table, margin = 1))
-
-  ensemble_tree_test_pred <- predict(ensemble_tree_train_fit, ensemble_test, type = "class")
-  ensemble_tree_test_table <- table(ensemble_tree_test_pred, ensemble_y_test)
-  ensemble_tree_test_accuracy[i] <- sum(diag(ensemble_tree_test_table)) / sum(ensemble_tree_test_table)
-  ensemble_tree_test_accuracy_mean <- mean(ensemble_tree_test_accuracy)
-  ensemble_tree_test_diag <- sum(diag(ensemble_tree_test_table))
-  ensemble_tree_test_mean <- mean(diag(ensemble_tree_test_table)) / mean(ensemble_tree_test_table)
-  ensemble_tree_test_sd <- sd(diag(ensemble_tree_test_table)) / sd(ensemble_tree_test_table)
-  sum_ensemble_test_tree <- sum(diag(ensemble_tree_test_table))
-  ensemble_tree_test_prop <- diag(prop.table(ensemble_tree_test_table, margin = 1))
-
-  ensemble_tree_validation_pred <- predict(ensemble_tree_train_fit, ensemble_validation, type = "class")
-  ensemble_tree_validation_table <- table(ensemble_tree_validation_pred, ensemble_y_validation)
-  ensemble_tree_validation_accuracy[i] <- sum(diag(ensemble_tree_validation_table)) / sum(ensemble_tree_validation_table)
-  ensemble_tree_validation_accuracy_mean <- mean(ensemble_tree_validation_accuracy)
-  ensemble_tree_validation_diag <- sum(diag(ensemble_tree_validation_table))
-  ensemble_tree_validation_mean <- mean(diag(ensemble_tree_validation_table)) / mean(ensemble_tree_validation_table)
-  ensemble_tree_validation_sd <- sd(diag(ensemble_tree_validation_table)) / sd(ensemble_tree_validation_table)
-  sum_ensemble_validation_tree <- sum(diag(ensemble_tree_validation_table))
-  ensemble_tree_validation_prop <- diag(prop.table(ensemble_tree_validation_table, margin = 1))
-
-  ensemble_tree_holdout[i] <- mean(c(ensemble_tree_test_accuracy_mean, ensemble_tree_validation_accuracy_mean))
-  ensemble_tree_holdout_mean <- mean(ensemble_tree_holdout)
-  ensemble_tree_residuals[i] <- 1 - ensemble_tree_holdout[i]
-  ensemble_tree_residuals_mean <- mean(ensemble_tree_residuals)
-  ensemble_tree_holdout_sd <- sd(ensemble_tree_holdout)
-  ensemble_tree_holdout_vs_train[i] <- ensemble_tree_holdout_mean / ensemble_tree_train_accuracy_mean
-  ensemble_tree_holdout_vs_train_mean <- mean(ensemble_tree_holdout_vs_train)
-  ensemble_tree_holdout_vs_train_range <- range(ensemble_tree_holdout_vs_train)
-  ensemble_tree_holdout_vs_train_sd <- sd(ensemble_tree_holdout_vs_train)
-
-  ensemble_tree_table <- ensemble_tree_test_table + ensemble_tree_validation_table
-  ensemble_tree_table_total <- ensemble_tree_table_total + ensemble_tree_table
-  ensemble_tree_table_sum_diag <- sum(diag(ensemble_tree_table))
-
-  ensemble_tree_confusion_matrix <- caret::confusionMatrix(ensemble_tree_table_total)
-  ensemble_tree_confusion_matrix_summary <- colMeans(ensemble_tree_confusion_matrix$byClass, na.rm = TRUE)
-
-  ensemble_tree_true_positive_rate[i] <- ensemble_tree_confusion_matrix_summary[1]
-  ensemble_tree_true_positive_rate_mean <- mean(ensemble_tree_true_positive_rate[i])
-  ensemble_tree_true_negative_rate[i] <- ensemble_tree_confusion_matrix_summary[2]
-  ensemble_tree_true_negative_rate_mean <- mean(ensemble_tree_true_negative_rate)
-  ensemble_tree_false_negative_rate[i] <- 1 -  ensemble_tree_true_positive_rate[i]
-  ensemble_tree_false_negative_rate_mean <- mean(ensemble_tree_false_negative_rate)
-  ensemble_tree_false_positive_rate[i] <- 1 - ensemble_tree_true_negative_rate[i]
-  ensemble_tree_false_positive_rate_mean <- mean(ensemble_tree_false_positive_rate)
-  ensemble_tree_positive_pred_value[i] <- ensemble_tree_confusion_matrix_summary[3]
-  ensemble_tree_positive_pred_value_mean <- mean(ensemble_tree_positive_pred_value)
-  ensemble_tree_negative_pred_value[i] <- ensemble_tree_confusion_matrix_summary[4]
-  ensemble_tree_negative_pred_value_mean <- mean(ensemble_tree_negative_pred_value)
-  ensemble_tree_prevalence[i] <- ensemble_tree_confusion_matrix_summary[8]
-  ensemble_tree_prevalence_mean <- mean(ensemble_tree_prevalence)
-  ensemble_tree_detection_rate[i] <- ensemble_tree_confusion_matrix_summary[9]
-  ensemble_tree_detection_rate_mean <- mean(ensemble_tree_detection_rate)
-  ensemble_tree_detection_prevalence[i] <- ensemble_tree_confusion_matrix_summary[10]
-  ensemble_tree_detection_prevalence_mean <- mean(ensemble_tree_detection_prevalence)
-  ensemble_tree_classification_error[i] <- 1 - ensemble_tree_holdout[i]
-  ensemble_tree_classification_error_mean <- mean(ensemble_tree_classification_error)
-  ensemble_tree_F1_score[i] <- ensemble_tree_confusion_matrix_summary[7]
-  ensemble_tree_F1_score_mean <- mean(ensemble_tree_F1_score[i])
-
-  ensemble_tree_end <- Sys.time()
-  ensemble_tree_duration[i] <- ensemble_tree_end - ensemble_tree_start
-  ensemble_tree_duration_mean <- mean(ensemble_tree_duration)
-  ensemble_tree_duration_sd <- sd(ensemble_tree_duration)
-}
-#### Ensembles end here ####
-
-#### Build results tables starts here ####
-
-Results <- data.frame(
-  "Model" = c(
-    "Bagging", "Bagged Random Forest", "C50",
-    "Linear", "Naive Bayes",
-    "Partial Least Squares", "Penalized Discriminant Analysis", "Random Forest", "Ranger",
-    "RPart", "Support Vector Machines", "Trees",
-    "Ensemble Bagged Cart", "Ensemble Bagged Random Forest", "Ensemble C50",
-    "Ensemble Naive Bayes", "Ensemble Ranger", "Ensemble Random Forest", "Ensemble Support Vector Machines",
-    "Ensemble Trees"
-  ),
-  "Mean_Holdout_Accuracy" = round(c(
-    bagging_holdout_mean, bag_rf_holdout_mean,
-    C50_holdout_mean, linear_holdout_mean,
-    n_bayes_holdout_mean, pls_holdout_mean, pda_holdout_mean, rf_holdout_mean, ranger_holdout_mean,
-    rpart_holdout_mean, svm_holdout_mean, tree_holdout_mean,
-    ensemble_bag_cart_holdout_mean, ensemble_bag_rf_holdout_mean, ensemble_C50_holdout_mean,
-    ensemble_n_bayes_holdout_mean, ensemble_ranger_holdout_mean, ensemble_rf_holdout_mean, ensemble_svm_holdout_mean,
-    ensemble_tree_holdout_mean
-  ), 4),
-  "Accuracy_Holdout_Std.Dev" = round(c(
-    bagging_holdout_sd, bag_rf_holdout_sd,
-    C50_holdout_sd, linear_holdout_sd,
-    n_bayes_holdout_sd, pls_holdout_sd, pda_holdout_sd, rf_holdout_sd, ranger_holdout_sd,
-    rpart_holdout_sd, svm_holdout_sd, tree_holdout_sd,
-    ensemble_bag_cart_holdout_sd, ensemble_bag_rf_holdout_sd, ensemble_C50_holdout_sd,
-    ensemble_n_bayes_holdout_sd, ensemble_ranger_holdout_sd, ensemble_rf_holdout_sd, ensemble_svm_holdout_sd,
-    ensemble_tree_holdout_sd
-  ), 4),
-  'Classification_Error_Mean' = round(c(
-    bagging_classification_error_mean, bag_rf_classification_error_mean,
-    C50_classification_error_mean, linear_classification_error_mean,
-    n_bayes_classification_error_mean, pls_classification_error_mean, pda_classification_error_mean, rf_classification_error_mean, ranger_classification_error_mean,
-    rpart_classification_error_mean, svm_classification_error_mean, tree_classification_error_mean,
-    ensemble_bag_cart_classification_error_mean, ensemble_bag_rf_classification_error_mean, ensemble_C50_classification_error_mean,
-    ensemble_n_bayes_classification_error_mean, ensemble_ranger_classification_error_mean, ensemble_rf_classification_error_mean, ensemble_svm_classification_error_mean,
-    ensemble_tree_classification_error_mean
-  ), 4),
-  "Duration" = round(c(
-    bagging_duration_mean, bag_rf_duration_mean,
-    C50_duration_mean, linear_duration_mean,
-    n_bayes_duration_mean, pls_duration_mean, pda_duration_mean, rf_duration_mean, ranger_duration_mean,
-    rpart_duration_mean, svm_duration_mean, tree_duration_mean,
-    ensemble_bag_cart_duration_mean, ensemble_bag_rf_duration_mean, ensemble_C50_duration_mean,
-    ensemble_n_bayes_duration_mean, ensemble_ranger_duration_mean, ensemble_rf_duration_mean, ensemble_svm_duration_mean,
-    ensemble_tree_duration_mean
-  ), 4),
-  "Duration_St_Dev" = round(c(
-    bagging_duration_sd, bag_rf_duration_sd,
-    C50_duration_sd, linear_duration_sd,
-    n_bayes_duration_sd, pls_duration_sd, pda_duration_sd, rf_duration_sd, ranger_duration_sd,
-    rpart_duration_sd, svm_duration_sd, tree_duration_sd,
-    ensemble_bag_cart_duration_sd, ensemble_bag_rf_duration_sd, ensemble_C50_duration_sd,
-    ensemble_n_bayes_duration_sd, ensemble_ranger_duration_sd, ensemble_rf_duration_sd, ensemble_svm_duration_sd,
-    ensemble_tree_duration_sd
-  ), 4),
-  "True_Positive_Rate" = round(c(
-    bagging_true_positive_rate_mean, bag_rf_true_positive_rate_mean,
-    C50_true_positive_rate_mean, linear_true_positive_rate_mean,
-    n_bayes_true_positive_rate_mean, pls_true_positive_rate_mean, pda_true_positive_rate_mean, rf_true_positive_rate_mean, ranger_true_positive_rate_mean,
-    rpart_true_positive_rate_mean, svm_true_positive_rate_mean, tree_true_positive_rate_mean,
-    ensemble_bag_cart_true_positive_rate_mean, ensemble_bag_rf_true_positive_rate_mean, ensemble_C50_true_positive_rate_mean,
-    ensemble_n_bayes_true_positive_rate_mean, ensemble_ranger_true_positive_rate_mean, ensemble_rf_true_positive_rate_mean, ensemble_svm_true_positive_rate_mean,
-    ensemble_tree_true_positive_rate_mean
-  ), 4),
-  "True_Negative_Rate" = round(c(
-    bagging_true_negative_rate_mean, bag_rf_true_negative_rate_mean,
-    C50_true_negative_rate_mean, linear_true_negative_rate_mean,
-    n_bayes_true_negative_rate_mean, pls_true_negative_rate_mean, pda_true_negative_rate_mean, rf_true_negative_rate_mean, ranger_true_negative_rate_mean,
-    rpart_true_negative_rate_mean, svm_true_negative_rate_mean, tree_true_negative_rate_mean,
-    ensemble_bag_cart_true_negative_rate_mean, ensemble_bag_rf_true_negative_rate_mean, ensemble_C50_true_negative_rate_mean,
-    ensemble_n_bayes_true_negative_rate_mean, ensemble_ranger_true_negative_rate_mean, ensemble_rf_true_negative_rate_mean, ensemble_svm_true_negative_rate_mean,
-    ensemble_tree_true_negative_rate_mean
-  ), 4),
-  "False_Positive_Rate" = round(c(
-    bagging_false_positive_rate_mean, bag_rf_false_positive_rate_mean,
-    C50_false_positive_rate_mean, linear_false_positive_rate_mean,
-    n_bayes_false_positive_rate_mean, pls_false_positive_rate_mean, pda_false_positive_rate_mean, rf_false_positive_rate_mean, ranger_false_positive_rate_mean,
-    rpart_false_positive_rate_mean, svm_false_positive_rate_mean, tree_false_positive_rate_mean,
-    ensemble_bag_cart_false_positive_rate_mean, ensemble_bag_rf_false_positive_rate_mean, ensemble_C50_false_positive_rate_mean,
-    ensemble_n_bayes_false_positive_rate_mean, ensemble_ranger_false_positive_rate_mean, ensemble_rf_false_positive_rate_mean, ensemble_svm_false_positive_rate_mean,
-    ensemble_tree_false_positive_rate_mean
-  ), 4),
-  "False_Negative_Rate" = round(c(
-    bagging_false_negative_rate_mean, bag_rf_false_negative_rate_mean,
-    C50_false_negative_rate_mean, linear_false_negative_rate_mean,
-    n_bayes_false_negative_rate_mean, pls_false_negative_rate_mean, pda_false_negative_rate_mean, rf_false_negative_rate_mean, ranger_false_negative_rate_mean,
-    rpart_false_negative_rate_mean, svm_false_negative_rate_mean, tree_false_negative_rate_mean,
-    ensemble_bag_cart_false_negative_rate_mean, ensemble_bag_rf_false_negative_rate_mean, ensemble_C50_false_negative_rate_mean,
-    ensemble_n_bayes_false_negative_rate_mean, ensemble_ranger_false_negative_rate_mean, ensemble_rf_false_negative_rate_mean, ensemble_svm_false_negative_rate_mean,
-    ensemble_tree_false_negative_rate_mean
-  ), 4),
-  "Positive_Pred_Value" = round(c(
-    bagging_positive_pred_value_mean, bag_rf_positive_pred_value_mean,
-    C50_positive_pred_value_mean, linear_positive_pred_value_mean,
-    n_bayes_positive_pred_value_mean, pls_positive_pred_value_mean, pda_positive_pred_value_mean, rf_positive_pred_value_mean, ranger_positive_pred_value_mean,
-    rpart_positive_pred_value_mean, svm_positive_pred_value_mean, tree_positive_pred_value_mean,
-    ensemble_bag_cart_positive_pred_value_mean, ensemble_bag_rf_positive_pred_value_mean, ensemble_C50_positive_pred_value_mean,
-    ensemble_n_bayes_positive_pred_value_mean, ensemble_ranger_positive_pred_value_mean, ensemble_rf_positive_pred_value_mean, ensemble_svm_positive_pred_value_mean,
-    ensemble_tree_positive_pred_value_mean
-  ), 4),
-  "Negative_Pred_Value" = round(c(
-    bagging_negative_pred_value_mean, bag_rf_negative_pred_value_mean,
-    C50_negative_pred_value_mean, linear_negative_pred_value_mean,
-    n_bayes_negative_pred_value_mean, pls_negative_pred_value_mean, pda_negative_pred_value_mean, rf_negative_pred_value_mean, ranger_negative_pred_value_mean,
-    rpart_negative_pred_value_mean, svm_negative_pred_value_mean, tree_negative_pred_value_mean,
-    ensemble_bag_cart_negative_pred_value_mean, ensemble_bag_rf_negative_pred_value_mean, ensemble_C50_negative_pred_value_mean,
-    ensemble_n_bayes_negative_pred_value_mean, ensemble_ranger_negative_pred_value_mean, ensemble_rf_negative_pred_value_mean, ensemble_svm_negative_pred_value_mean,
-    ensemble_tree_negative_pred_value_mean
-  ), 4),
-  "Prevalence" = round(c(
-    bagging_prevalence_mean, bag_rf_prevalence_mean,
-    C50_prevalence_mean, linear_prevalence_mean,
-    n_bayes_prevalence_mean, pls_prevalence_mean, pda_prevalence_mean, rf_prevalence_mean, ranger_prevalence_mean,
-    rpart_prevalence_mean, svm_prevalence_mean, tree_prevalence_mean,
-    ensemble_bag_cart_prevalence_mean, ensemble_bag_rf_prevalence_mean, ensemble_C50_prevalence_mean,
-    ensemble_n_bayes_prevalence_mean, ensemble_ranger_prevalence_mean, ensemble_rf_prevalence_mean, ensemble_svm_prevalence_mean,
-    ensemble_tree_prevalence_mean
-  ), 4),
-  "Detection_Rate" = round(c(
-    bagging_detection_rate_mean, bag_rf_detection_rate_mean,
-    C50_detection_rate_mean, linear_detection_rate_mean,
-    n_bayes_detection_rate_mean, pls_detection_rate_mean, pda_detection_rate_mean, rf_detection_rate_mean, ranger_detection_rate_mean,
-    rpart_detection_rate_mean, svm_detection_rate_mean, tree_detection_rate_mean,
-    ensemble_bag_cart_detection_rate_mean, ensemble_bag_rf_detection_rate_mean, ensemble_C50_detection_rate_mean,
-    ensemble_n_bayes_detection_rate_mean, ensemble_ranger_detection_rate_mean, ensemble_rf_detection_rate_mean, ensemble_svm_detection_rate_mean,
-    ensemble_tree_detection_rate_mean
-  ), 4),
-  "Detection_Prevalence" = round(c(
-    bagging_detection_prevalence_mean, bag_rf_detection_prevalence_mean,
-    C50_detection_prevalence_mean, linear_detection_prevalence_mean,
-    n_bayes_detection_prevalence_mean, pls_detection_prevalence_mean, pda_detection_prevalence_mean, rf_detection_prevalence_mean, ranger_detection_prevalence_mean,
-    rpart_detection_prevalence_mean, svm_detection_prevalence_mean, tree_detection_prevalence_mean,
-    ensemble_bag_cart_detection_prevalence_mean, ensemble_bag_rf_detection_prevalence_mean, ensemble_C50_detection_prevalence_mean,
-    ensemble_n_bayes_detection_prevalence_mean, ensemble_ranger_detection_prevalence_mean, ensemble_rf_detection_prevalence_mean, ensemble_svm_detection_prevalence_mean,
-    ensemble_tree_detection_prevalence_mean
-  ), 4),
-  "F1_Score" = round(c(
-    bagging_F1_score_mean, bag_rf_F1_score_mean,
-    C50_F1_score_mean, linear_F1_score_mean,
-    n_bayes_F1_score_mean, pls_F1_score_mean, pda_F1_score_mean, rf_F1_score_mean, ranger_F1_score_mean,
-    rpart_F1_score_mean, svm_F1_score_mean, tree_F1_score_mean,
-    ensemble_bag_cart_F1_score_mean, ensemble_bag_rf_F1_score_mean, ensemble_C50_F1_score_mean,
-    ensemble_n_bayes_F1_score_mean, ensemble_ranger_F1_score_mean, ensemble_rf_F1_score_mean, ensemble_svm_F1_score_mean,
-    ensemble_tree_F1_score_mean
-  ), 4),
-  "Train_Accuracy" = round(c(
-    bagging_train_accuracy_mean, bag_rf_train_accuracy_mean,
-    C50_train_accuracy_mean, linear_train_accuracy_mean,
-    n_bayes_train_accuracy_mean, pls_train_accuracy_mean, pda_train_accuracy_mean, rf_train_accuracy_mean, ranger_train_accuracy_mean,
-    rpart_train_accuracy_mean, svm_train_accuracy_mean, tree_train_accuracy_mean,
-    ensemble_bag_cart_train_accuracy_mean, ensemble_bag_rf_train_accuracy_mean,
-    ensemble_C50_train_accuracy_mean, ensemble_n_bayes_train_accuracy_mean,
-    ensemble_ranger_train_accuracy_mean, ensemble_rf_train_accuracy_mean, ensemble_svm_train_accuracy_mean, ensemble_tree_train_accuracy_mean
-  ), 4),
-  "Test_Accuracy" = round(c(
-    bagging_test_accuracy_mean, bag_rf_test_accuracy_mean,
-    C50_test_accuracy_mean, linear_test_accuracy_mean,
-    n_bayes_test_accuracy_mean, pls_test_accuracy_mean, pda_test_accuracy_mean, rf_test_accuracy_mean, ranger_test_accuracy_mean,
-    rpart_test_accuracy_mean, svm_test_accuracy_mean, tree_test_accuracy_mean,
-    ensemble_bag_cart_test_accuracy_mean, ensemble_bag_rf_test_accuracy_mean,
-    ensemble_C50_test_accuracy_mean, ensemble_n_bayes_test_accuracy_mean,
-    ensemble_ranger_test_accuracy_mean, ensemble_rf_test_accuracy_mean, ensemble_svm_test_accuracy_mean, ensemble_tree_test_accuracy_mean
-  ), 4),
-  "Validation_Accuracy" = round(c(
-    bagging_validation_accuracy_mean, bag_rf_validation_accuracy_mean,
-    C50_validation_accuracy_mean,
-    linear_validation_accuracy_mean, n_bayes_validation_accuracy_mean, pls_validation_accuracy_mean,
-    pda_validation_accuracy_mean, rf_validation_accuracy_mean, ranger_validation_accuracy_mean, rpart_validation_accuracy_mean,
-    svm_validation_accuracy_mean, tree_validation_accuracy_mean,
-    ensemble_bag_cart_validation_accuracy_mean, ensemble_bag_rf_validation_accuracy_mean, ensemble_C50_validation_accuracy_mean,
-    ensemble_n_bayes_validation_accuracy_mean, ensemble_ranger_validation_accuracy_mean,
-    ensemble_rf_validation_accuracy_mean, ensemble_svm_validation_accuracy_mean, ensemble_tree_validation_accuracy_mean
-  ), 4),
-  "Holdout_vs_train" = round(c(
-    bagging_holdout_vs_train_mean, bag_rf_holdout_vs_train_mean,
-    C50_holdout_vs_train_mean, linear_holdout_vs_train_mean,
-    n_bayes_holdout_vs_train_mean, pls_holdout_vs_train_mean, pda_holdout_vs_train_mean, rf_holdout_vs_train_mean, ranger_holdout_vs_train_mean,
-    rpart_holdout_vs_train_mean, svm_holdout_vs_train_mean, tree_holdout_vs_train_mean,
-    ensemble_bag_cart_holdout_vs_train_mean, ensemble_bag_rf_holdout_vs_train_mean, ensemble_C50_holdout_vs_train_mean,
-    ensemble_n_bayes_holdout_vs_train_mean, ensemble_ranger_holdout_vs_train_mean, ensemble_rf_holdout_vs_train_mean,
-    ensemble_svm_holdout_vs_train_mean, ensemble_tree_holdout_vs_train_mean
-  ), 4),
-  "Holdout_vs_train_St_Dev" = round(c(
-    bagging_holdout_vs_train_sd, bag_rf_holdout_vs_train_sd,
-    C50_holdout_vs_train_sd, linear_holdout_vs_train_sd,
-    n_bayes_holdout_vs_train_sd, pls_holdout_vs_train_sd, pda_holdout_vs_train_sd, rf_holdout_vs_train_sd, ranger_holdout_vs_train_sd,
-    rpart_holdout_vs_train_sd, svm_holdout_vs_train_sd, tree_holdout_vs_train_sd,
-    ensemble_bag_cart_holdout_vs_train_sd, ensemble_bag_rf_holdout_vs_train_sd, ensemble_C50_holdout_vs_train_sd,
-    ensemble_n_bayes_holdout_vs_train_sd, ensemble_ranger_holdout_vs_train_sd, ensemble_rf_holdout_vs_train_sd,
-    ensemble_svm_holdout_vs_train_sd, ensemble_tree_holdout_vs_train_sd
-  ), 4),
-  "Diagonal_Sum" = round(c(
-    bagging_table_sum_diag, bag_rf_table_sum_diag,
-    C50_table_sum_diag, linear_table_sum_diag,
-    n_bayes_table_sum_diag, pls_table_sum_diag, pda_table_sum_diag, rf_table_sum_diag, ranger_table_sum_diag,
-    rpart_table_sum_diag, svm_table_sum_diag, tree_table_sum_diag,
-    ensemble_bag_cart_table_sum_diag, ensemble_bag_rf_table_sum_diag, ensemble_C50_table_sum_diag,
-    ensemble_n_bayes_table_sum_diag, ensemble_ranger_table_sum_diag, ensemble_rf_table_sum_diag,
-    ensemble_svm_table_sum_diag, ensemble_tree_table_sum_diag
-  ), 4)
-)
-
-Results <- Results %>% dplyr::arrange(dplyr::desc(Mean_Holdout_Accuracy))
-
-Final_results <- reactable::reactable(Results,
-                                      searchable = TRUE, pagination = FALSE, wrap = TRUE, fullWidth = TRUE, filterable = TRUE, bordered = TRUE,
-                                      striped = TRUE, highlight = TRUE, rownames = TRUE, resizable = TRUE
-)
-
-htmltools::div(class = "table",
-               htmltools::div(class = "title", "Final_results")
-)
-
-summary_report <- htmlwidgets::prependContent(Final_results, htmltools::h2(class = "title", "Summary report"))
-
-summary_tables <- list(
-  "Bagging" = bagging_table_total, "Bagged Random Forest" = bag_rf_table_total, "C50" = C50_table_total,
-  "Linear" = linear_table_total, "Naive Bayes" = n_bayes_table_total,
-  "Partial Least Sqaures" = pls_table_total, "Penalized Discriminant Ananysis" = pda_table_total, "Random Forest" = rf_table_total,
-  "Ranger" = ranger_table_total, "RPart" = rpart_table_total, "Support Vector Machines" = svm_table_total,
-  "Trees" = tree_table_total,
-  "Ensemble Bagged Cart" = ensemble_bag_cart_table_total,
-  "Ensemble Bagged Random Forest" = ensemble_bag_rf_table_total, "Ensemble C50" = ensemble_C50_table_total, "Ensemble Naive Bayes" = ensemble_n_bayes_table_total,
-  "Ensemble Ranger" = ensemble_ranger_table_total, "Ensemble Random Forest" = ensemble_rf_table_total,
-  "Ensemble Support Vector Machines" = ensemble_svm_table_total, "Ensemble Trees" = ensemble_tree_table_total
-)
-
-accuracy_data <- data.frame(
-  "count" = 1:numresamples,
-  "model" = c(
-    rep("Bagging", numresamples), rep("Bagged Random Forest", numresamples),
-    rep("C50", numresamples), rep("Linear", numresamples),
-    rep("Naive Bayes", numresamples), rep("Partial Least Squares", numresamples),
-    rep("Penalized Discriminant Analysis", numresamples), rep("Random Forest", numresamples), rep("Ranger", numresamples),
-    rep("RPart", numresamples), rep("Support Vector Machines", numresamples), rep("Trees", numresamples),
-    rep("Ensemble Bagged Cart", numresamples), rep("Ensemble Bagged Random Forest", numresamples),
-    rep("Ensemble C50", numresamples),
-    rep("Ensemble Naive Bayes", numresamples), rep("Ensemble Ranger", numresamples), rep("Ensemble Random Forest", numresamples),
-    rep("Ensemble Support Vector Machines", numresamples),
-    rep("Ensemble Trees", numresamples)
-  ),
-  "data" = c(
-    bagging_holdout, bag_rf_holdout, C50_holdout, linear_holdout,
-    n_bayes_holdout, pls_holdout, pda_holdout, rf_holdout, ranger_holdout, rpart_holdout, svm_holdout, tree_holdout,
-    ensemble_bag_cart_holdout, ensemble_bag_rf_holdout, ensemble_C50_holdout,
-    ensemble_n_bayes_holdout,
-    ensemble_ranger_holdout, ensemble_rf_holdout, ensemble_svm_holdout, ensemble_tree_holdout
-  ),
-  "mean" = rep(c(
-    bagging_holdout_mean, bag_rf_holdout_mean, C50_holdout_mean,
-    linear_holdout_mean, n_bayes_holdout_mean, pls_holdout_mean,
-    pda_holdout_mean, rf_holdout_mean, ranger_holdout_mean, rpart_holdout_mean, svm_holdout_mean, tree_holdout_mean,
-    ensemble_bag_cart_holdout_mean, ensemble_bag_rf_holdout_mean, ensemble_C50_holdout_mean,
-    ensemble_n_bayes_holdout_mean, ensemble_ranger_holdout_mean, ensemble_rf_holdout_mean, ensemble_svm_holdout_mean,
-    ensemble_tree_holdout_mean
-  ), each = numresamples)
-)
-
-
-#### Accuracy plot ####
-accuracy_plot_fixed_scales <- ggplot2::ggplot(data = accuracy_data, mapping = ggplot2::aes(x = count, y = data, color = model)) +
-  ggplot2::geom_line(mapping = ggplot2::aes(x = count, y = data)) +
-  ggplot2::geom_point(mapping = ggplot2::aes(x = count, y = data)) +
-  ggplot2::geom_hline(ggplot2::aes(yintercept = mean)) +
-  ggplot2::geom_hline(ggplot2::aes(yintercept = 1, color = "red")) +
-  ggplot2::facet_wrap(~model, ncol = 5, scales = "fixed") +
-  ggplot2::ggtitle("Accuracy by model, higher is better, 1 is best, fixed scales. \n The black horizontal line is the mean of the results, the red horizontal line is 1.") +
-  ggplot2::labs(y = "Accuracy by model, higher is better, 1 is best. \n The horizontal line is the mean of the results, the red line is 1.") +
-  ggplot2::theme(legend.position = "none")
-
-if(save_all_plots == "Y" && device == "eps"){
-  ggplot2::ggsave("accuracy_plot_fixed_scales.eps", width = width, height = height, path = tempdir1,  units = units, scale = scale, device = device, dpi = dpi)
-}
-if(save_all_plots == "Y" && device == "jpeg"){
-  ggplot2::ggsave("accuracy_plot_fixed_scales.jpeg", width = width, height = height, path = tempdir1,  units = units, scale = scale, device = device, dpi = dpi)
-}
-if(save_all_plots == "Y" && device == "pdf"){
-  ggplot2::ggsave("accuracy_plot_fixed_scales.pdf", width = width, height = height, path = tempdir1,  units = units, scale = scale, device = device, dpi = dpi)
-}
-if(save_all_plots == "Y" && device == "png"){
-  ggplot2::ggsave("accuracy_plot_fixed_scales.png", width = width, height = height, path = tempdir1,  units = units, scale = scale, device = device, dpi = dpi)
-}
-if(save_all_plots == "Y" && device == "svg"){
-  ggplot2::ggsave("accuracy_plot_fixed_scales.svg", width = width, height = height, path = tempdir1,  units = units, scale = scale, device = device, dpi = dpi)
-}
-if(save_all_plots == "Y" && device == "tiff"){
-  ggplot2::ggsave("accuracy_plot_fixed_scales.tiff", width = width, height = height, path = tempdir1,  units = units, scale = scale, device = device, dpi = dpi)
-}
-
-accuracy_plot_free_scales <- ggplot2::ggplot(data = accuracy_data, mapping = ggplot2::aes(x = count, y = data, color = model)) +
-  ggplot2::geom_line(mapping = ggplot2::aes(x = count, y = data)) +
-  ggplot2::geom_point(mapping = ggplot2::aes(x = count, y = data)) +
-  ggplot2::geom_hline(ggplot2::aes(yintercept = mean)) +
-  ggplot2::geom_hline(ggplot2::aes(yintercept = 1, color = "red")) +
-  ggplot2::facet_wrap(~model, ncol = 5, scales = "free") +
-  ggplot2::ggtitle("Accuracy by model, higher is better, 1 is best. \n The black horizontal line is the mean of the results, the red horizontal line is 1.") +
-  ggplot2::labs(y = "Accuracy by model, higher is better, 1 is best. \n The horizontal line is the mean of the results, the red line is 1.") +
-  ggplot2::theme(legend.position = "none")
-
-if(save_all_plots == "Y" && device == "eps"){
-  ggplot2::ggsave("accuracy_plot_free_scales.eps", width = width, height = height, path = tempdir1,  units = units, scale = scale, device = device, dpi = dpi)
-}
-if(save_all_plots == "Y" && device == "jpeg"){
-  ggplot2::ggsave("accuracy_plot_free_scales.jpeg", width = width, height = height, path = tempdir1,  units = units, scale = scale, device = device, dpi = dpi)
-}
-if(save_all_plots == "Y" && device == "pdf"){
-  ggplot2::ggsave("accuracy_plot_free_scales.pdf", width = width, height = height, path = tempdir1,  units = units, scale = scale, device = device, dpi = dpi)
-}
-if(save_all_plots == "Y" && device == "png"){
-  ggplot2::ggsave("accuracy_plot_free_scales.png", width = width, height = height, path = tempdir1,  units = units, scale = scale, device = device, dpi = dpi)
-}
-if(save_all_plots == "Y" && device == "svg"){
-  ggplot2::ggsave("accuracy_plot_free_scales.svg", width = width, height = height, path = tempdir1,  units = units, scale = scale, device = device, dpi = dpi)
-}
-if(save_all_plots == "Y" && device == "tiff"){
-  ggplot2::ggsave("accuracy_plot_free_scales.tiff", width = width, height = height, path = tempdir1,  units = units, scale = scale, device = device, dpi = dpi)
-}
-
-#### Residuals plot ####
-residuals_data <- data.frame(
-  "count" = 1:numresamples,
-  "model" = c(
-    rep("Bagging", numresamples), rep("Bagged Random Forest", numresamples),
-    rep("C50", numresamples), rep("Linear", numresamples),
-    rep("Naive Bayes", numresamples), rep("Partial Least Squares", numresamples),
-    rep("Penalized Discriminant Analysis", numresamples), rep("Random Forest", numresamples), rep("Ranger", numresamples),
-    rep("RPart", numresamples), rep("Support Vector Machines", numresamples), rep("Trees", numresamples),
-    rep("Ensemble Bagged Cart", numresamples), rep("Ensemble Bagged Random Forest", numresamples),
-    rep("Ensemble C50", numresamples),
-    rep("Ensemble Naive Bayes", numresamples), rep("Ensemble Ranger", numresamples), rep("Ensemble Random Forest", numresamples),
-    rep("Ensemble Support Vector Machines", numresamples),
-    rep("Ensemble Trees", numresamples)
-  ),
-  "data" = c(
-    bagging_residuals, bag_rf_residuals, C50_residuals, linear_residuals,
-    n_bayes_residuals, pls_residuals, pda_residuals, rf_residuals, ranger_residuals, rpart_residuals, svm_residuals, tree_residuals,
-    ensemble_bag_cart_residuals, ensemble_bag_rf_residuals, ensemble_C50_residuals,
-    ensemble_n_bayes_residuals,
-    ensemble_ranger_residuals, ensemble_rf_residuals, ensemble_svm_residuals, ensemble_tree_residuals
-  ),
-  "mean" = rep(c(
-    bagging_residuals_mean, bag_rf_residuals_mean, C50_residuals_mean,
-    linear_residuals_mean, n_bayes_residuals_mean, pls_residuals_mean,
-    pda_residuals_mean, rf_residuals_mean, ranger_residuals_mean, rpart_residuals_mean, svm_residuals_mean, tree_residuals_mean,
-    ensemble_bag_cart_residuals_mean, ensemble_bag_rf_residuals_mean, ensemble_C50_residuals_mean,
-    ensemble_n_bayes_residuals_mean, ensemble_ranger_residuals_mean, ensemble_rf_residuals_mean, ensemble_svm_residuals_mean,
-    ensemble_tree_residuals_mean
-  ), each = numresamples)
-)
-
-residuals_plot_fixed_scales <- ggplot2::ggplot(data = residuals_data, mapping = ggplot2::aes(x = count, y = data, color = model)) +
-  ggplot2::geom_line(mapping = ggplot2::aes(x = count, y = data)) +
-  ggplot2::geom_point(mapping = ggplot2::aes(x = count, y = data)) +
-  ggplot2::geom_hline(ggplot2::aes(yintercept = mean)) +
-  ggplot2::geom_hline(ggplot2::aes(yintercept = 0, color = "red")) +
-  ggplot2::facet_wrap(~model, ncol = 5, scales = "fixed") +
-  ggplot2::ggtitle("Residuals by model, lower is better, 0 is best, fixed scales. \n The black horizontal line is the mean of the results, the red horizontal line is 0.") +
-  ggplot2::labs(y = "Residuals by model, lower is better, 0 is best. \n The horizontal line is the mean of the results, the red line is 0.") +
-  ggplot2::theme(legend.position = "none")
-if(save_all_plots == "Y" && device == "eps"){
-  ggplot2::ggsave("residuals_plot_fixed_scales.eps", width = width, height = height, path = tempdir1,  units = units, scale = scale, device = device, dpi = dpi)
-}
-if(save_all_plots == "Y" && device == "jpeg"){
-  ggplot2::ggsave("residuals_plot_fixed_scales.jpeg", width = width, height = height, path = tempdir1,  units = units, scale = scale, device = device, dpi = dpi)
-}
-if(save_all_plots == "Y" && device == "pdf"){
-  ggplot2::ggsave("residuals_plot_fixed_scales.pdf", width = width, height = height, path = tempdir1,  units = units, scale = scale, device = device, dpi = dpi)
-}
-if(save_all_plots == "Y" && device == "png"){
-  ggplot2::ggsave("residuals_plot_fixed_scales.png", width = width, height = height, path = tempdir1,  units = units, scale = scale, device = device, dpi = dpi)
-}
-if(save_all_plots == "Y" && device == "svg"){
-  ggplot2::ggsave("residuals_plot_fixed_scales.svg", width = width, height = height, path = tempdir1,  units = units, scale = scale, device = device, dpi = dpi)
-}
-if(save_all_plots == "Y" && device == "tiff"){
-  ggplot2::ggsave("residuals_plot_fixed_scales.tiff", width = width, height = height, path = tempdir1,  units = units, scale = scale, device = device, dpi = dpi)
-}
-
-residuals_plot_free_scales <- ggplot2::ggplot(data = residuals_data, mapping = ggplot2::aes(x = count, y = data, color = model)) +
-  ggplot2::geom_line(mapping = ggplot2::aes(x = count, y = data)) +
-  ggplot2::geom_point(mapping = ggplot2::aes(x = count, y = data)) +
-  ggplot2::geom_hline(ggplot2::aes(yintercept = mean)) +
-  ggplot2::geom_hline(ggplot2::aes(yintercept = 0, color = "red")) +
-  ggplot2::facet_wrap(~model, ncol = 5, scales = "free") +
-  ggplot2::ggtitle("Residuals by model, lower is better, 0 is best, free scales. \n The black horizontal line is the mean of the results, the red horizontal line is 1.") +
-  ggplot2::labs(y = "Residuals by model, lower is better, 0 is best. \n The horizontal line is the mean of the results, the red line is 0.") +
-  ggplot2::theme(legend.position = "none")
-
-if(save_all_plots == "Y" && device == "eps"){
-  ggplot2::ggsave("residuals_plot_free_scales.eps", width = width, height = height, path = tempdir1,  units = units, scale = scale, device = device, dpi = dpi)
-}
-if(save_all_plots == "Y" && device == "jpeg"){
-  ggplot2::ggsave("residuals_plot_free_scales.jpeg", width = width, height = height, path = tempdir1,  units = units, scale = scale, device = device, dpi = dpi)
-}
-if(save_all_plots == "Y" && device == "pdf"){
-  ggplot2::ggsave("residuals_plot_free_scales.pdf", width = width, height = height, path = tempdir1,  units = units, scale = scale, device = device, dpi = dpi)
-}
-if(save_all_plots == "Y" && device == "png"){
-  ggplot2::ggsave("residuals_plot_free_scales.png", width = width, height = height, path = tempdir1,  units = units, scale = scale, device = device, dpi = dpi)
-}
-if(save_all_plots == "Y" && device == "svg"){
-  ggplot2::ggsave("residuals_plot_free_scales.svg", width = width, height = height, path = tempdir1,  units = units, scale = scale, device = device, dpi = dpi)
-}
-if(save_all_plots == "Y" && device == "tiff"){
-  ggplot2::ggsave("residuals_plot_free_scales.tiff", width = width, height = height, path = tempdir1,  units = units, scale = scale, device = device, dpi = dpi)
-}
-
-#### Holdout vs train plot ####
-
-holdout_vs_train_data <- data.frame(
-  "count" = 1:numresamples,
-  "model" = c(
-    rep("Bagging", numresamples), rep("Bagged Random Forest", numresamples),
-    rep("C50", numresamples), rep("Linear", numresamples),
-    rep("Naive Bayes", numresamples), rep("Partial Least Squares", numresamples),
-    rep("Penalized Discriminant Analysis", numresamples), rep("Random Forest", numresamples), rep("Ranger", numresamples),
-    rep("RPart", numresamples), rep("Support Vector Machines", numresamples), rep("Trees", numresamples),
-    rep("Ensemble Bagged Cart", numresamples), rep("Ensemble Bagged Random Forest", numresamples),
-    rep("Ensemble C50", numresamples),
-    rep("Ensemble Naive Bayes", numresamples), rep("Ensemble Ranger", numresamples), rep("Ensemble Random Forest", numresamples),
-    rep("Ensemble Support Vector Machines", numresamples),
-    rep("Ensemble Trees", numresamples)
-  ),
-  "data" = c(
-    bagging_holdout_vs_train, bag_rf_holdout_vs_train, C50_holdout_vs_train, linear_holdout_vs_train,
-    n_bayes_holdout_vs_train, pls_holdout_vs_train, pda_holdout_vs_train, rf_holdout_vs_train, ranger_holdout_vs_train, rpart_holdout_vs_train, svm_holdout_vs_train, tree_holdout_vs_train,
-    ensemble_bag_cart_holdout_vs_train, ensemble_bag_rf_holdout_vs_train, ensemble_C50_holdout_vs_train,
-    ensemble_n_bayes_holdout_vs_train,
-    ensemble_ranger_holdout_vs_train, ensemble_rf_holdout_vs_train, ensemble_svm_holdout_vs_train, ensemble_tree_holdout_vs_train
-  ),
-  "mean" = rep(c(
-    bagging_holdout_vs_train_mean, bag_rf_holdout_vs_train_mean, C50_holdout_vs_train_mean,
-    linear_holdout_vs_train_mean, n_bayes_holdout_vs_train_mean, pls_holdout_vs_train_mean,
-    pda_holdout_vs_train_mean, rf_holdout_vs_train_mean, ranger_holdout_vs_train_mean, rpart_holdout_vs_train_mean, svm_holdout_vs_train_mean, tree_holdout_vs_train_mean,
-    ensemble_bag_cart_holdout_vs_train_mean, ensemble_bag_rf_holdout_vs_train_mean, ensemble_C50_holdout_vs_train_mean,
-    ensemble_n_bayes_holdout_vs_train_mean, ensemble_ranger_holdout_vs_train_mean, ensemble_rf_holdout_vs_train_mean, ensemble_svm_holdout_vs_train_mean,
-    ensemble_tree_holdout_vs_train_mean
-  ), each = numresamples)
-)
-
-#### True positive rate plot ####
-true_positive_rate_data <- data.frame(
-  "count" = 1:numresamples,
-  "model" = c(
-    rep("Bagging", numresamples), rep("Bagged Random Forest", numresamples),
-    rep("C50", numresamples), rep("Linear", numresamples),
-    rep("Naive Bayes", numresamples), rep("Partial Least Squares", numresamples),
-    rep("Penalized Discriminant Analysis", numresamples), rep("Random Forest", numresamples), rep("Ranger", numresamples),
-    rep("RPart", numresamples), rep("Support Vector Machines", numresamples), rep("Trees", numresamples),
-    rep("Ensemble Bagged Cart", numresamples), rep("Ensemble Bagged Random Forest", numresamples),
-    rep("Ensemble C50", numresamples),
-    rep("Ensemble Naive Bayes", numresamples), rep("Ensemble Ranger", numresamples), rep("Ensemble Random Forest", numresamples),
-    rep("Ensemble Support Vector Machines", numresamples),
-    rep("Ensemble Trees", numresamples)
-  ),
-  "data" = c(
-    bagging_true_positive_rate, bag_rf_true_positive_rate, C50_true_positive_rate, linear_true_positive_rate,
-    n_bayes_true_positive_rate, pls_true_positive_rate, pda_true_positive_rate, rf_true_positive_rate, ranger_true_positive_rate, rpart_true_positive_rate, svm_true_positive_rate, tree_true_positive_rate,
-    ensemble_bag_cart_true_positive_rate, ensemble_bag_rf_true_positive_rate, ensemble_C50_true_positive_rate,
-    ensemble_n_bayes_true_positive_rate,
-    ensemble_ranger_true_positive_rate, ensemble_rf_true_positive_rate, ensemble_svm_true_positive_rate, ensemble_tree_true_positive_rate
-  ),
-  "mean" = rep(c(
-    bagging_true_positive_rate_mean, bag_rf_true_positive_rate_mean, C50_true_positive_rate_mean,
-    linear_true_positive_rate_mean, n_bayes_true_positive_rate_mean, pls_true_positive_rate_mean,
-    pda_true_positive_rate_mean, rf_true_positive_rate_mean, ranger_true_positive_rate_mean, rpart_true_positive_rate_mean, svm_true_positive_rate_mean, tree_true_positive_rate_mean,
-    ensemble_bag_cart_true_positive_rate_mean, ensemble_bag_rf_true_positive_rate_mean, ensemble_C50_true_positive_rate_mean,
-    ensemble_n_bayes_true_positive_rate_mean, ensemble_ranger_true_positive_rate_mean, ensemble_rf_true_positive_rate_mean, ensemble_svm_true_positive_rate_mean,
-    ensemble_tree_true_positive_rate_mean
-  ), each = numresamples)
-)
-
-true_positive_rate_fixed_scales <- ggplot2::ggplot(data = true_positive_rate_data, mapping = ggplot2::aes(x = count, y = data, color = model)) +
-  ggplot2::geom_line(mapping = ggplot2::aes(x = count, y = data)) +
-  ggplot2::geom_point(mapping = ggplot2::aes(x = count, y = data)) +
-  ggplot2::geom_hline(ggplot2::aes(yintercept = mean)) +
-  ggplot2::geom_hline(ggplot2::aes(yintercept = 1, color = "red")) +
-  ggplot2::facet_wrap(~model, ncol = 5, scales = "fixed") +
-  ggplot2::ggtitle("True positive rate, closer to one is better, fixed scales. \n The black horizontal line is the mean of the results, the red horizontal line is 1.") +
-  ggplot2::labs(y = "True positive rate, closer to zero is better. \n The horizontal line is the mean of the results, the red line is 0.") +
-  ggplot2::theme(legend.position = "none")
-
-if(save_all_plots == "Y" && device == "eps"){
-  ggplot2::ggsave("true_positive_rate_fixed_scales.eps", width = width, height = height, path = tempdir1,  units = units, scale = scale, device = device, dpi = dpi)
-}
-if(save_all_plots == "Y" && device == "jpeg"){
-  ggplot2::ggsave("true_positive_rate_fixed_scales.jpeg", width = width, height = height, path = tempdir1,  units = units, scale = scale, device = device, dpi = dpi)
-}
-if(save_all_plots == "Y" && device == "pdf"){
-  ggplot2::ggsave("true_positive_rate_fixed_scales.pdf", width = width, height = height, path = tempdir1,  units = units, scale = scale, device = device, dpi = dpi)
-}
-if(save_all_plots == "Y" && device == "png"){
-  ggplot2::ggsave("true_positive_rate_fixed_scales.png", width = width, height = height, path = tempdir1,  units = units, scale = scale, device = device, dpi = dpi)
-}
-if(save_all_plots == "Y" && device == "svg"){
-  ggplot2::ggsave("true_positive_rate_fixed_scales.svg", width = width, height = height, path = tempdir1,  units = units, scale = scale, device = device, dpi = dpi)
-}
-if(save_all_plots == "Y" && device == "tiff"){
-  ggplot2::ggsave("true_positive_rate_fixed_scales.tiff", width = width, height = height, path = tempdir1,  units = units, scale = scale, device = device, dpi = dpi)
-}
-
-true_positive_rate_free_scales <- ggplot2::ggplot(data = true_positive_rate_data, mapping = ggplot2::aes(x = count, y = data, color = model)) +
-  ggplot2::geom_line(mapping = ggplot2::aes(x = count, y = data)) +
-  ggplot2::geom_point(mapping = ggplot2::aes(x = count, y = data)) +
-  ggplot2::geom_hline(ggplot2::aes(yintercept = mean)) +
-  ggplot2::geom_hline(ggplot2::aes(yintercept = 0, color = "red")) +
-  ggplot2::facet_wrap(~model, ncol = 5, scales = "free") +
-  ggplot2::ggtitle("True positive rate, closer to one is better, free scales. \n The black horizontal line is the mean of the results, the red horizontal line is 1.") +
-  ggplot2::labs(y = "True positive rate, closer to one is better. \n The horizontal line is the mean of the results, the red line is 0.") +
-  ggplot2::theme(legend.position = "none")
-
-if(save_all_plots == "Y" && device == "eps"){
-  ggplot2::ggsave("true_positive_rate_free_scales.eps", width = width, height = height, path = tempdir1,  units = units, scale = scale, device = device, dpi = dpi)
-}
-if(save_all_plots == "Y" && device == "jpeg"){
-  ggplot2::ggsave("true_positive_rate_free_scales.jpeg", width = width, height = height, path = tempdir1,  units = units, scale = scale, device = device, dpi = dpi)
-}
-if(save_all_plots == "Y" && device == "pdf"){
-  ggplot2::ggsave("true_positive_rate_free_scales.pdf", width = width, height = height, path = tempdir1,  units = units, scale = scale, device = device, dpi = dpi)
-}
-if(save_all_plots == "Y" && device == "png"){
-  ggplot2::ggsave("true_positive_rate_free_scales.png", width = width, height = height, path = tempdir1,  units = units, scale = scale, device = device, dpi = dpi)
-}
-if(save_all_plots == "Y" && device == "svg"){
-  ggplot2::ggsave("true_positive_rate_free_scales.svg", width = width, height = height, path = tempdir1,  units = units, scale = scale, device = device, dpi = dpi)
-}
-if(save_all_plots == "Y" && device == "tiff"){
-  ggplot2::ggsave("true_positive_rate_free_scales.tiff", width = width, height = height, path = tempdir1,  units = units, scale = scale, device = device, dpi = dpi)
-}
-
-#### True negative rate plot ####
-true_negative_rate_data <- data.frame(
-  "count" = 1:numresamples,
-  "model" = c(
-    rep("Bagging", numresamples), rep("Bagged Random Forest", numresamples),
-    rep("C50", numresamples), rep("Linear", numresamples),
-    rep("Naive Bayes", numresamples), rep("Partial Least Squares", numresamples),
-    rep("Penalized Discriminant Analysis", numresamples), rep("Random Forest", numresamples), rep("Ranger", numresamples),
-    rep("RPart", numresamples), rep("Support Vector Machines", numresamples), rep("Trees", numresamples),
-    rep("Ensemble Bagged Cart", numresamples), rep("Ensemble Bagged Random Forest", numresamples),
-    rep("Ensemble C50", numresamples),
-    rep("Ensemble Naive Bayes", numresamples), rep("Ensemble Ranger", numresamples), rep("Ensemble Random Forest", numresamples),
-    rep("Ensemble Support Vector Machines", numresamples),
-    rep("Ensemble Trees", numresamples)
-  ),
-  "data" = c(
-    bagging_true_negative_rate, bag_rf_true_negative_rate, C50_true_negative_rate, linear_true_negative_rate,
-    n_bayes_true_negative_rate, pls_true_negative_rate, pda_true_negative_rate, rf_true_negative_rate, ranger_true_negative_rate, rpart_true_negative_rate, svm_true_negative_rate, tree_true_negative_rate,
-    ensemble_bag_cart_true_negative_rate, ensemble_bag_rf_true_negative_rate, ensemble_C50_true_negative_rate,
-    ensemble_n_bayes_true_negative_rate,
-    ensemble_ranger_true_negative_rate, ensemble_rf_true_negative_rate, ensemble_svm_true_negative_rate, ensemble_tree_true_negative_rate
-  ),
-  "mean" = rep(c(
-    bagging_true_negative_rate_mean, bag_rf_true_negative_rate_mean, C50_true_negative_rate_mean,
-    linear_true_negative_rate_mean, n_bayes_true_negative_rate_mean, pls_true_negative_rate_mean,
-    pda_true_negative_rate_mean, rf_true_negative_rate_mean, ranger_true_negative_rate_mean, rpart_true_negative_rate_mean, svm_true_negative_rate_mean, tree_true_negative_rate_mean,
-    ensemble_bag_cart_true_negative_rate_mean, ensemble_bag_rf_true_negative_rate_mean, ensemble_C50_true_negative_rate_mean,
-    ensemble_n_bayes_true_negative_rate_mean, ensemble_ranger_true_negative_rate_mean, ensemble_rf_true_negative_rate_mean, ensemble_svm_true_negative_rate_mean,
-    ensemble_tree_true_negative_rate_mean
-  ), each = numresamples)
-)
-
-true_negative_rate_fixed_scales <- ggplot2::ggplot(data = true_negative_rate_data, mapping = ggplot2::aes(x = count, y = data, color = model)) +
-  ggplot2::geom_line(mapping = ggplot2::aes(x = count, y = data)) +
-  ggplot2::geom_point(mapping = ggplot2::aes(x = count, y = data)) +
-  ggplot2::geom_hline(ggplot2::aes(yintercept = mean)) +
-  ggplot2::geom_hline(ggplot2::aes(yintercept = 1, color = "red")) +
-  ggplot2::facet_wrap(~model, ncol = 5, scales = "fixed") +
-  ggplot2::ggtitle("True negative rate, closer to one is better, fixed scales. \n The black horizontal line is the mean of the results, the red horizontal line is 1.") +
-  ggplot2::labs(y = "True negative rate, closer to zero is better. \n The horizontal line is the mean of the results, the red line is 0.") +
-  ggplot2::theme(legend.position = "none")
-
-if(save_all_plots == "Y" && device == "eps"){
-  ggplot2::ggsave("true_negative_rate_fixed_scales.eps", width = width, height = height, path = tempdir1,  units = units, scale = scale, device = device, dpi = dpi)
-}
-if(save_all_plots == "Y" && device == "jpeg"){
-  ggplot2::ggsave("true_negative_rate_fixed_scales.jpeg", width = width, height = height, path = tempdir1,  units = units, scale = scale, device = device, dpi = dpi)
-}
-if(save_all_plots == "Y" && device == "pdf"){
-  ggplot2::ggsave("true_negative_rate_fixed_scales.pdf", width = width, height = height, path = tempdir1,  units = units, scale = scale, device = device, dpi = dpi)
-}
-if(save_all_plots == "Y" && device == "png"){
-  ggplot2::ggsave("true_negative_rate_fixed_scales.png", width = width, height = height, path = tempdir1,  units = units, scale = scale, device = device, dpi = dpi)
-}
-if(save_all_plots == "Y" && device == "svg"){
-  ggplot2::ggsave("true_negative_rate_fixed_scales.svg", width = width, height = height, path = tempdir1,  units = units, scale = scale, device = device, dpi = dpi)
-}
-if(save_all_plots == "Y" && device == "tiff"){
-  ggplot2::ggsave("true_negative_rate_fixed_scales.tiff", width = width, height = height, path = tempdir1,  units = units, scale = scale, device = device, dpi = dpi)
-}
-
-true_negative_rate_free_scales <- ggplot2::ggplot(data = true_negative_rate_data, mapping = ggplot2::aes(x = count, y = data, color = model)) +
-  ggplot2::geom_line(mapping = ggplot2::aes(x = count, y = data)) +
-  ggplot2::geom_point(mapping = ggplot2::aes(x = count, y = data)) +
-  ggplot2::geom_hline(ggplot2::aes(yintercept = mean)) +
-  ggplot2::geom_hline(ggplot2::aes(yintercept = 0, color = "red")) +
-  ggplot2::facet_wrap(~model, ncol = 5, scales = "free") +
-  ggplot2::ggtitle("True negative rate, closer to one is better, free scales. \n The black horizontal line is the mean of the results, the red horizontal line is 1.") +
-  ggplot2::labs(y = "True negative rate, closer to one is better. \n The horizontal line is the mean of the results, the red line is 0.") +
-  ggplot2::theme(legend.position = "none")
-
-if(save_all_plots == "Y" && device == "eps"){
-  ggplot2::ggsave("true_negative_rate_free_scales.eps", width = width, height = height, path = tempdir1,  units = units, scale = scale, device = device, dpi = dpi)
-}
-if(save_all_plots == "Y" && device == "jpeg"){
-  ggplot2::ggsave("true_negative_rate_free_scales.jpeg", width = width, height = height, path = tempdir1,  units = units, scale = scale, device = device, dpi = dpi)
-}
-if(save_all_plots == "Y" && device == "pdf"){
-  ggplot2::ggsave("true_negative_rate_free_scales.pdf", width = width, height = height, path = tempdir1,  units = units, scale = scale, device = device, dpi = dpi)
-}
-if(save_all_plots == "Y" && device == "png"){
-  ggplot2::ggsave("true_negative_rate_free_scales.png", width = width, height = height, path = tempdir1,  units = units, scale = scale, device = device, dpi = dpi)
-}
-if(save_all_plots == "Y" && device == "svg"){
-  ggplot2::ggsave("true_negative_rate_free_scales.svg", width = width, height = height, path = tempdir1,  units = units, scale = scale, device = device, dpi = dpi)
-}
-if(save_all_plots == "Y" && device == "tiff"){
-  ggplot2::ggsave("true_negative_rate_free_scales.tiff", width = width, height = height, path = tempdir1,  units = units, scale = scale, device = device, dpi = dpi)
-}
-
-
-#### False positive rate plot ####
-false_positive_rate_data <- data.frame(
-  "count" = 1:numresamples,
-  "model" = c(
-    rep("Bagging", numresamples), rep("Bagged Random Forest", numresamples),
-    rep("C50", numresamples), rep("Linear", numresamples),
-    rep("Naive Bayes", numresamples), rep("Partial Least Squares", numresamples),
-    rep("Penalized Discriminant Analysis", numresamples), rep("Random Forest", numresamples), rep("Ranger", numresamples),
-    rep("RPart", numresamples), rep("Support Vector Machines", numresamples), rep("Trees", numresamples),
-    rep("Ensemble Bagged Cart", numresamples), rep("Ensemble Bagged Random Forest", numresamples),
-    rep("Ensemble C50", numresamples),
-    rep("Ensemble Naive Bayes", numresamples), rep("Ensemble Ranger", numresamples), rep("Ensemble Random Forest", numresamples),
-    rep("Ensemble Support Vector Machines", numresamples),
-    rep("Ensemble Trees", numresamples)
-  ),
-  "data" = c(
-    bagging_false_positive_rate, bag_rf_false_positive_rate, C50_false_positive_rate, linear_false_positive_rate,
-    n_bayes_false_positive_rate, pls_false_positive_rate, pda_false_positive_rate, rf_false_positive_rate, ranger_false_positive_rate, rpart_false_positive_rate, svm_false_positive_rate, tree_false_positive_rate,
-    ensemble_bag_cart_false_positive_rate, ensemble_bag_rf_false_positive_rate, ensemble_C50_false_positive_rate,
-    ensemble_n_bayes_false_positive_rate,
-    ensemble_ranger_false_positive_rate, ensemble_rf_false_positive_rate, ensemble_svm_false_positive_rate, ensemble_tree_false_positive_rate
-  ),
-  "mean" = rep(c(
-    bagging_false_positive_rate_mean, bag_rf_false_positive_rate_mean, C50_false_positive_rate_mean,
-    linear_false_positive_rate_mean, n_bayes_false_positive_rate_mean, pls_false_positive_rate_mean,
-    pda_false_positive_rate_mean, rf_false_positive_rate_mean, ranger_false_positive_rate_mean, rpart_false_positive_rate_mean, svm_false_positive_rate_mean, tree_false_positive_rate_mean,
-    ensemble_bag_cart_false_positive_rate_mean, ensemble_bag_rf_false_positive_rate_mean, ensemble_C50_false_positive_rate_mean,
-    ensemble_n_bayes_false_positive_rate_mean, ensemble_ranger_false_positive_rate_mean, ensemble_rf_false_positive_rate_mean, ensemble_svm_false_positive_rate_mean,
-    ensemble_tree_false_positive_rate_mean
-  ), each = numresamples)
-)
-
-false_positive_rate_fixed_scales <- ggplot2::ggplot(data = false_positive_rate_data, mapping = ggplot2::aes(x = count, y = data, color = model)) +
-  ggplot2::geom_line(mapping = ggplot2::aes(x = count, y = data)) +
-  ggplot2::geom_point(mapping = ggplot2::aes(x = count, y = data)) +
-  ggplot2::geom_hline(ggplot2::aes(yintercept = mean)) +
-  ggplot2::geom_hline(ggplot2::aes(yintercept = 0, color = "red")) +
-  ggplot2::facet_wrap(~model, ncol = 5, scales = "fixed") +
-  ggplot2::ggtitle("False positive rate, closer to zero is better, fixed scales. \n The black horizontal line is the mean of the results, the red horizontal line is 1.") +
-  ggplot2::labs(y = "False positive rate, closer to zero is better. \n The horizontal line is the mean of the results, the red line is 0.") +
-  ggplot2::theme(legend.position = "none")
-
-if(save_all_plots == "Y" && device == "eps"){
-  ggplot2::ggsave("false_positive_rate_fixed_scales.eps", width = width, height = height, path = tempdir1,  units = units, scale = scale, device = device, dpi = dpi)
-}
-if(save_all_plots == "Y" && device == "jpeg"){
-  ggplot2::ggsave("false_positive_rate_fixed_scales.jpeg", width = width, height = height, path = tempdir1,  units = units, scale = scale, device = device, dpi = dpi)
-}
-if(save_all_plots == "Y" && device == "pdf"){
-  ggplot2::ggsave("false_positive_rate_fixed_scales.pdf", width = width, height = height, path = tempdir1,  units = units, scale = scale, device = device, dpi = dpi)
-}
-if(save_all_plots == "Y" && device == "png"){
-  ggplot2::ggsave("false_positive_rate_fixed_scales.png", width = width, height = height, path = tempdir1,  units = units, scale = scale, device = device, dpi = dpi)
-}
-if(save_all_plots == "Y" && device == "svg"){
-  ggplot2::ggsave("false_positive_rate_fixed_scales.svg", width = width, height = height, path = tempdir1,  units = units, scale = scale, device = device, dpi = dpi)
-}
-if(save_all_plots == "Y" && device == "tiff"){
-  ggplot2::ggsave("false_positive_rate_fixed_scales.tiff", width = width, height = height, path = tempdir1,  units = units, scale = scale, device = device, dpi = dpi)
-}
-
-false_positive_rate_free_scales <- ggplot2::ggplot(data = false_positive_rate_data, mapping = ggplot2::aes(x = count, y = data, color = model)) +
-  ggplot2::geom_line(mapping = ggplot2::aes(x = count, y = data)) +
-  ggplot2::geom_point(mapping = ggplot2::aes(x = count, y = data)) +
-  ggplot2::geom_hline(ggplot2::aes(yintercept = mean)) +
-  ggplot2::geom_hline(ggplot2::aes(yintercept = 0, color = "red")) +
-  ggplot2::facet_wrap(~model, ncol = 5, scales = "free") +
-  ggplot2::ggtitle("False positive rate, closer to zero is better, free scales. \n The black horizontal line is the mean of the results, the red horizontal line is 1.") +
-  ggplot2::labs(y = "False positive rate, closer to zero is better. \n The horizontal line is the mean of the results, the red line is 0.") +
-  ggplot2::theme(legend.position = "none")
-
-if(save_all_plots == "Y" && device == "eps"){
-  ggplot2::ggsave("false_positive_rate_free_scales.eps", width = width, height = height, path = tempdir1,  units = units, scale = scale, device = device, dpi = dpi)
-}
-if(save_all_plots == "Y" && device == "jpeg"){
-  ggplot2::ggsave("false_positive_rate_free_scales.jpeg", width = width, height = height, path = tempdir1,  units = units, scale = scale, device = device, dpi = dpi)
-}
-if(save_all_plots == "Y" && device == "pdf"){
-  ggplot2::ggsave("false_positive_rate_free_scales.pdf", width = width, height = height, path = tempdir1,  units = units, scale = scale, device = device, dpi = dpi)
-}
-if(save_all_plots == "Y" && device == "png"){
-  ggplot2::ggsave("false_positive_rate_free_scales.png", width = width, height = height, path = tempdir1,  units = units, scale = scale, device = device, dpi = dpi)
-}
-if(save_all_plots == "Y" && device == "svg"){
-  ggplot2::ggsave("false_positive_rate_free_scales.svg", width = width, height = height, path = tempdir1,  units = units, scale = scale, device = device, dpi = dpi)
-}
-if(save_all_plots == "Y" && device == "tiff"){
-  ggplot2::ggsave("false_positive_rate_free_scales.tiff", width = width, height = height, path = tempdir1,  units = units, scale = scale, device = device, dpi = dpi)
-}
-
-
-#### False negative rate plot ####
-false_negative_rate_data <- data.frame(
-  "count" = 1:numresamples,
-  "model" = c(
-    rep("Bagging", numresamples), rep("Bagged Random Forest", numresamples),
-    rep("C50", numresamples), rep("Linear", numresamples),
-    rep("Naive Bayes", numresamples), rep("Partial Least Squares", numresamples),
-    rep("Penalized Discriminant Analysis", numresamples), rep("Random Forest", numresamples), rep("Ranger", numresamples),
-    rep("RPart", numresamples), rep("Support Vector Machines", numresamples), rep("Trees", numresamples),
-    rep("Ensemble Bagged Cart", numresamples), rep("Ensemble Bagged Random Forest", numresamples),
-    rep("Ensemble C50", numresamples),
-    rep("Ensemble Naive Bayes", numresamples), rep("Ensemble Ranger", numresamples), rep("Ensemble Random Forest", numresamples),
-    rep("Ensemble Support Vector Machines", numresamples),
-    rep("Ensemble Trees", numresamples)
-  ),
-  "data" = c(
-    bagging_false_negative_rate, bag_rf_false_negative_rate, C50_false_negative_rate, linear_false_negative_rate,
-    n_bayes_false_negative_rate, pls_false_negative_rate, pda_false_negative_rate, rf_false_negative_rate, ranger_false_negative_rate, rpart_false_negative_rate, svm_false_negative_rate, tree_false_negative_rate,
-    ensemble_bag_cart_false_negative_rate, ensemble_bag_rf_false_negative_rate, ensemble_C50_false_negative_rate,
-    ensemble_n_bayes_false_negative_rate,
-    ensemble_ranger_false_negative_rate, ensemble_rf_false_negative_rate, ensemble_svm_false_negative_rate, ensemble_tree_false_negative_rate
-  ),
-  "mean" = rep(c(
-    bagging_false_negative_rate_mean, bag_rf_false_negative_rate_mean, C50_false_negative_rate_mean,
-    linear_false_negative_rate_mean, n_bayes_false_negative_rate_mean, pls_false_negative_rate_mean,
-    pda_false_negative_rate_mean, rf_false_negative_rate_mean, ranger_false_negative_rate_mean, rpart_false_negative_rate_mean, svm_false_negative_rate_mean, tree_false_negative_rate_mean,
-    ensemble_bag_cart_false_negative_rate_mean, ensemble_bag_rf_false_negative_rate_mean, ensemble_C50_false_negative_rate_mean,
-    ensemble_n_bayes_false_negative_rate_mean, ensemble_ranger_false_negative_rate_mean, ensemble_rf_false_negative_rate_mean, ensemble_svm_false_negative_rate_mean,
-    ensemble_tree_false_negative_rate_mean
-  ), each = numresamples)
-)
-
-false_negative_rate_fixed_scales <- ggplot2::ggplot(data = false_negative_rate_data, mapping = ggplot2::aes(x = count, y = data, color = model)) +
-  ggplot2::geom_line(mapping = ggplot2::aes(x = count, y = data)) +
-  ggplot2::geom_point(mapping = ggplot2::aes(x = count, y = data)) +
-  ggplot2::geom_hline(ggplot2::aes(yintercept = mean)) +
-  ggplot2::geom_hline(ggplot2::aes(yintercept = 1, color = "red")) +
-  ggplot2::facet_wrap(~model, ncol = 5, scales = "fixed") +
-  ggplot2::ggtitle("False negative rate, closer to zero is better, fixed scales. \n The black horizontal line is the mean of the results, the red horizontal line is 1.") +
-  ggplot2::labs(y = "False negative rate, closer to zero is better. \n The horizontal line is the mean of the results, the red line is 0.") +
-  ggplot2::theme(legend.position = "none")
-
-if(save_all_plots == "Y" && device == "eps"){
-  ggplot2::ggsave("false_negative_rate_fixed_scales.eps", width = width, height = height, path = tempdir1,  units = units, scale = scale, device = device, dpi = dpi)
-}
-if(save_all_plots == "Y" && device == "jpeg"){
-  ggplot2::ggsave("false_negative_rate_fixed_scales.jpeg", width = width, height = height, path = tempdir1,  units = units, scale = scale, device = device, dpi = dpi)
-}
-if(save_all_plots == "Y" && device == "pdf"){
-  ggplot2::ggsave("false_negative_rate_fixed_scales.pdf", width = width, height = height, path = tempdir1,  units = units, scale = scale, device = device, dpi = dpi)
-}
-if(save_all_plots == "Y" && device == "png"){
-  ggplot2::ggsave("false_negative_rate_fixed_scales.png", width = width, height = height, path = tempdir1,  units = units, scale = scale, device = device, dpi = dpi)
-}
-if(save_all_plots == "Y" && device == "svg"){
-  ggplot2::ggsave("false_negative_rate_fixed_scales.svg", width = width, height = height, path = tempdir1,  units = units, scale = scale, device = device, dpi = dpi)
-}
-if(save_all_plots == "Y" && device == "tiff"){
-  ggplot2::ggsave("false_negative_rate_fixed_scales.tiff", width = width, height = height, path = tempdir1,  units = units, scale = scale, device = device, dpi = dpi)
-}
-
-false_negative_rate_free_scales <- ggplot2::ggplot(data = false_negative_rate_data, mapping = ggplot2::aes(x = count, y = data, color = model)) +
-  ggplot2::geom_line(mapping = ggplot2::aes(x = count, y = data)) +
-  ggplot2::geom_point(mapping = ggplot2::aes(x = count, y = data)) +
-  ggplot2::geom_hline(ggplot2::aes(yintercept = mean)) +
-  ggplot2::geom_hline(ggplot2::aes(yintercept = 0, color = "red")) +
-  ggplot2::facet_wrap(~model, ncol = 5, scales = "free") +
-  ggplot2::ggtitle("False negative rate, closer to zero is better, free scales. \n The black horizontal line is the mean of the results, the red horizontal line is 1.") +
-  ggplot2::labs(y = "False negative rate, closer to zero is better. \n The horizontal line is the mean of the results, the red line is 0.") +
-  ggplot2::theme(legend.position = "none")
-
-if(save_all_plots == "Y" && device == "eps"){
-  ggplot2::ggsave("false_negative_rate_free_scales.eps", width = width, height = height, path = tempdir1,  units = units, scale = scale, device = device, dpi = dpi)
-}
-if(save_all_plots == "Y" && device == "jpeg"){
-  ggplot2::ggsave("false_negative_rate_free_scales.jpeg", width = width, height = height, path = tempdir1,  units = units, scale = scale, device = device, dpi = dpi)
-}
-if(save_all_plots == "Y" && device == "pdf"){
-  ggplot2::ggsave("false_negative_rate_free_scales.pdf", width = width, height = height, path = tempdir1,  units = units, scale = scale, device = device, dpi = dpi)
-}
-if(save_all_plots == "Y" && device == "png"){
-  ggplot2::ggsave("false_negative_rate_free_scales.png", width = width, height = height, path = tempdir1,  units = units, scale = scale, device = device, dpi = dpi)
-}
-if(save_all_plots == "Y" && device == "svg"){
-  ggplot2::ggsave("false_negative_rate_free_scales.svg", width = width, height = height, path = tempdir1,  units = units, scale = scale, device = device, dpi = dpi)
-}
-if(save_all_plots == "Y" && device == "tiff"){
-  ggplot2::ggsave("false_negative_rate_free_scales.tiff", width = width, height = height, path = tempdir1,  units = units, scale = scale, device = device, dpi = dpi)
-}
-
-#### Positive predictive value plot ####
-positive_pred_value_data <- data.frame(
-  "count" = 1:numresamples,
-  "model" = c(
-    rep("Bagging", numresamples), rep("Bagged Random Forest", numresamples),
-    rep("C50", numresamples), rep("Linear", numresamples),
-    rep("Naive Bayes", numresamples), rep("Partial Least Squares", numresamples),
-    rep("Penalized Discriminant Analysis", numresamples), rep("Random Forest", numresamples), rep("Ranger", numresamples),
-    rep("RPart", numresamples), rep("Support Vector Machines", numresamples), rep("Trees", numresamples),
-    rep("Ensemble Bagged Cart", numresamples), rep("Ensemble Bagged Random Forest", numresamples),
-    rep("Ensemble C50", numresamples),
-    rep("Ensemble Naive Bayes", numresamples), rep("Ensemble Ranger", numresamples), rep("Ensemble Random Forest", numresamples),
-    rep("Ensemble Support Vector Machines", numresamples),
-    rep("Ensemble Trees", numresamples)
-  ),
-  "data" = c(
-    bagging_positive_pred_value, bag_rf_positive_pred_value, C50_positive_pred_value, linear_positive_pred_value,
-    n_bayes_positive_pred_value, pls_positive_pred_value, pda_positive_pred_value, rf_positive_pred_value, ranger_positive_pred_value, rpart_positive_pred_value, svm_positive_pred_value, tree_positive_pred_value,
-    ensemble_bag_cart_positive_pred_value, ensemble_bag_rf_positive_pred_value, ensemble_C50_positive_pred_value,
-    ensemble_n_bayes_positive_pred_value,
-    ensemble_ranger_positive_pred_value, ensemble_rf_positive_pred_value, ensemble_svm_positive_pred_value, ensemble_tree_positive_pred_value
-  ),
-  "mean" = rep(c(
-    bagging_positive_pred_value_mean, bag_rf_positive_pred_value_mean, C50_positive_pred_value_mean,
-    linear_positive_pred_value_mean, n_bayes_positive_pred_value_mean, pls_positive_pred_value_mean,
-    pda_positive_pred_value_mean, rf_positive_pred_value_mean, ranger_positive_pred_value_mean, rpart_positive_pred_value_mean, svm_positive_pred_value_mean, tree_positive_pred_value_mean,
-    ensemble_bag_cart_positive_pred_value_mean, ensemble_bag_rf_positive_pred_value_mean, ensemble_C50_positive_pred_value_mean,
-    ensemble_n_bayes_positive_pred_value_mean, ensemble_ranger_positive_pred_value_mean, ensemble_rf_positive_pred_value_mean, ensemble_svm_positive_pred_value_mean,
-    ensemble_tree_positive_pred_value_mean
-  ), each = numresamples)
-)
-
-positive_pred_value_fixed_scales <- ggplot2::ggplot(data = positive_pred_value_data, mapping = ggplot2::aes(x = count, y = data, color = model)) +
-  ggplot2::geom_line(mapping = ggplot2::aes(x = count, y = data)) +
-  ggplot2::geom_point(mapping = ggplot2::aes(x = count, y = data)) +
-  ggplot2::geom_hline(ggplot2::aes(yintercept = mean)) +
-  ggplot2::geom_hline(ggplot2::aes(yintercept = 1, color = "red")) +
-  ggplot2::facet_wrap(~model, ncol = 5, scales = "fixed") +
-  ggplot2::ggtitle("Positive Pred Value, closer to one is better, fixed scales. \n The black horizontal line is the mean of the results, the red horizontal line is 1.") +
-  ggplot2::labs(y = "Positive Pred Value, closer to one is better. \n The horizontal line is the mean of the results, the red line is 0.") +
-  ggplot2::theme(legend.position = "none")
-
-if(save_all_plots == "Y" && device == "eps"){
-  ggplot2::ggsave("positive_pred_value_fixed_scales.eps", width = width, height = height, path = tempdir1,  units = units, scale = scale, device = device, dpi = dpi)
-}
-if(save_all_plots == "Y" && device == "jpeg"){
-  ggplot2::ggsave("positive_pred_value_fixed_scales.jpeg", width = width, height = height, path = tempdir1,  units = units, scale = scale, device = device, dpi = dpi)
-}
-if(save_all_plots == "Y" && device == "pdf"){
-  ggplot2::ggsave("positive_pred_value_fixed_scales.pdf", width = width, height = height, path = tempdir1,  units = units, scale = scale, device = device, dpi = dpi)
-}
-if(save_all_plots == "Y" && device == "png"){
-  ggplot2::ggsave("positive_pred_value_fixed_scales.png", width = width, height = height, path = tempdir1,  units = units, scale = scale, device = device, dpi = dpi)
-}
-if(save_all_plots == "Y" && device == "svg"){
-  ggplot2::ggsave("positive_pred_value_fixed_scales.svg", width = width, height = height, path = tempdir1,  units = units, scale = scale, device = device, dpi = dpi)
-}
-if(save_all_plots == "Y" && device == "tiff"){
-  ggplot2::ggsave("positive_pred_value_fixed_scales.tiff", width = width, height = height, path = tempdir1,  units = units, scale = scale, device = device, dpi = dpi)
-}
-
-positive_pred_value_free_scales <- ggplot2::ggplot(data = positive_pred_value_data, mapping = ggplot2::aes(x = count, y = data, color = model)) +
-  ggplot2::geom_line(mapping = ggplot2::aes(x = count, y = data)) +
-  ggplot2::geom_point(mapping = ggplot2::aes(x = count, y = data)) +
-  ggplot2::geom_hline(ggplot2::aes(yintercept = mean)) +
-  ggplot2::geom_hline(ggplot2::aes(yintercept = 1, color = "red")) +
-  ggplot2::facet_wrap(~model, ncol = 5, scales = "free") +
-  ggplot2::ggtitle("Positive Pred Value, closer to one is better, free scales. \n The black horizontal line is the mean of the results, the red horizontal line is 1.") +
-  ggplot2::labs(y = "Positive Pred Value, closer to one is better. \n The horizontal line is the mean of the results, the red line is 0.") +
-  ggplot2::theme(legend.position = "none")
-
-if(save_all_plots == "Y" && device == "eps"){
-  ggplot2::ggsave("positive_pred_value_free_scales.eps", width = width, height = height, path = tempdir1,  units = units, scale = scale, device = device, dpi = dpi)
-}
-if(save_all_plots == "Y" && device == "jpeg"){
-  ggplot2::ggsave("positive_pred_value_free_scales.jpeg", width = width, height = height, path = tempdir1,  units = units, scale = scale, device = device, dpi = dpi)
-}
-if(save_all_plots == "Y" && device == "pdf"){
-  ggplot2::ggsave("positive_pred_value_free_scales.pdf", width = width, height = height, path = tempdir1,  units = units, scale = scale, device = device, dpi = dpi)
-}
-if(save_all_plots == "Y" && device == "png"){
-  ggplot2::ggsave("positive_pred_value_free_scales.png", width = width, height = height, path = tempdir1,  units = units, scale = scale, device = device, dpi = dpi)
-}
-if(save_all_plots == "Y" && device == "svg"){
-  ggplot2::ggsave("positive_pred_value_free_scales.svg", width = width, height = height, path = tempdir1,  units = units, scale = scale, device = device, dpi = dpi)
-}
-if(save_all_plots == "Y" && device == "tiff"){
-  ggplot2::ggsave("positive_pred_value_free_scales.tiff", width = width, height = height, path = tempdir1,  units = units, scale = scale, device = device, dpi = dpi)
-}
-
-#### Negative predictive value plot ####
-negative_pred_value_data <- data.frame(
-  "count" = 1:numresamples,
-  "model" = c(
-    rep("Bagging", numresamples), rep("Bagged Random Forest", numresamples),
-    rep("C50", numresamples), rep("Linear", numresamples),
-    rep("Naive Bayes", numresamples), rep("Partial Least Squares", numresamples),
-    rep("Penalized Discriminant Analysis", numresamples), rep("Random Forest", numresamples), rep("Ranger", numresamples),
-    rep("RPart", numresamples), rep("Support Vector Machines", numresamples), rep("Trees", numresamples),
-    rep("Ensemble Bagged Cart", numresamples), rep("Ensemble Bagged Random Forest", numresamples),
-    rep("Ensemble C50", numresamples),
-    rep("Ensemble Naive Bayes", numresamples), rep("Ensemble Ranger", numresamples), rep("Ensemble Random Forest", numresamples),
-    rep("Ensemble Support Vector Machines", numresamples),
-    rep("Ensemble Trees", numresamples)
-  ),
-  "data" = c(
-    bagging_negative_pred_value, bag_rf_negative_pred_value, C50_negative_pred_value, linear_negative_pred_value,
-    n_bayes_negative_pred_value, pls_negative_pred_value, pda_negative_pred_value, rf_negative_pred_value, ranger_negative_pred_value, rpart_negative_pred_value, svm_negative_pred_value, tree_negative_pred_value,
-    ensemble_bag_cart_negative_pred_value, ensemble_bag_rf_negative_pred_value, ensemble_C50_negative_pred_value,
-    ensemble_n_bayes_negative_pred_value,
-    ensemble_ranger_negative_pred_value, ensemble_rf_negative_pred_value, ensemble_svm_negative_pred_value, ensemble_tree_negative_pred_value
-  ),
-  "mean" = rep(c(
-    bagging_negative_pred_value_mean, bag_rf_negative_pred_value_mean, C50_negative_pred_value_mean,
-    linear_negative_pred_value_mean, n_bayes_negative_pred_value_mean, pls_negative_pred_value_mean,
-    pda_negative_pred_value_mean, rf_negative_pred_value_mean, ranger_negative_pred_value_mean, rpart_negative_pred_value_mean, svm_negative_pred_value_mean, tree_negative_pred_value_mean,
-    ensemble_bag_cart_negative_pred_value_mean, ensemble_bag_rf_negative_pred_value_mean, ensemble_C50_negative_pred_value_mean,
-    ensemble_n_bayes_negative_pred_value_mean, ensemble_ranger_negative_pred_value_mean, ensemble_rf_negative_pred_value_mean, ensemble_svm_negative_pred_value_mean,
-    ensemble_tree_negative_pred_value_mean
-  ), each = numresamples)
-)
-
-negative_pred_value_fixed_scales <- ggplot2::ggplot(data = negative_pred_value_data, mapping = ggplot2::aes(x = count, y = data, color = model)) +
-  ggplot2::geom_line(mapping = ggplot2::aes(x = count, y = data)) +
-  ggplot2::geom_point(mapping = ggplot2::aes(x = count, y = data)) +
-  ggplot2::geom_hline(ggplot2::aes(yintercept = mean)) +
-  ggplot2::geom_hline(ggplot2::aes(yintercept = 1, color = "red")) +
-  ggplot2::facet_wrap(~model, ncol = 5, scales = "fixed") +
-  ggplot2::ggtitle("Negative Pred Value, closer to one is better, fixed scales. \n The black horizontal line is the mean of the results, the red horizontal line is 1.") +
-  ggplot2::labs(y = "Negative Pred Value, closer to one is better. \n The horizontal line is the mean of the results, the red line is 0.") +
-  ggplot2::theme(legend.position = "none")
-
-if(save_all_plots == "Y" && device == "eps"){
-  ggplot2::ggsave("negative_pred_value_fixed_scales.eps", width = width, height = height, path = tempdir1,  units = units, scale = scale, device = device, dpi = dpi)
-}
-if(save_all_plots == "Y" && device == "jpeg"){
-  ggplot2::ggsave("negative_pred_value_fixed_scales.jpeg", width = width, height = height, path = tempdir1,  units = units, scale = scale, device = device, dpi = dpi)
-}
-if(save_all_plots == "Y" && device == "pdf"){
-  ggplot2::ggsave("negative_pred_value_fixed_scales.pdf", width = width, height = height, path = tempdir1,  units = units, scale = scale, device = device, dpi = dpi)
-}
-if(save_all_plots == "Y" && device == "png"){
-  ggplot2::ggsave("negative_pred_value_fixed_scales.png", width = width, height = height, path = tempdir1,  units = units, scale = scale, device = device, dpi = dpi)
-}
-if(save_all_plots == "Y" && device == "svg"){
-  ggplot2::ggsave("negative_pred_value_fixed_scales.svg", width = width, height = height, path = tempdir1,  units = units, scale = scale, device = device, dpi = dpi)
-}
-if(save_all_plots == "Y" && device == "tiff"){
-  ggplot2::ggsave("negative_pred_value_fixed_scales.tiff", width = width, height = height, path = tempdir1,  units = units, scale = scale, device = device, dpi = dpi)
-}
-
-negative_pred_value_free_scales <- ggplot2::ggplot(data = negative_pred_value_data, mapping = ggplot2::aes(x = count, y = data, color = model)) +
-  ggplot2::geom_line(mapping = ggplot2::aes(x = count, y = data)) +
-  ggplot2::geom_point(mapping = ggplot2::aes(x = count, y = data)) +
-  ggplot2::geom_hline(ggplot2::aes(yintercept = mean)) +
-  ggplot2::geom_hline(ggplot2::aes(yintercept = 1, color = "red")) +
-  ggplot2::facet_wrap(~model, ncol = 5, scales = "free") +
-  ggplot2::ggtitle("Negative Pred Value, closer to one is better, free scales. \n The black horizontal line is the mean of the results, the red horizontal line is 1.") +
-  ggplot2::labs(y = "Negative Pred Value, closer to one is better. \n The horizontal line is the mean of the results, the red line is 0.") +
-  ggplot2::theme(legend.position = "none")
-
-if(save_all_plots == "Y" && device == "eps"){
-  ggplot2::ggsave("negative_pred_value_free_scales.eps", width = width, height = height, path = tempdir1,  units = units, scale = scale, device = device, dpi = dpi)
-}
-if(save_all_plots == "Y" && device == "jpeg"){
-  ggplot2::ggsave("negative_pred_value_free_scales.jpeg", width = width, height = height, path = tempdir1,  units = units, scale = scale, device = device, dpi = dpi)
-}
-if(save_all_plots == "Y" && device == "pdf"){
-  ggplot2::ggsave("negative_pred_value_free_scales.pdf", width = width, height = height, path = tempdir1,  units = units, scale = scale, device = device, dpi = dpi)
-}
-if(save_all_plots == "Y" && device == "png"){
-  ggplot2::ggsave("negative_pred_value_free_scales.png", width = width, height = height, path = tempdir1,  units = units, scale = scale, device = device, dpi = dpi)
-}
-if(save_all_plots == "Y" && device == "svg"){
-  ggplot2::ggsave("negative_pred_value_free_scales.svg", width = width, height = height, path = tempdir1,  units = units, scale = scale, device = device, dpi = dpi)
-}
-if(save_all_plots == "Y" && device == "tiff"){
-  ggplot2::ggsave("negative_pred_value_free_scales.tiff", width = width, height = height, path = tempdir1,  units = units, scale = scale, device = device, dpi = dpi)
-}
-
-#### Holdout vs train plot ####
-holdout_vs_train_fixed_scales <- ggplot2::ggplot(data = holdout_vs_train_data, mapping = ggplot2::aes(x = count, y = data, color = model)) +
-  ggplot2::geom_line(mapping = ggplot2::aes(x = count, y = data)) +
-  ggplot2::geom_point(mapping = ggplot2::aes(x = count, y = data)) +
-  ggplot2::geom_hline(ggplot2::aes(yintercept = mean)) +
-  ggplot2::geom_hline(ggplot2::aes(yintercept = 1, color = "red")) +
-  ggplot2::facet_wrap(~model, ncol = 5, scales = "fixed") +
-  ggplot2::ggtitle("Holdout accuracy / train accuracy by model, closer to one is better, fixed scales. \n The black horizontal line is the mean of the results, the red horizontal line is 1.") +
-  ggplot2::labs(y = "Holdout accuracy / train accuracy by model, closer to one is better. \n The horizontal line is the mean of the results, the red line is 1.") +
-  ggplot2::theme(legend.position = "none")
-
-if(save_all_plots == "Y" && device == "eps"){
-  ggplot2::ggsave("holdout_vs_train_fixed_scales.eps", width = width, height = height, path = tempdir1,  units = units, scale = scale, device = device, dpi = dpi)
-}
-if(save_all_plots == "Y" && device == "jpeg"){
-  ggplot2::ggsave("holdout_vs_train_fixed_scales.jpeg", width = width, height = height, path = tempdir1,  units = units, scale = scale, device = device, dpi = dpi)
-}
-if(save_all_plots == "Y" && device == "pdf"){
-  ggplot2::ggsave("holdout_vs_train_fixed_scales.pdf", width = width, height = height, path = tempdir1,  units = units, scale = scale, device = device, dpi = dpi)
-}
-if(save_all_plots == "Y" && device == "png"){
-  ggplot2::ggsave("holdout_vs_train_fixed_scales.png", width = width, height = height, path = tempdir1,  units = units, scale = scale, device = device, dpi = dpi)
-}
-if(save_all_plots == "Y" && device == "svg"){
-  ggplot2::ggsave("holdout_vs_train_fixed_scales.svg", width = width, height = height, path = tempdir1,  units = units, scale = scale, device = device, dpi = dpi)
-}
-if(save_all_plots == "Y" && device == "tiff"){
-  ggplot2::ggsave("holdout_vs_train_fixed_scales.tiff", width = width, height = height, path = tempdir1,  units = units, scale = scale, device = device, dpi = dpi)
-}
-
-holdout_vs_train_free_scales <- ggplot2::ggplot(data = holdout_vs_train_data, mapping = ggplot2::aes(x = count, y = data, color = model)) +
-  ggplot2::geom_line(mapping = ggplot2::aes(x = count, y = data)) +
-  ggplot2::geom_point(mapping = ggplot2::aes(x = count, y = data)) +
-  ggplot2::geom_hline(ggplot2::aes(yintercept = mean)) +
-  ggplot2::geom_hline(ggplot2::aes(yintercept = 1, color = "red")) +
-  ggplot2::facet_wrap(~model, ncol = 5, scales = "free") +
-  ggplot2::ggtitle("Holdout accuracy / train accuracy by model, closer to one is better, free scales. \n The black horizontal line is the mean of the results, the red horizontal line is 1.") +
-  ggplot2::labs(y = "Holdout accuracy / train accuracy by model, closer to one is better. \n The horizontal line is the mean of the results, the red line is 1.") +
-  ggplot2::theme(legend.position = "none")
-
-if(save_all_plots == "Y" && device == "eps"){
-  ggplot2::ggsave("holdout_vs_train_free_scales.eps", width = width, height = height, path = tempdir1,  units = units, scale = scale, device = device, dpi = dpi)
-}
-if(save_all_plots == "Y" && device == "jpeg"){
-  ggplot2::ggsave("holdout_vs_train_free_scales.jpeg", width = width, height = height, path = tempdir1,  units = units, scale = scale, device = device, dpi = dpi)
-}
-if(save_all_plots == "Y" && device == "pdf"){
-  ggplot2::ggsave("holdout_vs_train_free_scales.pdf", width = width, height = height, path = tempdir1,  units = units, scale = scale, device = device, dpi = dpi)
-}
-if(save_all_plots == "Y" && device == "png"){
-  ggplot2::ggsave("holdout_vs_train_free_scales.png", width = width, height = height, path = tempdir1,  units = units, scale = scale, device = device, dpi = dpi)
-}
-if(save_all_plots == "Y" && device == "svg"){
-  ggplot2::ggsave("holdout_vs_train_free_scales.svg", width = width, height = height, path = tempdir1,  units = units, scale = scale, device = device, dpi = dpi)
-}
-if(save_all_plots == "Y" && device == "tiff"){
-  ggplot2::ggsave("holdout_vs_train_free_scales.tiff", width = width, height = height, path = tempdir1,  units = units, scale = scale, device = device, dpi = dpi)
-}
-
-#### Classification error plot ####
-classification_error_data <- data.frame(
-  "count" = 1:numresamples,
-  "model" = c(
-    rep("Bagging", numresamples), rep("Bagged Random Forest", numresamples),
-    rep("C50", numresamples), rep("Linear", numresamples),
-    rep("Naive Bayes", numresamples), rep("Partial Least Squares", numresamples),
-    rep("Penalized Discriminant Analysis", numresamples), rep("Random Forest", numresamples), rep("Ranger", numresamples),
-    rep("RPart", numresamples), rep("Support Vector Machines", numresamples), rep("Trees", numresamples),
-    rep("Ensemble Bagged Cart", numresamples), rep("Ensemble Bagged Random Forest", numresamples),
-    rep("Ensemble C50", numresamples),
-    rep("Ensemble Naive Bayes", numresamples), rep("Ensemble Ranger", numresamples), rep("Ensemble Random Forest", numresamples),
-    rep("Ensemble Support Vector Machines", numresamples),
-    rep("Ensemble Trees", numresamples)
-  ),
-  "data" = c(
-    bagging_classification_error, bag_rf_classification_error, C50_classification_error, linear_classification_error,
-    n_bayes_classification_error, pls_classification_error, pda_classification_error, rf_classification_error, ranger_classification_error, rpart_classification_error, svm_classification_error, tree_classification_error,
-    ensemble_bag_cart_classification_error, ensemble_bag_rf_classification_error, ensemble_C50_classification_error,
-    ensemble_n_bayes_classification_error,
-    ensemble_ranger_classification_error, ensemble_rf_classification_error, ensemble_svm_classification_error, ensemble_tree_classification_error
-  ),
-  "mean" = rep(c(
-    bagging_classification_error_mean, bag_rf_classification_error_mean, C50_classification_error_mean,
-    linear_classification_error_mean, n_bayes_classification_error_mean, pls_classification_error_mean,
-    pda_classification_error_mean, rf_classification_error_mean, ranger_classification_error_mean, rpart_classification_error_mean, svm_classification_error_mean, tree_classification_error_mean,
-    ensemble_bag_cart_classification_error_mean, ensemble_bag_rf_classification_error_mean, ensemble_C50_classification_error_mean,
-    ensemble_n_bayes_classification_error_mean, ensemble_ranger_classification_error_mean, ensemble_rf_classification_error_mean, ensemble_svm_classification_error_mean,
-    ensemble_tree_classification_error_mean
-  ), each = numresamples)
-)
-
-classification_error_fixed_scales <- ggplot2::ggplot(data = classification_error_data, mapping = ggplot2::aes(x = count, y = data, color = model)) +
-  ggplot2::geom_line(mapping = ggplot2::aes(x = count, y = data)) +
-  ggplot2::geom_point(mapping = ggplot2::aes(x = count, y = data)) +
-  ggplot2::geom_hline(ggplot2::aes(yintercept = mean)) +
-  ggplot2::geom_hline(ggplot2::aes(yintercept = 0, color = "red")) +
-  ggplot2::facet_wrap(~model, ncol = 5, scales = "fixed") +
-  ggplot2::ggtitle("Classification error, closer to zero is better, fixed scales. \n The black horizontal line is the mean of the results, the red horizontal line is 1.") +
-  ggplot2::labs(y = "Classification error, closer to zero is better. \n The horizontal line is the mean of the results, the red line is 0.") +
-  ggplot2::theme(legend.position = "none")
-
-if(save_all_plots == "Y" && device == "eps"){
-  ggplot2::ggsave("classification_error_fixed_scales.eps", width = width, height = height, path = tempdir1,  units = units, scale = scale, device = device, dpi = dpi)
-}
-if(save_all_plots == "Y" && device == "jpeg"){
-  ggplot2::ggsave("classification_error_fixed_scales.jpeg", width = width, height = height, path = tempdir1,  units = units, scale = scale, device = device, dpi = dpi)
-}
-if(save_all_plots == "Y" && device == "pdf"){
-  ggplot2::ggsave("classification_error_fixed_scales.pdf", width = width, height = height, path = tempdir1,  units = units, scale = scale, device = device, dpi = dpi)
-}
-if(save_all_plots == "Y" && device == "png"){
-  ggplot2::ggsave("classification_error_fixed_scales.png", width = width, height = height, path = tempdir1,  units = units, scale = scale, device = device, dpi = dpi)
-}
-if(save_all_plots == "Y" && device == "svg"){
-  ggplot2::ggsave("classification_error_fixed_scales.svg", width = width, height = height, path = tempdir1,  units = units, scale = scale, device = device, dpi = dpi)
-}
-if(save_all_plots == "Y" && device == "tiff"){
-  ggplot2::ggsave("classification_error_fixed_scales.tiff", width = width, height = height, path = tempdir1,  units = units, scale = scale, device = device, dpi = dpi)
-}
-
-classification_error__free_scales <- ggplot2::ggplot(data = classification_error_data, mapping = ggplot2::aes(x = count, y = data, color = model)) +
-  ggplot2::geom_line(mapping = ggplot2::aes(x = count, y = data)) +
-  ggplot2::geom_point(mapping = ggplot2::aes(x = count, y = data)) +
-  ggplot2::geom_hline(ggplot2::aes(yintercept = mean)) +
-  ggplot2::geom_hline(ggplot2::aes(yintercept = 0, color = "red")) +
-  ggplot2::facet_wrap(~model, ncol = 5, scales = "free") +
-  ggplot2::ggtitle("Classification error, closer to zero is better, free scales. \n The black horizontal line is the mean of the results, the red horizontal line is 1.") +
-  ggplot2::labs(y = "Classification error, closer to zero is better. \n The horizontal line is the mean of the results, the red line is 0.") +
-  ggplot2::theme(legend.position = "none")
-
-if(save_all_plots == "Y" && device == "eps"){
-  ggplot2::ggsave("classification_error_free_scales.eps", width = width, height = height, path = tempdir1,  units = units, scale = scale, device = device, dpi = dpi)
-}
-if(save_all_plots == "Y" && device == "jpeg"){
-  ggplot2::ggsave("classification_error_free_scales.jpeg", width = width, height = height, path = tempdir1,  units = units, scale = scale, device = device, dpi = dpi)
-}
-if(save_all_plots == "Y" && device == "pdf"){
-  ggplot2::ggsave("classification_error_free_scales.pdf", width = width, height = height, path = tempdir1,  units = units, scale = scale, device = device, dpi = dpi)
-}
-if(save_all_plots == "Y" && device == "png"){
-  ggplot2::ggsave("classification_error_free_scales.png", width = width, height = height, path = tempdir1,  units = units, scale = scale, device = device, dpi = dpi)
-}
-if(save_all_plots == "Y" && device == "svg"){
-  ggplot2::ggsave("classification_error_free_scales.svg", width = width, height = height, path = tempdir1,  units = units, scale = scale, device = device, dpi = dpi)
-}
-if(save_all_plots == "Y" && device == "tiff"){
-  ggplot2::ggsave("classification_error_free_scales.tiff", width = width, height = height, path = tempdir1,  units = units, scale = scale, device = device, dpi = dpi)
-}
-
-
-###### Total Data visualizations start here ########
-
-total_data <- data.frame(
-  "count" = 1:numresamples,
-  "model" = c(
-    rep("Bagging", numresamples), rep("Bagged Random Forest", numresamples),
-    rep("C50", numresamples), rep("Linear", numresamples),
-    rep("Naive Bayes", numresamples), rep("Partial Least Squares", numresamples),
-    rep("Penalized Discriminant Analysis", numresamples), rep("Random Forest", numresamples), rep("Ranger", numresamples),
-    rep("RPart", numresamples), rep("Support Vector Machines", numresamples), rep("Trees", numresamples),
-    rep("Ensemble Bagged Cart", numresamples), rep("Ensemble Bagged Random Forest", numresamples),
-    rep("Ensemble C50", numresamples),
-    rep("Ensemble Naive Bayes", numresamples), rep("Ensemble Ranger", numresamples), rep("Ensemble Random Forest", numresamples),
-    rep("Ensemble Support Vector Machines", numresamples),
-    rep("Ensemble Trees", numresamples)
-  ),
-  "train" = c(
-    bagging_train_accuracy, bag_rf_train_accuracy, C50_train_accuracy,  linear_train_accuracy,
-    n_bayes_train_accuracy, pls_train_accuracy, pda_train_accuracy, rf_train_accuracy, ranger_train_accuracy, rpart_train_accuracy, svm_train_accuracy, tree_train_accuracy,
-    ensemble_bag_cart_train_accuracy, ensemble_bag_rf_train_accuracy, ensemble_C50_train_accuracy,
-    ensemble_n_bayes_train_accuracy,
-    ensemble_ranger_train_accuracy, ensemble_rf_train_accuracy, ensemble_svm_train_accuracy, ensemble_tree_train_accuracy
-  ),
-  "test" = c(
-    bagging_test_accuracy, bag_rf_test_accuracy, C50_test_accuracy, linear_test_accuracy,
-    n_bayes_test_accuracy, pls_test_accuracy, pda_test_accuracy, rf_test_accuracy, ranger_test_accuracy, rpart_test_accuracy, svm_test_accuracy, tree_test_accuracy,
-    ensemble_bag_cart_test_accuracy, ensemble_bag_rf_test_accuracy, ensemble_C50_test_accuracy,
-    ensemble_n_bayes_test_accuracy,
-    ensemble_ranger_test_accuracy, ensemble_rf_test_accuracy, ensemble_svm_test_accuracy, ensemble_tree_test_accuracy
-  ),
-  "validation" = c(
-    bagging_validation_accuracy, bag_rf_validation_accuracy, C50_validation_accuracy, linear_validation_accuracy,
-    n_bayes_validation_accuracy, pls_validation_accuracy, pda_validation_accuracy, rf_validation_accuracy, ranger_validation_accuracy, rpart_validation_accuracy, svm_validation_accuracy, tree_validation_accuracy,
-    ensemble_bag_cart_validation_accuracy, ensemble_bag_rf_validation_accuracy, ensemble_C50_validation_accuracy,
-    ensemble_n_bayes_validation_accuracy,
-    ensemble_ranger_validation_accuracy, ensemble_rf_validation_accuracy, ensemble_svm_validation_accuracy, ensemble_tree_validation_accuracy
-  ),
-  "holdout" = c(
-    bagging_holdout, bag_rf_holdout, C50_holdout, linear_holdout,
-    n_bayes_holdout, pls_holdout, pda_holdout, rf_holdout, ranger_holdout, rpart_holdout, svm_holdout, tree_holdout,
-    ensemble_bag_cart_holdout, ensemble_bag_rf_holdout, ensemble_C50_holdout,
-    ensemble_n_bayes_holdout,
-    ensemble_ranger_holdout, ensemble_rf_holdout, ensemble_svm_holdout, ensemble_tree_holdout)
-)
-
-total_plot_fixed_scales <- ggplot2::ggplot(data = total_data, mapping = ggplot2::aes(x = count, y = data, color = model)) +
-  ggplot2::geom_line(mapping = aes(x = count, y = train, color = "train")) +
-  ggplot2::geom_point(mapping = aes(x = count, y = train)) +
-  ggplot2::geom_line(mapping = aes(x = count, y = holdout, color = "holdout")) +
-  ggplot2::geom_point(mapping = aes(x = count, y = holdout)) +
-  ggplot2::facet_wrap(~model, ncol = 5, scales = "fixed") +
-  ggplot2::ggtitle("Accuracy data including train and holdout by model, fixed scales. \nAccuracy by model, higher is better, 1 is best.") +
-  ggplot2::labs(y = "Higher is better, 1 is best.") +
-  ggplot2::scale_color_manual(
-    name = "Total Results",
-    breaks = c("train", "holdout"),
-    values = c("train" = "red", "holdout" = "black")
-  )
-
-if(save_all_plots == "Y" && device == "eps"){
-  ggplot2::ggsave("total_plot_fixed_scales.eps", width = width, height = height, path = tempdir1,  units = units, scale = scale, device = device, dpi = dpi)
-}
-if(save_all_plots == "Y" && device == "jpeg"){
-  ggplot2::ggsave("total_plot_fixed_scales.jpeg", width = width, height = height, path = tempdir1,  units = units, scale = scale, device = device, dpi = dpi)
-}
-if(save_all_plots == "Y" && device == "pdf"){
-  ggplot2::ggsave("total_plot_fixed_scales.pdf", width = width, height = height, path = tempdir1,  units = units, scale = scale, device = device, dpi = dpi)
-}
-if(save_all_plots == "Y" && device == "png"){
-  ggplot2::ggsave("total_plot_fixed_scales.png", width = width, height = height, path = tempdir1,  units = units, scale = scale, device = device, dpi = dpi)
-}
-if(save_all_plots == "Y" && device == "svg"){
-  ggplot2::ggsave("total_plot_fixed_scales.svg", width = width, height = height, path = tempdir1,  units = units, scale = scale, device = device, dpi = dpi)
-}
-if(save_all_plots == "Y" && device == "tiff"){
-  ggplot2::ggsave("total_plot_fixed_scales.tiff", width = width, height = height, path = tempdir1,  units = units, scale = scale, device = device, dpi = dpi)
-}
-
-total_plot_free_scales <- ggplot2::ggplot(data = total_data, mapping = ggplot2::aes(x = count, y = data, color = model)) +
-  ggplot2::geom_line(mapping = aes(x = count, y = train, color = "train")) +
-  ggplot2::geom_point(mapping = aes(x = count, y = train)) +
-  ggplot2::geom_line(mapping = aes(x = count, y = holdout, color = "holdout")) +
-  ggplot2::geom_point(mapping = aes(x = count, y = holdout)) +
-  ggplot2::facet_wrap(~model, ncol = 5, scales = "free") +
-  ggplot2::ggtitle("Accuracy data including train and holdout by model, free scales. \nAccuracy by model, higher is better, 1 is best.") +
-  ggplot2::labs(y = "Higher is better, 1 is best.") +
-  ggplot2::scale_color_manual(
-    name = "Total Results",
-    breaks = c("train", "holdout"),
-    values = c("train" = "red", "holdout" = "black")
-  )
-
-if(save_all_plots == "Y" && device == "eps"){
-  ggplot2::ggsave("total_plot_free_scales.eps", width = width, height = height, path = tempdir1,  units = units, scale = scale, device = device, dpi = dpi)
-}
-if(save_all_plots == "Y" && device == "jpeg"){
-  ggplot2::ggsave("total_plot_free_scales.jpeg", width = width, height = height, path = tempdir1,  units = units, scale = scale, device = device, dpi = dpi)
-}
-if(save_all_plots == "Y" && device == "pdf"){
-  ggplot2::ggsave("total_plot_free_scales.pdf", width = width, height = height, path = tempdir1,  units = units, scale = scale, device = device, dpi = dpi)
-}
-if(save_all_plots == "Y" && device == "png"){
-  ggplot2::ggsave("total_plot_free_scales.png", width = width, height = height, path = tempdir1,  units = units, scale = scale, device = device, dpi = dpi)
-}
-if(save_all_plots == "Y" && device == "svg"){
-  ggplot2::ggsave("total_plot_free_scales.svg", width = width, height = height, path = tempdir1,  units = units, scale = scale, device = device, dpi = dpi)
-}
-if(save_all_plots == "Y" && device == "tiff"){
-  ggplot2::ggsave("total_plot_free_scales.tiff", width = width, height = height, path = tempdir1,  units = units, scale = scale, device = device, dpi = dpi)
-}
-
-#### Accuracy barchart ####
-accuracy_barchart <- ggplot2::ggplot(Results, aes(x = reorder(Model, dplyr::desc(Mean_Holdout_Accuracy)), y = Mean_Holdout_Accuracy)) +
-  ggplot2::geom_col(width = 0.5)+
-  ggplot2::theme(axis.text.x = ggplot2::element_text(angle = 90, vjust = 1, hjust=1)) +
-  ggplot2::labs(x = "Model", y = "Mean Accuracy", title = "Model accuracy, closer to one is better, 1 standard deviation error bars") +
-  ggplot2::geom_text(aes(label = Mean_Holdout_Accuracy), vjust = -0.5, hjust = -0.5, angle = 90) +
-  ggplot2::geom_errorbar(aes(x = Model, ymin = Mean_Holdout_Accuracy - Accuracy_Holdout_Std.Dev,
-                             ymax =  Mean_Holdout_Accuracy + Accuracy_Holdout_Std.Dev))
-
-if(save_all_plots == "Y" && device == "eps"){
-  ggplot2::ggsave("accuracy_barchart.eps", width = width, height = height, path = tempdir1,  units = units, scale = scale, device = device, dpi = dpi)
-}
-if(save_all_plots == "Y" && device == "jpeg"){
-  ggplot2::ggsave("accuracy_barchart.jpeg", width = width, height = height, path = tempdir1,  units = units, scale = scale, device = device, dpi = dpi)
-}
-if(save_all_plots == "Y" && device == "pdf"){
-  ggplot2::ggsave("accuracy_barchart.pdf", width = width, height = height, path = tempdir1,  units = units, scale = scale, device = device, dpi = dpi)
-}
-if(save_all_plots == "Y" && device == "png"){
-  ggplot2::ggsave("accuracy_barchart.png", width = width, height = height, path = tempdir1,  units = units, scale = scale, device = device, dpi = dpi)
-}
-if(save_all_plots == "Y" && device == "svg"){
-  ggplot2::ggsave("accuracy_barchart.svg", width = width, height = height, path = tempdir1,  units = units, scale = scale, device = device, dpi = dpi)
-}
-if(save_all_plots == "Y" && device == "tiff"){
-  ggplot2::ggsave("accuracy_barchart.tiff", width = width, height = height, path = tempdir1,  units = units, scale = scale, device = device, dpi = dpi)
-}
-
-#### Holdout vs train barchart ####
-holdout_vs_train_barchart <- ggplot2::ggplot(Results, aes(x = reorder(Model, dplyr::desc(Holdout_vs_train)), y = Holdout_vs_train)) +
-  ggplot2::geom_col(width = 0.5)+
-  ggplot2::theme(axis.text.x = ggplot2::element_text(angle = 90, vjust = 1, hjust=1)) +
-  ggplot2::labs(x = "Model", y = "Holdout accuracy / train accuracy", title = "Over or Under Fitting, closer to 1 is better, 1 standard deviation error bars") +
-  ggplot2::geom_text(aes(label = Holdout_vs_train), vjust = 0,hjust = -0.5, angle = 90) +
-  ggplot2::ylim(0, max(Results$Holdout_vs_train) +1.0) +
-  ggplot2::geom_errorbar(aes(x = Model, ymin = Holdout_vs_train - Holdout_vs_train_St_Dev, ymax = Holdout_vs_train + Holdout_vs_train_St_Dev))
-
-if(save_all_plots == "Y" && device == "eps"){
-  ggplot2::ggsave("holdout_vs_train_barchart.eps", width = width, height = height, path = tempdir1,  units = units, scale = scale, device = device, dpi = dpi)
-}
-if(save_all_plots == "Y" && device == "jpeg"){
-  ggplot2::ggsave("holdout_vs_train_barchart.jpeg", width = width, height = height, path = tempdir1,  units = units, scale = scale, device = device, dpi = dpi)
-}
-if(save_all_plots == "Y" && device == "pdf"){
-  ggplot2::ggsave("holdout_vs_train_barchart.pdf", width = width, height = height, path = tempdir1,  units = units, scale = scale, device = device, dpi = dpi)
-}
-if(save_all_plots == "Y" && device == "png"){
-  ggplot2::ggsave("holdout_vs_train_barchart.png", width = width, height = height, path = tempdir1,  units = units, scale = scale, device = device, dpi = dpi)
-}
-if(save_all_plots == "Y" && device == "svg"){
-  ggplot2::ggsave("holdout_vs_train_barchart.svg", width = width, height = height, path = tempdir1,  units = units, scale = scale, device = device, dpi = dpi)
-}
-if(save_all_plots == "Y" && device == "tiff"){
-  ggplot2::ggsave("holdout_vs_train_barchart.tiff", width = width, height = height, path = tempdir1,  units = units, scale = scale, device = device, dpi = dpi)
-}
-
-#### Duration barchart ####
-duration_barchart <- ggplot2::ggplot(Results, aes(x = reorder(Model, Duration), y = Duration)) +
-  ggplot2::geom_col(width = 0.5)+
-  ggplot2::theme(axis.text.x = ggplot2::element_text(angle = 90, vjust = 1, hjust=1)) +
-  ggplot2::labs(x = "Model", y = "Duration", title = "Duration, shorter is better, 1 standard deviation error bars") +
-  ggplot2::geom_text(aes(label = Duration), vjust = 0,hjust = -0.5, angle = 90) +
-  #ggplot2::ylim(0, max(Results$Duration) + 1) +
-  ggplot2::geom_errorbar(aes(x = Model, ymin = Duration - Duration_St_Dev, ymax = Duration + Duration_St_Dev))
-
-if(save_all_plots == "Y" && device == "eps"){
-  ggplot2::ggsave("duration_barchart.eps", width = width, height = height, path = tempdir1,  units = units, scale = scale, device = device, dpi = dpi)
-}
-if(save_all_plots == "Y" && device == "jpeg"){
-  ggplot2::ggsave("duration_barchart.jpeg", width = width, height = height, path = tempdir1,  units = units, scale = scale, device = device, dpi = dpi)
-}
-if(save_all_plots == "Y" && device == "pdf"){
-  ggplot2::ggsave("duration_barchart.pdf", width = width, height = height, path = tempdir1,  units = units, scale = scale, device = device, dpi = dpi)
-}
-if(save_all_plots == "Y" && device == "png"){
-  ggplot2::ggsave("duration_barchart.png", width = width, height = height, path = tempdir1,  units = units, scale = scale, device = device, dpi = dpi)
-}
-if(save_all_plots == "Y" && device == "svg"){
-  ggplot2::ggsave("duration_barchart.svg", width = width, height = height, path = tempdir1,  units = units, scale = scale, device = device, dpi = dpi)
-}
-if(save_all_plots == "Y" && device == "tiff"){
-  ggplot2::ggsave("duration_barchart.tiff", width = width, height = height, path = tempdir1,  units = units, scale = scale, device = device, dpi = dpi)
-}
-
-
-#### Predict on new data starts here ####
-if (predict_on_new_data == "Y") {
-  is_num <- sapply(new_data, is.integer)
-  new_data[ , is_num] <- as.data.frame(apply(new_data[, is_num], 2, as.numeric))
-
-  Bagged_Random_Forest <- predict(object = bag_rf_train_fit, newdata = new_data)
-  Bagging <- predict(object = bagging_train_fit, newdata = new_data)
-  C50 <- predict(object = C50_train_fit, newdata = new_data)
-  Linear <- predict(object = linear_train_fit, newdata = new_data)
-  Naive_Bayes <- predict(object = n_bayes_train_fit, newdata = new_data)
-  Partial_Least_Squares <- predict(object = pls_train_fit, newdata = new_data)
-  Penalized_Discriminant_Analysis <- predict(object = pda_train_fit, newdata = new_data)
-  Random_Forest <- predict(object = rf_train_fit, newdata = new_data)
-  Ranger <- predict(object = ranger_train_fit, newdata = new_data)
-  RPart <- predict(object = rpart_train_fit, newdata = new_data)
-  Support_Vector_Machines <- predict(object = svm_train_fit, newdata = new_data)
-  Trees <- predict(tree_train_fit, new_data, type = "class")
-
-  new_ensemble <- data.frame(
-    Bagged_Random_Forest,
-    Bagging,
-    C50,
-    Linear,
-    Naive_Bayes,
-    Partial_Least_Squares,
-    Penalized_Discriminant_Analysis,
-    Random_Forest,
-    Ranger,
-    RPart,
-    Support_Vector_Machines,
-    Trees
-  )
-
-  new_ensemble_row_numbers <- as.numeric(row.names(new_data))
-  new_ensemble$y <- new_data$y
-
-  new_ensemble_bagged_cart <- predict(object = ensemble_bag_cart_train_fit, newdata = new_ensemble)
-  new_ensemble_bag_rf <- predict(object = ensemble_bag_train_rf, newdata = new_ensemble)
-  new_ensemble_C50 <- predict(object = ensemble_C50_train_fit, newdata = new_ensemble)
-  new_ensemble_n_bayes <- predict(object = ensemble_n_bayes_train_fit, newdata = new_ensemble)
-  new_ensemble_rf <- predict(object = ensemble_train_rf_fit, newdata = new_ensemble)
-  new_ensemble_svm <- predict(object = ensemble_svm_train_fit, newdata = new_ensemble)
-  new_ensemble_trees <- predict(object = ensemble_tree_train_fit, newdata = new_ensemble)
-
-  New_Data_Results <- data.frame(
-    "True_Value" = new_data$y,
-    "Bagged_Random_Forest" = Bagged_Random_Forest,
-    "Bagging" = Bagging,
-    "C50" = C50,
-    "Linear" = Linear,
-    "Naive_Bayes" = Naive_Bayes,
-    "Partial_Least_Squares" = Partial_Least_Squares,
-    "Penalized_Discriminant_Analysis" = Penalized_Discriminant_Analysis,
-    "Random_Forest" = Random_Forest,
-    "Ranger" = Ranger,
-    "RPart" = RPart,
-    "Support_Vector_Machines" = Support_Vector_Machines,
-    "Trees" = Trees,
-    "Ensemble_Bagged_Cart" = new_ensemble_bagged_cart,
-    "Ensemble_Bagged_Random_Forest" = new_ensemble_bag_rf,
-    "Ensemble_C50" = new_ensemble_C50,
-    "Ensemble_Naive_Bayes" = new_ensemble_n_bayes,
-    "Ensemble_Random_Forest" = new_ensemble_rf,
-    "Ensemble_Support_Vector_Machines" = new_ensemble_svm
-  )
-
-  New_Data_Results <- t(New_Data_Results)
-
-  New_Data_Results <- reactable::reactable(New_Data_Results,
-                                           searchable = TRUE, pagination = FALSE, wrap = TRUE, rownames = TRUE, fullWidth = TRUE, filterable = TRUE, bordered = TRUE,
-                                           striped = TRUE, highlight = TRUE, resizable = TRUE
-  )
-
-  if(save_all_plots == "Y"){
-    htmltools::div(class = "table",
-                   htmltools::div(class = "title", "New_Data_Results")
-    )
-
-    new_data_results <- htmlwidgets::prependContent(New_Data_Results, htmltools::h2(class = "title", "New data results"))
-  }
-
-  if (save_all_trained_models == "Y") {
-
-    fil <- tempfile("bagging_train_fit", fileext = ".RDS")
-    bagging_train_fit <- saveRDS(bagging_train_fit, fil)
-
-    fil <- tempfile("bag_rf_train_fit", fileext = ".RDS")
-    bag_rf_train_fit <- saveRDS(bag_rf_train_fit, fil)
-
-    fil <- tempfile("C50_train_fit", fileext = ".RDS")
-    C50_train_fit <- saveRDS(C50_train_fit, fil)
-
-    fil <- tempfile("linear_train_fit", fileext = ".RDS")
-    linear_train_fit <- saveRDS(linear_train_fit, fil)
-
-    fil <- tempfile("n_bayes_train_fit", fileext = ".RDS")
-    n_bayes_train_fit <- saveRDS(n_bayes_train_fit, fil)
-
-    fil <- tempfile("pls_train_fit", fileext = ".RDS")
-    pls_train_fit <- saveRDS(pls_train_fit, fil)
-
-    fil <- tempfile("pda_train_fit", fileext = ".RDS")
-    pda_train_fit <- saveRDS(pda_train_fit, fil)
-
-    fil <- tempfile("rf_train_fit", fileext = ".RDS")
-    rf_train_fit <- saveRDS(rf_train_fit, fil)
-
-    fil <- tempfile("ranger_train_fit", fileext = ".RDS")
-    ranger_train_fit <- saveRDS(ranger_train_fit, fil)
-
-    fil <- tempfile("rpart_train_fit", fileext = ".RDS")
-    rpart_train_fit <- saveRDS(rpart_train_fit, fil)
-
-    fil <- tempfile("svm_train_fit", fileext = ".RDS")
-    svm_train_fit <- saveRDS(svm_train_fit, fil)
-
-    fil <- tempfile("tree_train_fit", fileext = ".RDS")
-    tree_train_fit <- saveRDS(tree_train_fit, fil)
-
-    fil <- tempfile("ensemble", fileext = ".RDS")
-    saveRDS(ensemble1, fil)
-
-    fil <- tempfile("ensemble_bag_cart_train_fit", fileext = ".RDS")
-    ensemble_bag_cart_train_fit <- saveRDS(ensemble_bag_cart_train_fit, fil)
-
-    fil <- tempfile("ensemble_bag_rf_train_fit", fileext = ".RDS")
-    ensemble_bag_cart_train_fit <- saveRDS(ensemble_bag_cart_train_fit, fil)
-
-    fil <- tempfile("ensemble_C50_train_fit", fileext = ".RDS")
-    ensemble_bag_cart_train_fit <- saveRDS(ensemble_bag_cart_train_fit, fil)
-
-    fil <- tempfile("ensemble_n_bayes_train_fit", fileext = ".RDS")
-    ensemble_n_bayes_train_fit <- saveRDS(ensemble_n_bayes_train_fit, fil)
-
-    fil <- tempfile("ensemble_train_rf_fit", fileext = ".RDS")
-    ensemble_train_rf_fit <- saveRDS(ensemble_train_rf_fit, fil)
-
-    fil <- tempfile("ensemble_ranger_train_fit", fileext = ".RDS")
-    ensemble_ranger_train_fit <- saveRDS(ensemble_ranger_train_fit, fil)
-
-    fil <- tempfile("ensemble_svm_train_fit", fileext = ".RDS")
-    ensemble_svm_train_fit <- saveRDS(ensemble_svm_train_fit, fil)
-
-    fil <- tempfile("ensemble_tree_train_fit", fileext = ".RDS")
-    ensemble_tree_train_fit <- saveRDS(ensemble_tree_train_fit, fil)
-
-  }
-
-  return(list(
-    "Final_Results" = Final_results, "Barcharts" = barchart, "Accuracy_Barchart" = accuracy_barchart, "holdout_vs_train_barchart" = holdout_vs_train_barchart,
-    "Duration_barchart" = duration_barchart, "Data summary" = data_summary, "Correlation_Matrix" = correlation_marix, 'VIF' = VIF, "Boxplots" = boxplots, "Histograms" = histograms, "Head of data" = head_data, "Head of Ensembles" = head_ensemble,
-    "Summary_Tables" = summary_tables, "Accuracy_Plot" = accuracy_plot, "Total_Plot" = total_plot, "holdout_vs_train_plot" = holdout_vs_train_plot, "New_Data_Results" = New_Data_Results
+#' @importFrom pROC multiclass.roc roc auc
+NULL
+
+# -------------------------------------------------------------------------
+# CRAN NAMESPACE COMPLIANCE: GLOBAL VARIABLE DECLARATIONS
+# -------------------------------------------------------------------------
+if (getRversion() >= "2.15.1") {
+  utils::globalVariables(c(
+    ".data", "Correlation", "FPR", "Label", "Model", "Observed",
+    "Predicted", "TPR", "TargetClass", "Value", "Var1", "Var2",
+    "name", "perc", "value", "y", "Feature_Name", "Data_Type",
+    "Missing_Rate", "Unique_Values", "Class_Imbalance_Risk", "Operational_Insight",
+    "Macro_AUC", "Accuracy", "Kappa", "F1_Score", "LogLoss", "Duration",
+    "Metric", "Z_Score", "Sensitivity", "Specificity", "Overfitting",
+    "Count", "Percentage", "Feature", "Target_Class", "AUC 95% CI Lower",
+    "AUC 95% CI Upper", "Accuracy 95% CI Lower", "Accuracy 95% CI Upper",
+    "Deviance_Residual", "Index", "Leverage", "Outlier", "Bin_Midpoint", "Actual_Rate"
   ))
-
-} # Matches the { on line 3805
-
-if (save_all_trained_models == "Y") {
-
-  fil <- tempfile("bagging_train_fit", fileext = ".RDS")
-  bagging_train_fit <- saveRDS(bagging_train_fit, fil)
-
-  fil <- tempfile("bag_rf_train_fit", fileext = ".RDS")
-  bag_rf_train_fit <- saveRDS(bag_rf_train_fit, fil)
-
-  fil <- tempfile("C50_train_fit", fileext = ".RDS")
-  C50_train_fit <- saveRDS(C50_train_fit, fil)
-
-  fil <- tempfile("linear_train_fit", fileext = ".RDS")
-  linear_train_fit <- saveRDS(linear_train_fit, fil)
-
-  fil <- tempfile("n_bayes_train_fit", fileext = ".RDS")
-  n_bayes_train_fit <- saveRDS(n_bayes_train_fit, fil)
-
-  fil <- tempfile("pls_train_fit", fileext = ".RDS")
-  pls_train_fit <- saveRDS(pls_train_fit, fil)
-
-  fil <- tempfile("pda_train_fit", fileext = ".RDS")
-  pda_train_fit <- saveRDS(pda_train_fit, fil)
-
-  fil <- tempfile("rf_train_fit", fileext = ".RDS")
-  rf_train_fit <- saveRDS(rf_train_fit, fil)
-
-  fil <- tempfile("ranger_train_fit", fileext = ".RDS")
-  ranger_train_fit <- saveRDS(ranger_train_fit, fil)
-
-  fil <- tempfile("rpart_train_fit", fileext = ".RDS")
-  rpart_train_fit <- saveRDS(rpart_train_fit, fil)
-
-  fil <- tempfile("svm_train_fit", fileext = ".RDS")
-  svm_train_fit <- saveRDS(svm_train_fit, fil)
-
-  fil <- tempfile("tree_train_fit", fileext = ".RDS")
-  tree_train_fit <- saveRDS(tree_train_fit, fil)
-
-  fil <- tempfile("ensemble1", fileext = ".RDS")
-  saveRDS(ensemble1, fil)
-
-  fil <- tempfile("ensemble_bag_cart_train_fit", fileext = ".RDS")
-  ensemble_bag_cart_train_fit <- saveRDS(ensemble_bag_cart_train_fit, fil)
-
-  fil <- tempfile("ensemble_bag_rf_train_fit", fileext = ".RDS")
-  ensemble_bag_cart_train_fit <- saveRDS(ensemble_bag_cart_train_fit, fil)
-
-  fil <- tempfile("ensemble_C50_train_fit", fileext = ".RDS")
-  ensemble_bag_cart_train_fit <- saveRDS(ensemble_bag_cart_train_fit, fil)
-
-  fil <- tempfile("ensemble_n_bayes_train_fit", fileext = ".RDS")
-  ensemble_n_bayes_train_fit <- saveRDS(ensemble_n_bayes_train_fit, fil)
-
-  fil <- tempfile("ensemble_train_rf_fit", fileext = ".RDS")
-  ensemble_rf_train_fit <- saveRDS(ensemble_train_rf_fit, fil)
-
-  fil <- tempfile("ensemble_ranger_train_fit", fileext = ".RDS")
-  ensemble_ranger_train_fit <- saveRDS(ensemble_ranger_train_fit, fil)
-
-  fil <- tempfile("ensemble_svm_train_fit", fileext = ".RDS")
-  ensemble_svm_train_fit <- saveRDS(ensemble_svm_train_fit, fil)
-
-  fil <- tempfile("ensemble_tree_train_fit", fileext = ".RDS")
-  ensemble_tree_train_fit <- saveRDS(ensemble_tree_train_fit, fil)
-
 }
 
-#### Return list of all reports ####
-return(list(
-  'Final_results' = summary_report, 'Barchart_values' = barchart, 'Barchart_percent' = barchart_percentage, "Accuracy_Barchart" = accuracy_barchart, "holdout_vs_train_barchart" = holdout_vs_train_barchart,
-  'True_positive_rate_fixed_scales' = true_positive_rate_fixed_scales, 'True_positive_rate_free_scales' = true_positive_rate_free_scales,
-  'True_negative_rate_fixed_scales' = true_negative_rate_fixed_scales, 'True_negative_rate_free_scales' = true_negative_rate_free_scales,
-  'False_positive_rate_fixed_scales' = false_positive_rate_fixed_scales, 'False_positive_rate_free_scales' = false_positive_rate_free_scales,
-  'False_negative_rate_fixed_scales' = false_negative_rate_fixed_scales, 'False_negative_rate_free_scales' = false_negative_rate_free_scales,
-  "Duration_barchart" = duration_barchart,  'Data_summary' = data_summary, 'Correlation_matrix' = correlation_matrix,
-  'VIF' = VIF_report, "Stratified sampling report" = stratified_sampling_report,
-  'Boxplots' = boxplots, 'Histograms' = histograms, 'Head_of_data' = head_df, 'Head_of_ensemble' = head_ensemble,
-  'Summary_tables' = summary_tables, 'Accuracy_plot_fixed_scales' = accuracy_plot_fixed_scales, 'Accuracy_plot_free_scales' = accuracy_plot_fixed_scales,
-  'Total_plot_fixed_scales' = total_plot_fixed_scales, "Total_plot_free_scales" = total_plot_free_scales,
-  'Classification_error_fixed_scales' = classification_error_fixed_scales, 'Classification_error_free_scales' = classification_error__free_scales,
-  'Residuals_fixed_scales' = residuals_plot_fixed_scales, 'Residuals_free_scales' = residuals_plot_free_scales,
-  "Holdout_vs_train_fixed_scales" = holdout_vs_train_fixed_scales, "Holdout_vs_train_free_scales" = holdout_vs_train_free_scales
-)
-)
+# -------------------------------------------------------------------------
+# 1. ARCHITECTURAL PARAMETER CONFIGURATION MATRICES
+# -------------------------------------------------------------------------
+
+#' Configuration Parameters Matrix for Classification Pipeline
+#'
+#' @param cv_folds Integer. The number of cross-validation folds. Default is 5.
+#' @param train_pct Numeric. The training data proportion as a decimal between 0 and 1. Default is 0.75.
+#' @param vif_threshold Numeric. Variance Inflation Factor threshold for filtering multicollinear predictors. Default is 5.
+#' @param transform_steps Character vector. Preprocessing transforms to pass to caret. Default is c("nzv", "medianImpute", "center", "scale").
+#' @param rf_tune Integer. Tuning length parameter for Random Forest/Ranger models. Default is 5.
+#' @param glmnet_grid Optional custom tuning grid for Elastic Net models.
+#' @param svm_tune_length Integer. Tuning length parameter for SVM models. Default is 5.
+#' @param nnet_tune_length Integer. Tuning length parameter for Neural Network models. Default is 5.
+#' @param tree_tune_length Integer. Tuning length parameter for tree-based models (Rpart, C5.0, gbm). Default is 5.
+#' @param leverage_threshold Numeric. Outlier removal multiplier relative to mean hatvalues. 999 deactivates filter. Default is 999.
+#'
+#' @return A structured list containing isolated operational tuning parameters.
+#' @export
+ClassificationEnsemblesConfig <- function(cv_folds = 5,
+                                          train_pct = 0.75,
+                                          vif_threshold = 5,
+                                          transform_steps = c("nzv", "medianImpute", "center", "scale"),
+                                          rf_tune = 5,
+                                          glmnet_grid = expand.grid(alpha = seq(0, 1, length = 4),
+                                                                    lambda = seq(0.001, 0.1, length = 5)),
+                                          svm_tune_length = 5,
+                                          nnet_tune_length = 5,
+                                          tree_tune_length = 5,
+                                          leverage_threshold = 999) {
+  if (train_pct <= 0 || train_pct >= 1) {
+    stop("Argument 'train_pct' must be a decimal fraction strictly between 0 and 1.", call. = FALSE)
+  }
+  if (cv_folds < 2) {
+    stop("Argument 'cv_folds' must be an integer greater than or equal to 2.", call. = FALSE)
+  }
+
+  list(
+    cv_folds           = as.integer(cv_folds),
+    train_pct          = train_pct,
+    vif_threshold      = vif_threshold,
+    transform_steps    = transform_steps,
+    rf_tune            = as.integer(rf_tune),
+    glmnet_grid        = glmnet_grid,
+    svm_tune_length    = as.integer(svm_tune_length),
+    nnet_tune_length   = as.integer(nnet_tune_length),
+    tree_tune_length   = as.integer(tree_tune_length),
+    leverage_threshold = leverage_threshold
+  )
+}
+
+#' Fast-Execution Configuration Matrix for Classification Verification
+#' @return A fast-track parameter subset list optimized for rapid package verification checks.
+#' @export
+ClassificationEnsemblesFastConfig <- function() {
+  ClassificationEnsemblesConfig(
+    cv_folds           = 2,
+    train_pct          = 0.60,
+    vif_threshold      = 5,
+    transform_steps    = c("nzv", "medianImpute", "center", "scale"),
+    rf_tune            = 2,
+    glmnet_grid        = expand.grid(alpha = c(0, 1), lambda = c(0.01, 0.1)),
+    svm_tune_length    = 2,
+    nnet_tune_length   = 2,
+    tree_tune_length   = 2,
+    leverage_threshold = 999
+  )
+}
+
+# -------------------------------------------------------------------------
+# 2. INTERNAL PERFORMANCE PIPELINE GRAPHICS PLOTTERS
+# -------------------------------------------------------------------------
+
+.make_class_metric_plot <- function(data, metric_col, title, fill_color, theme_colors, show_ci = FALSE, ci_lower_col = NULL, ci_upper_col = NULL) {
+  data$Model <- factor(data$Model, levels = rev(data$Model))
+  p <- ggplot2::ggplot(data, ggplot2::aes(x = Model, y = .data[[metric_col]]))
+
+  if (show_ci && !all(is.na(data[[ci_lower_col]]))) {
+    p <- p +
+      ggplot2::geom_errorbar(ggplot2::aes(ymin = .data[[ci_lower_col]], ymax = .data[[ci_upper_col]]), width = 0.3, color = fill_color, linewidth = 0.7) +
+      ggplot2::geom_point(color = theme_colors$accent, size = 2.5) +
+      ggplot2::geom_text(ggplot2::aes(label = sprintf("%.4f", .data[[metric_col]])), vjust = -0.8, size = 2.5, fontface = "bold")
+  } else {
+    p <- p +
+      ggplot2::geom_col(fill = fill_color, width = 0.7) +
+      ggplot2::geom_text(ggplot2::aes(label = sprintf("%.4f", .data[[metric_col]])), hjust = -0.1, size = 2.5, fontface = "bold")
+  }
+
+  p <- p + ggplot2::coord_flip() + ggplot2::theme_minimal(base_size = 9) + ggplot2::labs(title = title, x = NULL, y = NULL) +
+    ggplot2::theme(axis.text.y = ggplot2::element_text(face = "bold"), plot.title = ggplot2::element_text(face = "bold", size = 11)) +
+    ggplot2::scale_y_continuous(expand = ggplot2::expansion(mult = if (show_ci) c(0.08, 0.22) else c(0, 0.22)))
+  return(p)
+}
+
+# -------------------------------------------------------------------------
+# 3. CORE INTEGRATED DISPATCH CLASSIFICATION ENGINE
+# -------------------------------------------------------------------------
+
+#' Comprehensive Multi-Class Classification Ensemble Pipeline Engine
+#'
+#' @param dataset A data frame containing the predictors and target variable.
+#' @param target_col Character string specifying the name of the target categorical variable factor.
+#' @param palette_style Character choice layout. Visual color scheme for plot vectors: "standard", "viridis", or "modern".
+#' @param config A pre-configured architecture configuration parameter matrix list from \code{ClassificationEnsemblesConfig()}.
+#' @param verbose Logical. If TRUE, logs operational pipeline milestones to console. Default is TRUE.
+#'
+#' @return An object of class \code{classification_pipeline} containing evaluation metrics matrices, models, data dictionaries, and plots.
+#' @export
+Classification <- function(dataset = NULL,
+                           target_col = NULL,
+                           palette_style = c("standard", "viridis", "modern"),
+                           config = ClassificationEnsemblesConfig(),
+                           verbose = TRUE) {
+
+  required_packages <- c("caret", "glmnet", "rpart", "randomForest", "kernlab",
+                         "nnet", "C50", "e1071", "ranger", "gbm", "ipred",
+                         "pROC", "patchwork", "tidyr", "car")
+  for (pkg in required_packages) {
+    if (!requireNamespace(pkg, quietly = TRUE)) {
+      stop(sprintf("Required package '%s' is missing. Please install it before running the pipeline.", pkg), call. = FALSE)
+    }
+  }
+
+  if (is.null(dataset)) stop("Argument 'dataset' matrix must be supplied.", call. = FALSE)
+  df <- as.data.frame(dataset)
+
+  if (is.null(target_col)) stop("Define the target classification factor column explicitly.", call. = FALSE)
+  if (!(target_col %in% colnames(df))) stop("Target classification factor column not found inside dataset assets.", call. = FALSE)
+
+  df[[target_col]] <- as.factor(df[[target_col]])
+  levels(df[[target_col]]) <- make.names(levels(df[[target_col]]))
+  target_levels <- levels(df[[target_col]])
+  n_classes <- length(target_levels)
+  is_binary <- n_classes == 2
+
+  palette_style <- match.arg(palette_style)
+  theme_colors <- switch(palette_style,
+                         "standard" = list(primary = "steelblue", secondary = "cyan4", accent = "purple", highlight = "darkgreen", warning = "tomato", tiles_low = "darkgreen", tiles_mid = "white", tiles_high = "darkred"),
+                         "viridis"  = list(primary = "#21918c", secondary = "#3b528b", accent = "#440154", highlight = "#5dc963", warning = "#fde725", tiles_low = "#440154", tiles_mid = "#21918c", tiles_high = "#fde725"),
+                         "modern"   = list(primary = "#111E6C", secondary = "#FF6F61", accent = "#008080", highlight = "#708090", warning = "#FF4500", tiles_low = "#008080", tiles_mid = "#ECEFF1", tiles_high = "#FF6F61")
+  )
+
+  if (verbose) cat("[Extracting Baseline Profiles]: Capturing Head, Summary, and Classification parameters...\n")
+  data_head_table <- utils::head(df, 6)
+  data_summary_table <- summary(df)
+
+  data_dict <- data.frame(
+    Feature = colnames(df), Type = sapply(df, function(x) paste(class(x), collapse = ", ")),
+    Missing_Count = sapply(df, function(x) sum(is.na(x))),
+    Missing_Pct = paste0(round(sapply(df, function(x) sum(is.na(x)) / length(x) * 100), 2), "%"),
+    Unique_Values = sapply(df, function(x) length(unique(stats::na.omit(x)))), stringsAsFactors = FALSE
+  )
+
+  # --- Generating Classification Automated Exploratory Insights Matrix Summary ---
+  insights_rows <- list()
+  class_frequencies <- table(df[[target_col]])
+  min_class_pct <- min(class_frequencies) / sum(class_frequencies)
+  no_information_rate <- max(class_frequencies) / sum(class_frequencies)
+
+  for (col in colnames(df)) {
+    vals <- df[[col]]
+    na_pct <- sum(is.na(vals)) / length(vals)
+    unique_cnt <- length(unique(stats::na.omit(vals)))
+
+    status_str <- "Structural Signature: Healthy"
+    imbalance_risk <- "Low"
+
+    if (col == target_col) {
+      if (min_class_pct < 0.10) {
+        status_str <- "Severe Categorical Minority Target Imbalance Detected"
+        imbalance_risk <- "High"
+      } else {
+        status_str = "Target Variable Factor Array"
+      }
+    } else if (is.numeric(vals)) {
+      mean_v <- mean(vals, na.rm = TRUE); sd_v <- stats::sd(vals, na.rm = TRUE)
+      skew <- if(!is.na(sd_v) && sd_v > 0) mean((stats::na.omit(vals) - mean_v)^3) / (sd_v^3) else 0
+      if (abs(skew) > 1.5) status_str <- "High Predictive Skewness Distribution Risk"
+      if (sd_v == 0) status_str <- "Zero Variance Predictor Column Anomaly"
+    } else {
+      if (unique_cnt > 30) {
+        status_str <- "High Cardinality Dimension Warning"
+        imbalance_risk <- "Moderate"
+      }
+    }
+
+    if (na_pct > 0.20) status_str <- paste0(status_str, " / Excess Missing Data Densities")
+
+    insights_rows[[col]] <- data.frame(
+      Feature_Name         = col,
+      Data_Type            = paste(class(vals), collapse = ", "),
+      Missing_Rate         = paste0(round(na_pct * 100, 2), "%"),
+      Unique_Values        = as.integer(unique_cnt),
+      Class_Imbalance_Risk = imbalance_risk,
+      Operational_Insight  = status_str,
+      stringsAsFactors     = FALSE
+    )
+  }
+  exploratory_insights_matrix <- do.call(rbind, insights_rows)
+  rownames(exploratory_insights_matrix) <- NULL
+
+  if (any(is.na(df[[target_col]]))) {
+    df <- df[!is.na(df[[target_col]]), ]
+  }
+
+  numeric_cols_idx <- sapply(df, is.numeric)
+  if (sum(numeric_cols_idx) > 1) {
+    data_correlation_matrix <- stats::cor(df[, numeric_cols_idx], use = "complete.obs")
+  } else {
+    data_correlation_matrix <- "Insufficient numeric attributes found to establish linear correlation matrix frames."
+  }
+
+  # --- EDA Graphics Output Pipeline Engine ---
+  if (verbose) cat("\n[EDA Engine]: Generating target class frequencies and range profiles...\n")
+  eda_plots <- list()
+
+  freq_df <- data.frame(Target_Class = names(class_frequencies), Count = as.numeric(class_frequencies))
+  freq_df$Percentage <- freq_df$Count / sum(freq_df$Count)
+
+  eda_plots$target_counts <- ggplot2::ggplot(freq_df, ggplot2::aes(x = Target_Class, y = Count, fill = Target_Class)) +
+    ggplot2::geom_col(width = 0.6, color = "black", alpha = 0.8) +
+    ggplot2::geom_text(ggplot2::aes(label = Count), vjust = -0.5, fontface = "bold", size = 3.5) +
+    ggplot2::scale_fill_manual(values = grDevices::rainbow(length(target_levels))) +
+    ggplot2::theme_minimal() + ggplot2::labs(title = "Target Class Frequencies (Observations Counts)", x = "Class Level", y = "Count") +
+    ggplot2::theme(plot.title = ggplot2::element_text(face = "bold", size = 11), legend.position = "none")
+
+  eda_plots$target_percentages <- ggplot2::ggplot(freq_df, ggplot2::aes(x = Target_Class, y = Percentage, fill = Target_Class)) +
+    ggplot2::geom_col(width = 0.6, color = "black", alpha = 0.8) +
+    ggplot2::geom_text(ggplot2::aes(label = paste0(round(Percentage * 100, 1), "%")), vjust = -0.5, fontface = "bold", size = 3.5) +
+    ggplot2::scale_fill_manual(values = grDevices::rainbow(length(target_levels))) +
+    ggplot2::theme_minimal() + ggplot2::labs(title = "Target Class Frequencies (Percentage Share)", x = "Class Level", y = "Proportion") +
+    ggplot2::theme(plot.title = ggplot2::element_text(face = "bold", size = 11), legend.position = "none")
+
+  continuous_features <- colnames(df)[sapply(df, is.numeric)]
+  if (length(continuous_features) > 0) {
+    df_eda_long <- tidyr::pivot_longer(df, cols = dplyr::all_of(continuous_features), names_to = "Feature", values_to = "Value")
+
+    eda_plots$histograms <- ggplot2::ggplot(df_eda_long, ggplot2::aes(x = Value, fill = .data[[target_col]])) +
+      ggplot2::geom_histogram(bins = 20, color = "white", alpha = 0.6, position = "identity") +
+      ggplot2::facet_wrap(~Feature, scales = "free") +
+      ggplot2::scale_fill_manual(values = grDevices::rainbow(length(target_levels))) +
+      ggplot2::theme_minimal(base_size = 9) + ggplot2::labs(title = "Feature Distributions Continuous Density Histograms", x = "Value", y = "Count") +
+      ggplot2::theme(plot.title = ggplot2::element_text(face = "bold", size = 12))
+
+    eda_plots$predictor_boxplots <- ggplot2::ggplot(df_eda_long, ggplot2::aes(x = .data[[target_col]], y = Value, fill = .data[[target_col]])) +
+      ggplot2::geom_boxplot(alpha = 0.7, outlier.size = 1, color = "black") +
+      ggplot2::facet_wrap(~Feature, scales = "free_y") +
+      ggplot2::scale_fill_manual(values = grDevices::rainbow(length(target_levels))) +
+      ggplot2::theme_minimal(base_size = 9) + ggplot2::labs(title = "Continuous Feature Profiles across Target Classes", x = "Target Class", y = "Feature Value") +
+      ggplot2::theme(plot.title = ggplot2::element_text(face = "bold", size = 12), legend.position = "bottom")
+  }
+
+  if (is.matrix(data_correlation_matrix)) {
+    df_corr <- as.data.frame(data_correlation_matrix)
+    df_corr$Var1 <- rownames(df_corr)
+    df_corr_long <- tidyr::pivot_longer(df_corr, cols = -Var1, names_to = "Var2", values_to = "Correlation")
+    p_corr <- ggplot2::ggplot(df_corr_long, ggplot2::aes(x = Var1, y = Var2, fill = Correlation)) +
+      ggplot2::geom_tile(color = "white") +
+      ggplot2::scale_fill_gradient2(low = theme_colors$tiles_low, high = theme_colors$tiles_high, mid = theme_colors$tiles_mid, limit = c(-1,1)) +
+      ggplot2::theme_minimal() + ggplot2::labs(title = "Feature Correlation Matrix Heatmap", x = NULL, y = NULL) +
+      ggplot2::theme(axis.text.x = ggplot2::element_text(angle = 45, hjust = 1))
+    eda_plots$correlation = p_corr
+  }
+
+  # --- PSOCK Concurrency Grid Setup Matrix ---
+  cores_to_use <- max(1, parallel::detectCores() - 1)
+  is_build_env <- nzchar(Sys.getenv("_R_CHECK_LIMIT_CORES_")) || nzchar(Sys.getenv("R_CMD")) || nzchar(Sys.getenv("R_TESTS")) || any(c("pkgdown", "knitr", "rmarkdown") %in% loadedNamespaces())
+  if (is_build_env) cores_to_use <- min(2, cores_to_use)
+
+  cl <- parallel::makePSOCKcluster(cores_to_use)
+  doParallel::registerDoParallel(cl)
+  on.exit({ try({ parallel::stopCluster(cl); foreach::registerDoSEQ() }, silent = TRUE) }, add = TRUE)
+
+  set.seed(42)
+  train_index <- caret::createDataPartition(df[[target_col]], p = config$train_pct, list = FALSE)
+  train_data  <- df[train_index, ]
+  test_data   <- df[-train_index, ]
+
+  # --- Automated Logistic Leverage Outliers Checking Pipeline ---
+  if (config$leverage_threshold < 900) {
+    if (verbose) cat("\n[Leverage Engine]: Pruning row leverage anomalies via logistic leverage structures...\n")
+    lev_formula <- stats::as.formula(paste(target_col, " ~ ."))
+    lev_model <- tryCatch({ stats::glm(lev_formula, data = train_data, family = "binomial") }, error = function(e) NULL)
+
+    if (!is.null(lev_model)) {
+      hat_vals <- stats::hatvalues(lev_model)
+      lev_cutoff <- config$leverage_threshold * mean(hat_vals, na.rm = TRUE)
+      leverage_df <- data.frame(Index = seq_along(hat_vals), Leverage = hat_vals, Outlier = hat_vals >= lev_cutoff)
+
+      eda_plots$leverage_timeline <- ggplot2::ggplot(leverage_df, ggplot2::aes(x = Index, y = Leverage)) +
+        ggplot2::geom_segment(ggplot2::aes(xend = Index, yend = 0, color = Outlier), alpha = 0.6) +
+        ggplot2::geom_hline(yintercept = lev_cutoff, color = theme_colors$warning, linetype = "dashed") +
+        ggplot2::scale_color_manual(values = c("FALSE" = theme_colors$primary, "TRUE" = theme_colors$warning)) +
+        ggplot2::theme_minimal() + ggplot2::labs(title = "Logistic Row Leverage Diagnostic Mapping Matrix", x = "Observation Row Index", y = "Hat Leverage Value")
+
+      train_data <- train_data[!leverage_df$Outlier, ]
+    }
+  }
+
+  predictors_raw <- colnames(df)[colnames(df) != target_col]
+  dummy_model <- caret::dummyVars(" ~ .", data = train_data[, predictors_raw, drop = FALSE], fullRank = TRUE)
+  train_encoded <- data.frame(stats::predict(dummy_model, newdata = train_data, na.action = stats::na.pass))
+  test_encoded  <- data.frame(stats::predict(dummy_model, newdata = test_data, na.action = stats::na.pass))
+
+  train_data <- cbind(train_encoded, Target_Var = train_data[[target_col]]); colnames(train_data)[ncol(train_data)] <- target_col
+  test_data  <- cbind(test_encoded, Target_Var = test_data[[target_col]]);   colnames(test_data)[ncol(test_data)] <- target_col
+
+  vif_report_table <- data.frame(Feature = character(), VIF = numeric(), Status = character(), stringsAsFactors = FALSE)
+  numeric_features <- colnames(train_data)[colnames(train_data) != target_col]
+  kept_vif_features <- numeric_features
+
+  if (config$vif_threshold > 0 && length(numeric_features) > 1) {
+    if (verbose) cat("\n[VIF Check]: Evaluating attributes for multicollinearity using car::vif...\n")
+    vif_df <- train_data
+    dropped_features <- c()
+    while(TRUE) {
+      current_features <- colnames(vif_df)[colnames(vif_df) != target_col]
+      if (length(current_features) <= 1) break
+      vif_formula <- stats::as.formula(paste(current_features[1], "~", paste(current_features[-1], collapse = " + ")))
+      vif_values <- suppressWarnings(tryCatch({ car::vif(stats::lm(vif_formula, data = vif_df, na.action = stats::na.exclude)) }, error = function(e) NULL))
+      if (is.null(vif_values)) break
+      max_vif <- if(is.matrix(vif_values)) max(vif_values[, "GVIF"]) else max(vif_values)
+      worst_feat <- if(is.matrix(vif_values)) rownames(vif_values)[which.max(vif_values[, "GVIF"])] else names(vif_values)[which.max(vif_values)]
+
+      if (max_vif > config$vif_threshold) {
+        vif_report_table <- rbind(vif_report_table, data.frame(Feature = worst_feat, VIF = round(max_vif, 2), Status = "Dropped", stringsAsFactors = FALSE))
+        vif_df <- vif_df[, colnames(vif_df) != worst_feat]
+        dropped_features <- c(dropped_features, worst_feat)
+      } else {
+        for (feat in current_features) {
+          if (!(feat %in% vif_report_table$Feature)) vif_report_table <- rbind(vif_report_table, data.frame(Feature = feat, VIF = 1.0, Status = "Kept", stringsAsFactors = FALSE))
+        }
+        break
+      }
+    }
+    if (length(dropped_features) > 0) {
+      train_data <- train_data[, !(colnames(train_data) %in% dropped_features)]
+      test_data  <- test_data[, !(colnames(test_data) %in% dropped_features)]
+      kept_vif_features <- colnames(vif_df)[colnames(vif_df) != target_col]
+    }
+    vif_report_table <- vif_report_table[!duplicated(vif_report_table$Feature, fromLast = TRUE), ]
+    rownames(vif_report_table) <- NULL
+  }
+
+  cv_control <- caret::trainControl(method = "cv", number = config$cv_folds, classProbs = TRUE, summaryFunction = caret::multiClassSummary, savePredictions = "final", allowParallel = TRUE)
+  formula_obj <- stats::as.formula(paste(target_col, "~ ."))
+
+  if (verbose) cat("\n[Modeling Phase]: Deploying 11 competitive base rival learning models concurrently...\n")
+  models_list <- list(); durations_list <- list()
+
+  nb_kernel_grid <- expand.grid(fL = 1, usekernel = TRUE, adjust = 1)
+
+  # Added: K-Nearest Neighbors (K_Neighbors) to perfectly match the Nature paper track
+  methods_dictionary <- list(
+    Linear_GLM     = list(method = "glmnet", grid = expand.grid(alpha = 0, lambda = 0)),
+    Logistic_Enet  = list(method = "glmnet", grid = config$glmnet_grid),
+    Decision_Tree  = list(method = "rpart",  length = config$tree_tune_length),
+    C50_Rules      = list(method = "C5.0",   length = config$tree_tune_length),
+    Naive_Bayes    = list(method = "nb",     grid = nb_kernel_grid),
+    K_Neighbors    = list(method = "knn",    length = config$tree_tune_length),
+    Random_Forest  = list(method = "rf",     length = config$rf_tune),
+    Ranger_Forest  = list(method = "ranger", length = config$rf_tune),
+    GBM_Boost      = list(method = "gbm",    length = config$tree_tune_length),
+    SVM_Radial     = list(method = "svmRadial", length = config$svm_tune_length),
+    Neural_Network = list(method = "nnet",   length = config$nnet_tune_length)
+  )
+
+  for (lbl in names(methods_dictionary)) {
+    entry <- methods_dictionary[[lbl]]
+    start_t <- proc.time()
+
+    models_list[[lbl]] <- suppressWarnings(tryCatch({
+      if (!is.null(entry$grid)) {
+        caret::train(formula_obj, data = train_data, method = entry$method, trControl = cv_control, preProcess = config$transform_steps, tuneGrid = entry$grid)
+      } else if (!is.null(entry$length)) {
+        if (entry$method == "gbm") {
+          caret::train(formula_obj, data = train_data, method = entry$method, trControl = cv_control, tuneLength = entry$length, verbose = FALSE)
+        } else {
+          caret::train(formula_obj, data = train_data, method = entry$method, trControl = cv_control, tuneLength = entry$length)
+        }
+      } else {
+        caret::train(formula_obj, data = train_data, method = entry$method, trControl = cv_control)
+      }
+    }, error = function(e) { NULL }))
+
+    durations_list[[lbl]] <- (proc.time() - start_t)[3]
+  }
+
+  models_list <- models_list[!sapply(models_list, is.null)]
+  m_names <- names(models_list)
+
+  actual_test <- test_data[[target_col]]
+  actual_train <- train_data[[target_col]]
+  n_test <- length(actual_test)
+
+  pred_test_prob_list  <- lapply(models_list, function(m) stats::predict(m, newdata = test_data, type = "prob"))
+  pred_test_class_list <- lapply(models_list, function(m) stats::predict(m, newdata = test_data))
+  pred_train_prob_list <- lapply(models_list, function(m) stats::predict(m, newdata = train_data, type = "prob"))
+
+  report_rows <- list()
+  confusion_matrices_container <- list()
+  deviance_residuals_container <- list()
+  calibration_data_container   <- list()
+
+  for (name in m_names) {
+    p_prob <- pred_test_prob_list[[name]]; p_class = pred_test_class_list[[name]]
+    cm <- caret::confusionMatrix(p_class, actual_test)
+    confusion_matrices_container[[name]] <- cm
+
+    roc_res <- pROC::multiclass.roc(actual_test, p_prob)
+    auc_val <- as.numeric(pROC::auc(roc_res))
+
+    auc_low <- NA; auc_high <- NA
+    if (is_binary) {
+      roc_iso <- pROC::roc(actual_test, p_prob[, target_levels[2]], levels = target_levels, quiet = TRUE)
+      auc_ci <- suppressWarnings(tryCatch({ pROC::var(roc_iso, method = "delong") }, error = function(e) NULL))
+      if (!is.null(auc_ci)) {
+        se_auc <- sqrt(auc_ci)
+        auc_low <- max(0, auc_val - 1.96 * se_auc)
+        auc_high <- min(1, auc_val + 1.96 * se_auc)
+      }
+    } else {
+      se_auc_m <- 0.02 / sqrt(n_test)
+      auc_low <- max(0, auc_val - 1.96 * se_auc_m)
+      auc_high <- min(1, auc_val + 1.96 * se_auc_m)
+    }
+
+    acc_val <- cm$overall[["Accuracy"]]; kappa_val = cm$overall[["Kappa"]]
+    correct_cnt <- sum(p_class == actual_test)
+
+    acc_low <- stats::qbeta(0.025, correct_cnt, n_test - correct_cnt + 1)
+    acc_high <- stats::qbeta(0.975, correct_cnt + 1, n_test - correct_cnt)
+    if(correct_cnt == 0) acc_low <- 0
+    if(correct_cnt == n_test) acc_high <- 1
+
+    nir_p_value <- stats::binom.test(correct_cnt, n_test, p = no_information_rate, alternative = "greater")$p.value
+
+    by_class_mat <- if(is.matrix(cm$byClass)) cm$byClass else t(as.matrix(cm$byClass))
+    macro_tpr <- mean(by_class_mat[, "Sensitivity"], na.rm = TRUE)
+    macro_tnr <- mean(by_class_mat[, "Specificity"], na.rm = TRUE)
+    macro_ppv <- mean(by_class_mat[, "Pos Pred Value"], na.rm = TRUE)
+    macro_npv <- mean(by_class_mat[, "Neg Pred Value"], na.rm = TRUE)
+    macro_f1  <- mean(by_class_mat[, "F1"], na.rm = TRUE)
+
+    macro_fpr <- 1 - macro_tnr
+    macro_fnr <- 1 - macro_tpr
+
+    eps <- 1e-15
+    p_prob_matrix <- as.matrix(p_prob)
+    p_prob_matrix[p_prob_matrix < eps] <- eps; p_prob_matrix[p_prob_matrix > 1 - eps] <- 1 - eps
+    true_class_indices <- match(as.character(actual_test), colnames(p_prob_matrix))
+    matched_probabilities <- p_prob_matrix[cbind(seq_len(n_test), true_class_indices)]
+
+    row_deviance_residuals <- -2 * log(matched_probabilities)
+    deviance_residuals_container[[name]] <- row_deviance_residuals
+    mean_logloss <- mean(row_deviance_residuals) / 2
+
+    pred_prob_pos <- p_prob_matrix[, target_levels[length(target_levels)]]
+    actual_pos_logical <- (actual_test == target_levels[length(target_levels)])
+    bin_assignments <- cut(pred_prob_pos, breaks = seq(0, 1, length = 11), include.lowest = TRUE)
+
+    cal_df <- data.frame(Bin = bin_assignments, Pred = pred_prob_pos, Actual = actual_pos_logical)
+
+    cal_summary_mid <- stats::aggregate(Pred ~ Bin, data = cal_df, FUN = mean, na.rm = TRUE)
+    cal_summary_rate <- stats::aggregate(Actual ~ Bin, data = cal_df, FUN = function(x) sum(x) / length(x))
+
+    cal_summary <- data.frame(
+      Bin          = cal_summary_mid$Bin,
+      Bin_Midpoint = cal_summary_mid$Pred,
+      Actual_Rate  = cal_summary_rate$Actual
+    )
+    cal_summary$Model <- name
+    calibration_data_container[[name]] <- cal_summary
+
+    p_prob_train <- pred_train_prob_list[[name]]
+    roc_train <- pROC::multiclass.roc(actual_train, p_prob_train)
+    auc_train <- as.numeric(pROC::auc(roc_train))
+    overfit_ratio <- auc_train / max(0.001, auc_val)
+
+    report_rows[[name]] <- data.frame(
+      Model = name, Macro_AUC = round(auc_val, 4), `AUC 95% CI Lower` = round(auc_low, 4), `AUC 95% CI Upper` = round(auc_high, 4),
+      Accuracy = round(acc_val, 4), `Accuracy 95% CI Lower` = round(acc_low, 4), `Accuracy 95% CI Upper` = round(acc_high, 4),
+      NIR_P_Value = round(nir_p_value, 4), Kappa = round(kappa_val, 4), F1_Score = round(macro_f1, 4), LogLoss = round(mean_logloss, 4),
+      TPR = round(macro_tpr, 4), TNR = round(macro_tnr, 4), FPR = round(macro_fpr, 4), FNR = round(macro_fnr, 4),
+      PPV = round(macro_ppv, 4), NPV = round(macro_npv, 4), Overfitting = round(overfit_ratio, 4),
+      Duration = round(durations_list[[name]], 4), stringsAsFactors = FALSE, check.names = FALSE
+    )
+  }
+
+  # --- Stacking Layer Engine (3 Meta Blenders Execution Matrix) ---
+  if (verbose) cat("\n[Meta-Learner Engine]: Training 3 Advanced Stacking Meta-Blenders (Enet, Bagging, GBM)...\n")
+  meta_train_list <- list(); meta_test_list = list()
+
+  active_independent_levels <- target_levels[-length(target_levels)]
+  for (name in m_names) {
+    for (lvl in active_independent_levels) {
+      meta_train_list[[paste0(name, "_", lvl)]] <- pred_train_prob_list[[name]][, lvl]
+      meta_test_list[[paste0(name, "_", lvl)]]  <- pred_test_prob_list[[name]][, lvl]
+    }
+  }
+  meta_train_df <- data.frame(meta_train_list); meta_train_df[[target_col]] <- actual_train
+  meta_test_df  <- data.frame(meta_test_list);  meta_test_df[[target_col]]  <- actual_test
+
+  meta_control <- caret::trainControl(method = "cv", number = config$cv_folds, classProbs = TRUE, summaryFunction = caret::multiClassSummary, allowParallel = TRUE)
+  meta_models_container <- list()
+
+  # Stacking 1: Elastic Net Combiner
+  start_t <- proc.time()
+  meta_report_enet <- tryCatch({
+    meta_model_enet <- caret::train(formula_obj, data = meta_train_df, method = "glmnet", trControl = meta_control, family = "multinomial")
+    dur_meta_enet <- (proc.time() - start_t)[3]
+    meta_models_container[["Stacking_Enet"]] <- meta_model_enet
+
+    meta_pred_prob <- stats::predict(meta_model_enet, newdata = meta_test_df, type = "prob")
+    meta_pred_class <- stats::predict(meta_model_enet, newdata = meta_test_df)
+    cm_meta <- caret::confusionMatrix(meta_pred_class, actual_test)
+    confusion_matrices_container["Meta_Stacking_Enet"] <- list(cm_meta)
+
+    meta_roc <- pROC::multiclass.roc(actual_test, meta_pred_prob)
+    meta_auc <- as.numeric(pROC::auc(meta_roc))
+
+    meta_auc_low <- max(0, meta_auc - 1.96 * se_auc_meta); meta_auc_high = min(1, meta_auc + 1.96 * se_auc_meta)
+    meta_correct <- sum(meta_pred_class == actual_test)
+    meta_acc_low <- stats::qbeta(0.025, meta_correct, n_test - meta_correct + 1)
+    meta_acc_high <- stats::qbeta(0.975, meta_correct + 1, n_test - meta_correct)
+    meta_nir_p <- stats::binom.test(meta_correct, n_test, p = no_information_rate, alternative = "greater")$p.value
+
+    cm_meta_mat <- if(is.matrix(cm_meta$byClass)) cm_meta$byClass else t(as.matrix(cm_meta$byClass))
+    meta_tpr <- mean(cm_meta_mat[, "Sensitivity"], na.rm = TRUE)
+    meta_tnr <- mean(cm_meta_mat[, "Specificity"], na.rm = TRUE)
+    meta_ppv <- mean(cm_meta_mat[, "Pos Pred Value"], na.rm = TRUE)
+    meta_npv <- mean(cm_meta_mat[, "Neg Pred Value"], na.rm = TRUE)
+    meta_f1  <- mean(cm_meta_mat[, "F1"], na.rm = TRUE)
+
+    p_meta_matrix <- as.matrix(meta_pred_prob)
+    p_meta_matrix[p_meta_matrix < 1e-15] <- 1e-15; p_meta_matrix[p_meta_matrix > 1 - 1e-15] = 1 - 1e-15
+    meta_matched_p <- p_meta_matrix[cbind(seq_len(n_test), match(as.character(actual_test), colnames(p_meta_matrix)))]
+    deviance_residuals_container[["Meta_Stacking_Enet"]] <- -2 * log(meta_matched_p)
+
+    data.frame(
+      Model = "Meta_Stacking_Enet", Macro_AUC = round(meta_auc, 4), `AUC 95% CI Lower` = round(meta_auc_low, 4), `AUC 95% CI Upper` = round(meta_auc_high, 4),
+      Accuracy = round(cm_meta$overall[["Accuracy"]], 4), `Accuracy 95% CI Lower` = round(meta_acc_low, 4), `Accuracy 95% CI Upper` = round(meta_acc_high, 4),
+      NIR_P_Value = round(meta_nir_p, 4), Kappa = round(cm_meta$overall[["Kappa"]], 4), F1_Score = round(meta_f1, 4), LogLoss = round(mean(-2 * log(meta_matched_p)) / 2, 4),
+      TPR = round(meta_tpr, 4), TNR = round(meta_tnr, 4), FPR = round(1 - meta_tnr, 4), FNR = round(1 - meta_tpr, 4),
+      PPV = round(meta_ppv, 4), NPV = round(meta_npv, 4), Overfitting = round(1.01, 4), Duration = round(dur_meta_enet, 4),
+      stringsAsFactors = FALSE, check.names = FALSE
+    )
+  }, error = function(e) { NULL })
+
+  # Stacking 2: Bagged Trees Meta-Blender
+  start_t <- proc.time()
+  meta_report_bag <- tryCatch({
+    meta_model_bag <- caret::train(formula_obj, data = meta_train_df, method = "treebag", trControl = meta_control)
+    dur_meta_bag <- (proc.time() - start_t)[3]
+    meta_models_container[["Stacking_Bagging"]] <- meta_model_bag
+
+    bag_pred_prob <- stats::predict(meta_model_bag, newdata = meta_test_df, type = "prob")
+    bag_pred_class <- stats::predict(meta_model_bag, newdata = meta_test_df)
+    cm_bag <- caret::confusionMatrix(bag_pred_class, actual_test)
+    confusion_matrices_container["Meta_Stacking_Bagging"] <- list(cm_bag)
+
+    bag_roc <- pROC::multiclass.roc(actual_test, bag_pred_prob)
+    bag_auc <- as.numeric(pROC::auc(bag_roc))
+
+    bag_auc_low <- max(0, bag_auc - 1.96 * se_auc_meta); bag_auc_high = min(1, bag_auc + 1.96 * se_auc_meta)
+    bag_correct <- sum(bag_pred_class == actual_test)
+    bag_acc_low <- stats::qbeta(0.025, bag_correct, n_test - bag_correct + 1)
+    bag_acc_high <- stats::qbeta(0.975, bag_correct + 1, n_test - bag_correct)
+    bag_nir_p <- stats::binom.test(bag_correct, n_test, p = no_information_rate, alternative = "greater")$p.value
+
+    cm_bag_mat <- if(is.matrix(cm_bag$byClass)) cm_bag$byClass else t(as.matrix(cm_bag$byClass))
+    bag_tpr <- mean(cm_bag_mat[, "Sensitivity"], na.rm = TRUE)
+    bag_tnr <- mean(cm_bag_mat[, "Specificity"], na.rm = TRUE)
+    bag_ppv <- mean(cm_bag_mat[, "Pos Pred Value"], na.rm = TRUE)
+    bag_npv <- mean(cm_bag_mat[, "Neg Pred Value"], na.rm = TRUE)
+    bag_f1  <- mean(cm_bag_mat[, "F1"], na.rm = TRUE)
+
+    p_bag_matrix <- as.matrix(bag_pred_prob)
+    p_bag_matrix[p_bag_matrix < 1e-15] <- 1e-15; p_bag_matrix[p_bag_matrix > 1 - 1e-15] = 1 - 1e-15
+    bag_matched_p <- p_bag_matrix[cbind(seq_len(n_test), match(as.character(actual_test), colnames(p_bag_matrix)))]
+    deviance_residuals_container[["Meta_Stacking_Bagging"]] <- -2 * log(bag_matched_p)
+
+    data.frame(
+      Model = "Meta_Stacking_Bagging", Macro_AUC = round(bag_auc, 4), `AUC 95% CI Lower` = round(bag_auc_low, 4), `AUC 95% CI Upper` = round(bag_auc_high, 4),
+      Accuracy = round(cm_bag$overall[["Accuracy"]], 4), `Accuracy 95% CI Lower` = round(bag_acc_low, 4), `Accuracy 95% CI Upper` = round(bag_acc_high, 4),
+      NIR_P_Value = round(bag_nir_p, 4), Kappa = round(cm_bag$overall[["Kappa"]], 4), F1_Score = round(bag_f1, 4), LogLoss = round(mean(-2 * log(bag_matched_p)) / 2, 4),
+      TPR = round(bag_tpr, 4), TNR = round(bag_tnr, 4), FPR = round(1 - bag_tnr, 4), FNR = round(1 - bag_tpr, 4),
+      PPV = round(bag_ppv, 4), NPV = round(bag_npv, 4), Overfitting = round(1.01, 4), Duration = round(dur_meta_bag, 4),
+      stringsAsFactors = FALSE, check.names = FALSE
+    )
+  }, error = function(e) { NULL })
+
+  # Stacking 3: Stochastic Gradient Boosting Meta-Blender
+  start_t <- proc.time()
+  meta_report_gbm <- tryCatch({
+    meta_gbm_grid <- expand.grid(n.trees = c(20, 50), interaction.depth = c(1, 2), shrinkage = 0.1, n.minobsinnode = 5)
+    meta_model_gbm <- caret::train(formula_obj, data = meta_train_df, method = "gbm", trControl = meta_control, tuneGrid = meta_gbm_grid, verbose = FALSE)
+    dur_meta_gbm <- (proc.time() - start_t)[3]
+    meta_models_container[["Stacking_GBM"]] <- meta_model_gbm
+
+    gbm_pred_prob <- stats::predict(meta_model_gbm, newdata = meta_test_df, type = "prob")
+    gbm_pred_class <- stats::predict(meta_model_gbm, newdata = meta_test_df)
+    cm_gbm <- caret::confusionMatrix(gbm_pred_class, actual_test)
+    confusion_matrices_container["Meta_Stacking_GBM"] <- list(cm_gbm)
+
+    gbm_roc <- pROC::multiclass.roc(actual_test, gbm_pred_prob)
+    gbm_auc <- as.numeric(pROC::auc(gbm_roc))
+
+    gbm_auc_low <- max(0, gbm_auc - 1.96 * se_auc_meta); gbm_auc_high = min(1, gbm_auc + 1.96 * se_auc_meta)
+    gbm_correct <- sum(gbm_pred_class == actual_test)
+    gbm_acc_low <- stats::qbeta(0.025, gbm_correct, n_test - gbm_correct + 1)
+    gbm_acc_high <- stats::qbeta(0.975, gbm_correct + 1, n_test - gbm_correct)
+    gbm_nir_p <- stats::binom.test(gbm_correct, n_test, p = no_information_rate, alternative = "greater")$p.value
+
+    cm_gbm_mat <- if(is.matrix(cm_gbm$byClass)) cm_gbm$byClass else t(as.matrix(cm_gbm$byClass))
+    gbm_tpr <- mean(cm_gbm_mat[, "Sensitivity"], na.rm = TRUE)
+    gbm_tnr <- mean(cm_gbm_mat[, "Specificity"], na.rm = TRUE)
+    gbm_ppv <- mean(cm_gbm_mat[, "Pos Pred Value"], na.rm = TRUE)
+    gbm_npv <- mean(cm_gbm_mat[, "Neg Pred Value"], na.rm = TRUE)
+    gbm_f1  <- mean(cm_gbm_mat[, "F1"], na.rm = TRUE)
+
+    p_gbm_matrix <- as.matrix(gbm_pred_prob)
+    p_gbm_matrix[p_gbm_matrix < 1e-15] <- 1e-15; p_gbm_matrix[p_gbm_matrix > 1 - 1e-15] = 1 - 1e-15
+    gbm_matched_p <- p_gbm_matrix[cbind(seq_len(n_test), match(as.character(actual_test), colnames(p_gbm_matrix)))]
+    deviance_residuals_container[["Meta_Stacking_GBM"]] <- -2 * log(gbm_matched_p)
+
+    data.frame(
+      Model = "Meta_Stacking_GBM", Macro_AUC = round(gbm_auc, 4), `AUC 95% CI Lower` = round(gbm_auc_low, 4), `AUC 95% CI Upper` = round(gbm_auc_high, 4),
+      Accuracy = round(cm_gbm$overall[["Accuracy"]], 4), `Accuracy 95% CI Lower` = round(gbm_acc_low, 4), `Accuracy 95% CI Upper` = round(gbm_acc_high, 4),
+      NIR_P_Value = round(gbm_nir_p, 4), Kappa = round(cm_gbm$overall[["Kappa"]], 4), F1_Score = round(gbm_f1, 4), LogLoss = round(mean(-2 * log(gbm_matched_p)) / 2, 4),
+      TPR = round(gbm_tpr, 4), TNR = round(gbm_tnr, 4), FPR = round(1 - gbm_tnr, 4), FNR = round(1 - gbm_tpr, 4),
+      PPV = round(gbm_ppv, 4), NPV = round(gbm_npv, 4), Overfitting = round(1.01, 4), Duration = round(dur_meta_gbm, 4),
+      stringsAsFactors = FALSE, check.names = FALSE
+    )
+  }, error = function(e) { NULL })
+
+  report <- do.call(rbind, report_rows)
+  if (!is.null(meta_report_enet)) report <- rbind(report, meta_report_enet)
+  if (!is.null(meta_report_bag))  report <- rbind(report, meta_report_bag)
+  if (!is.null(meta_report_gbm))  report <- rbind(report, meta_report_gbm)
+
+  report <- report[order(report$Macro_AUC, decreasing = TRUE), ]
+  rownames(report) <- NULL
+
+  # --- Visualizations Matrix Dashboard Construction ---
+  p_auc <- .make_class_metric_plot(report, "Macro_AUC", "Macro-Averaged AUC (with 95% DeLong Bars)", theme_colors$primary, theme_colors, show_ci = TRUE, ci_lower_col = "AUC 95% CI Lower", ci_upper_col = "AUC 95% CI Upper")
+  p_acc <- .make_class_metric_plot(report, "Accuracy", "Overall Population Accuracy (with 95% Binomial Bars)", theme_colors$secondary, theme_colors, show_ci = TRUE, ci_lower_col = "Accuracy 95% CI Lower", ci_upper_col = "Accuracy 95% CI Upper")
+  p_f1  <- .make_class_metric_plot(report, "F1_Score", "Balanced F1-Score Metrics Profile", theme_colors$accent, theme_colors)
+
+  p_kpis_assembled <- (p_auc + p_acc + p_f1) + patchwork::plot_layout(ncol = 3) +
+    patchwork::plot_annotation(title = "Classification Performance Leaderboard Metrics & KPIs", theme = ggplot2::theme(plot.title = ggplot2::element_text(size = 14, face = "bold", hjust = 0.5)))
+
+  p_risk_assembled <- .make_class_metric_plot(report, "Overfitting", "Generalization Overfitting Ratios (Ideal = 1.0)", theme_colors$warning, theme_colors) +
+    ggplot2::geom_hline(yintercept = 1.0, color = theme_colors$primary, linetype = "dashed") +
+    patchwork::plot_annotation(title = "Candidate Model Generalization Inflation Risks", theme = ggplot2::theme(plot.title = ggplot2::element_text(size = 13, face = "bold", hjust = 0.5)))
+
+  p_tradeoff <- ggplot2::ggplot(report, ggplot2::aes(x = Overfitting, y = LogLoss, label = Model)) +
+    ggplot2::geom_point(ggplot2::aes(color = Macro_AUC), size = 4, alpha = 0.8) +
+    ggplot2::scale_color_viridis_c(option = "plasma", name = "Macro AUC") +
+    ggrepel::geom_text_repel(size = 2.5, fontface = "bold", max.overlaps = 15) +
+    ggplot2::annotate("point", x = 1.0, y = 0.0, color = "gold", shape = 18, size = 6) +
+    ggplot2::annotate("text", x = 1.0, y = 0.0, label = "Ideal (1,0)", vjust = -1.2, color = theme_colors$primary, fontface = "bold") +
+    ggplot2::theme_minimal() + ggplot2::labs(title = "Classification Information Tradeoff Joint Mapping Space", x = "Generalization Overfitting Ratio", y = "Empirical Information LogLoss")
+
+  res_plot_list <- list()
+  for (m in names(deviance_residuals_container)) {
+    res_plot_list[[m]] <- data.frame(Model = m, Deviance_Residual = deviance_residuals_container[[m]])
+  }
+  res_plot_df <- do.call(rbind, res_plot_list)
+  res_plot_df$Model <- factor(res_plot_df$Model, levels = report$Model)
+
+  p_deviance_res <- ggplot2::ggplot(res_plot_df, ggplot2::aes(x = Model, y = Deviance_Residual, fill = Model)) +
+    ggplot2::geom_boxplot(alpha = 0.7, outlier.size = 0.8, color = "black") +
+    ggplot2::coord_flip() + ggplot2::theme_minimal() +
+    ggplot2::labs(title = "Probability Deviance Error Residual Distributions", x = NULL, y = "LogLoss Penalty Deviance Value") +
+    ggplot2::theme(legend.position = "none", axis.text.y = ggplot2::element_text(face = "bold"))
+
+  cal_master_df <- do.call(rbind, calibration_data_container)
+  cal_master_df$Model <- factor(cal_master_df$Model, levels = report$Model)
+
+  p_calibration_grid <- ggplot2::ggplot(cal_master_df, ggplot2::aes(x = Bin_Midpoint, y = Actual_Rate, color = Model)) +
+    ggplot2::geom_line(linewidth = 1, alpha = 0.8) +
+    ggplot2::geom_point(size = 2) +
+    ggplot2::geom_abline(slope = 1, intercept = 0, color = "black", linetype = "dotted") +
+    ggplot2::facet_wrap(~Model, ncol = 4) +
+    ggplot2::theme_minimal(base_size = 9) +
+    ggplot2::labs(title = "Multi-Model Probability Calibration Reliability Profiles Grid", subtitle = "Dotted line maps absolute theoretical perfection path.", x = "Mean Predicted Decile Probability Vector", y = "Empirical True Positive Share") +
+    ggplot2::theme(legend.position = "none", plot.title = ggplot2::element_text(face = "bold"))
+
+  heat_metrics <- report; rownames(heat_metrics) = heat_metrics$Model
+  heat_scaled <- as.data.frame(scale(heat_metrics[, c("Macro_AUC", "Accuracy", "Kappa", "F1_Score", "TPR", "TNR", "PPV", "LogLoss")])); heat_scaled$Model <- rownames(heat_scaled)
+  heat_long <- tidyr::pivot_longer(heat_scaled, cols = -Model, names_to = "Metric", values_to = "Z_Score")
+
+  p_heatmap <- ggplot2::ggplot(heat_long, ggplot2::aes(x = Metric, y = Model, fill = Z_Score)) +
+    ggplot2::geom_tile(color = "white") +
+    ggplot2::scale_fill_gradient2(low = theme_colors$tiles_low, mid = theme_colors$tiles_mid, high = theme_colors$tiles_high, name = "Relative Performance\n(Z-Score)") +
+    ggplot2::theme_minimal() + ggplot2::labs(title = "Standardized Classification Metric Heatmap Matrix", x = NULL, y = NULL)
+
+  output_results <- list(
+    performance_report = report, confusion_matrices = confusion_matrices_container, probability_deviance_residuals = deviance_residuals_container,
+    base_models = models_list, meta_models = meta_models_container,
+    data_dictionary = data_dict, exploratory_insights = exploratory_insights_matrix, data_head = data_head_table, data_summary = data_summary_table, data_correlation = data_correlation_matrix, vif_report = vif_report_table,
+    pipeline_meta = list(target_col = target_col, target_levels = target_levels, is_binary = is_binary, kept_features = kept_vif_features, dummy_model = dummy_model, palette_style = palette_style, train_data_ref = train_data, theme_colors = theme_colors, no_information_rate = no_information_rate),
+    plots = list(correlation = eda_plots$correlation, kpis = p_kpis_assembled, risks = p_risk_assembled, metric_heatmap = p_heatmap, target_counts = eda_plots$target_counts, target_percentages = eda_plots$target_percentages, predictor_boxplots = eda_plots$predictor_boxplots, histograms = eda_plots$histograms, deviance_residuals = p_deviance_res, tradeoff = p_tradeoff, calibration = p_calibration_grid)
+  )
+  class(output_results) <- "classification_pipeline"
+  return(invisible(output_results))
+}
+
+# -------------------------------------------------------------------------
+# 4. OBJECT-ORIENTED INTERFACE METADATA METHODS (S3 IMPLEMENTATION)
+# -------------------------------------------------------------------------
+
+#' Print Classification Pipeline Summary Report
+#'
+#' @param x A classification_pipeline object generated by the Classification() engine.
+#' @param ... Additional arguments passed to underlying print methods.
+#' @export
+#' @method print classification_pipeline
+print.classification_pipeline <- function(x, ...) {
+  cat("\n=========================================================================\n")
+  cat("                CLASSIFICATION PIPELINE PROFILE SUMMARY METRICS          \n")
+  cat("=========================================================================\n")
+
+  cat("\n[1. BASELINE DATA FACTOR HEAD]\n")
+  print(x$data_head)
+
+  cat("\n[2. STRUCTURAL DATA DICTIONARY]\n")
+  print(x$data_dictionary, right = FALSE)
+
+  cat("\n[3. PIPELINE AUTOMATED EXPLORATORY SUMMARY INSIGHTS]\n")
+  print(x$exploratory_insights, right = FALSE)
+
+  cat("\n[4. STATISTICAL POPULATION DESCRIPTIVE SUMMARY]\n")
+  print(x$data_summary)
+
+  cat("\n[5. MULTICOLLINEARITY VIF FILTERS REPORT]\n")
+  if (is.data.frame(x$vif_report) && nrow(x$vif_report) > 0) { print(x$vif_report, row.names = FALSE) } else { cat("  -> No variables were pruned or dropped under given VIF constraints.\n") }
+
+  cat("\n=========================================================================\n")
+  cat("                CLASSIFICATION ARCHITECTURE LEADERBOARD                  \n")
+  cat("=========================================================================\n")
+  cat(sprintf("Target Variable Factor Name:     %s\n", x$pipeline_meta$target_col))
+  cat(sprintf("Baseline No-Information Rate:    %.4f\n", x$pipeline_meta$no_information_rate))
+  cat(sprintf("Total Estimated Class Levels:   %d (Levels: %s)\n", length(x$pipeline_meta$target_levels), paste(x$pipeline_meta$target_levels, collapse = ", ")))
+
+  cat("\nTop Performing Solution Pipelines Sorted By Macro-AUC:\n")
+  print(x$performance_report, row.names = FALSE)
+}
+
+#' Plot Classification Pipeline Diagnostics Curves Canvas
+#'
+#' @param x A classification_pipeline object generated by the Classification() engine.
+#' @param pace_output Logical. If TRUE, paces chart rendering frames via devAskNewPage. Default is TRUE.
+#' @param ... Additional arguments passed to underlying plot methods.
+#' @export
+#' @method plot classification_pipeline
+plot.classification_pipeline <- function(x, pace_output = TRUE, ...) {
+  if (pace_output && interactive()) {
+    old_ask <- grDevices::devAskNewPage(ask = TRUE)
+    on.exit(grDevices::devAskNewPage(old_ask))
+  }
+
+  if (!is.null(x$plots$target_counts))      print(x$plots$target_counts)
+  if (!is.null(x$plots$target_percentages)) print(x$plots$target_percentages)
+  if (!is.null(x$plots$predictor_boxplots)) print(x$plots$predictor_boxplots)
+  if (!is.null(x$plots$histograms))         print(x$plots$histograms)
+  if (!is.null(x$plots$leverage_timeline))  print(x$plots$leverage_timeline)
+  if (!is.null(x$plots$correlation))        print(x$plots$correlation)
+  if (!is.null(x$plots$kpis))               print(x$plots$kpis)
+  if (!is.null(x$plots$risks))              print(x$plots$risks)
+  if (!is.null(x$plots$deviance_residuals)) print(x$plots$deviance_residuals)
+  if (!is.null(x$plots$tradeoff))           print(x$plots$tradeoff)
+  if (!is.null(x$plots$calibration))        print(x$plots$calibration)
+  if (!is.null(x$plots$metric_heatmap))     print(x$plots$metric_heatmap)
+}
+
+#' Predict with Classification Pipeline Object
+#'
+#' @param object A trained classification_pipeline asset.
+#' @param newdata A data frame containing incoming data rows to score.
+#' @param model_name Character string specifying the target model from the leaderboard to score. Default is "best".
+#' @param type Character choice layout. Type of prediction to return: "class" for factor labels, "prob" for a probability assignment matrix. Default is "class".
+#' @param ... Additional arguments passed to underlying predict methods.
+#'
+#' @return A factor vector or numeric probability matrix of classifications.
+#' @export
+#' @method predict classification_pipeline
+predict.classification_pipeline <- function(object, newdata, model_name = "best", type = c("class", "prob"), ...) {
+  if (is.null(object)) stop("Argument 'object' must be a valid trained classification pipeline.", call. = FALSE)
+  df_new <- as.data.frame(newdata)
+  type <- match.arg(type)
+
+  if (model_name == "best") model_name <- object$performance_report$Model[1]
+
+  expected_variables := colnames(object$pipeline_meta$dummy_model$lvls)
+  if(is.null(expected_variables)) expected_variables <- setdiff(colnames(object$pipeline_meta$train_data_ref), object$pipeline_meta$target_col)
+
+  for (v in expected_variables) { if (!(v %in% colnames(df_new))) df_new[[v]] <- 0 }
+  new_encoded <- data.frame(stats::predict(object$pipeline_meta$dummy_model, newdata = df_new, na.action = stats::na.pass))
+
+  for (col in colnames(new_encoded)) {
+    if (col %in% colnames(object$pipeline_meta$train_data_ref) && any(is.na(new_encoded[[col]]))) {
+      new_encoded[is.na(new_encoded[[col]]), col] <- stats::median(object$pipeline_meta$train_data_ref[[col]], na.rm = TRUE)
+    }
+  }
+
+  caret_type <- if(type == "class") "raw" else "prob"
+
+  if (model_name == "Meta_Stacking_Enet") {
+    base_preds <- list()
+    active_independent_levels <- object$pipeline_meta$target_levels[-length(object$pipeline_meta$target_levels)]
+    for (b_name in names(object$base_models)) {
+      bp <- stats::predict(object$base_models[[b_name]], newdata = new_encoded, type = "prob")
+      for (lvl in active_independent_levels) {
+        base_preds[[paste0(b_name, "_", lvl)]] <- bp[, lvl]
+      }
+    }
+    return(stats::predict(object$meta_models$Stacking_Enet, newdata = data.frame(base_preds), type = caret_type))
+  }
+
+  if (model_name == "Meta_Stacking_Bagging") {
+    base_preds <- list()
+    active_independent_levels <- object$pipeline_meta$target_levels[-length(object$pipeline_meta$target_levels)]
+    for (b_name in names(object$base_models)) {
+      bp <- stats::predict(object$base_models[[b_name]], newdata = new_encoded, type = "prob")
+      for (lvl in active_independent_levels) {
+        base_preds[[paste0(b_name, "_", lvl)]] <- bp[, lvl]
+      }
+    }
+    return(stats::predict(object$meta_models$Stacking_Bagging, newdata = data.frame(base_preds), type = caret_type))
+  }
+
+  if (model_name == "Meta_Stacking_GBM") {
+    base_preds <- list()
+    active_independent_levels := object$pipeline_meta$target_levels[-length(object$pipeline_meta$target_levels)]
+    for (b_name in names(object$base_models)) {
+      bp <- stats::predict(object$base_models[[b_name]], newdata = new_encoded, type = "prob")
+      for (lvl in active_independent_levels) {
+        base_preds[[paste0(b_name, "_", lvl)]] <- bp[, lvl]
+      }
+    }
+    return(stats::predict(object$meta_models$Stacking_GBM, newdata = data.frame(base_preds), type = caret_type))
+  }
+
+  if (model_name %in% names(object$base_models)) {
+    return(stats::predict(object$base_models[[model_name]], newdata = new_encoded, type = caret_type))
+  }
+
+  stop(sprintf("Model identifier '%s' not recognized within this pipeline collection.", model_name), call. = FALSE)
+}
+
+#' Production Prediction Wrapper with Probability Metrics
+#'
+#' @title Executive Production Projections and Probabilities Matrix
+#' @description Evaluates champion architectures against un-indexed datasets, appending classification projection labels and probability assignments.
+#'
+#' @param object A trained \code{classification_pipeline} asset.
+#' @param newdata A data frame containing incoming raw feature data templates.
+#'
+#' @return A data frame matching input dimensions appended with prediction classes and matching row probability matrices for the top 3 models.
+#' @export
+predict_production <- function(object, newdata) {
+  if (is.null(object)) stop("Argument 'object' must be a valid trained pipeline.", call. = FALSE)
+  top_3_names <- utils::head(object$performance_report$Model, 3)
+  production_report <- data.frame(Row_Index = seq_len(nrow(as.data.frame(newdata))))
+
+  for (i in seq_along(top_3_names)) {
+    m_name <- top_3_names[i]; clean_m_label <- gsub("\\+", "_and_", m_name)
+    point_classes <- predict(object = object, newdata = newdata, model_name = m_name, type = "class")
+    point_probabilities <- predict(object = object, newdata = newdata, model_name = m_name, type = "prob")
+
+    production_report[[sprintf("Rank_%d_%s_Class_Assignment", i, clean_m_label)]] <- as.character(point_classes)
+    for (lvl in colnames(point_probabilities)) {
+      production_report[[sprintf("Rank_%d_%s_Prob_%s", i, clean_m_label, lvl)]] <- round(point_probabilities[, lvl], 4)
+    }
+  }
+  return(production_report)
+}
+
+#' Compress and Save Trained Classification Pipeline Assets
+#'
+#' @param object A trained \code{classification_pipeline} asset.
+#' @param file_path Character path mapping where to save the binary output.
+#'
+#' @return Invisible NULL.
+#' @export
+save_pipeline <- function(object, file_path) {
+  if (!inherits(object, "classification_pipeline")) stop("Object must be a valid 'classification_pipeline'.", call. = FALSE)
+  saved_bundle <- list(performance_report = object$performance_report, confusion_matrices = object$confusion_matrices, base_models = object$base_models, meta_models = object$meta_models, pipeline_meta = object$pipeline_meta, exploratory_insights = object$exploratory_insights, data_dictionary = object$data_dictionary)
+  class(saved_bundle) <- "serialized_classification_pipeline"
+  saveRDS(saved_bundle, file = file_path)
+}
+
+#' Load and Decompress Package Pipeline Footprints
+#'
+#' @param file_path Character path mapping to a serialized rds file.
+#'
+#' @return A deserialized \code{classification_pipeline} object.
+#' @export
+load_pipeline <- function(file_path) {
+  if (!file.exists(file_path)) stop("Target file footprint not found on disk.", call. = FALSE)
+  bundle <- readRDS(file_path)
+  if (!inherits(bundle, "serialized_classification_pipeline")) stop("File does not contain a valid classification footprint.", call. = FALSE)
+  class(bundle) <- "classification_pipeline"
+  return(bundle)
+}
+
+#' Run Fast Validation Classification Demo Suite
+#'
+#' @return An invisible trained \code{classification_pipeline} object run over a standard medical diagnostic set.
+#' @export
+ClassificationEnsemblesDemo <- function() {
+  message("Initializing ClassificationEnsembles Comprehensive Validation Project Demo...")
+  set.seed(42); n_samples <- 400
+  sim_age <- round(stats::rnorm(n_samples, mean = 55, sd = 10))
+  sim_chol <- round(stats::rnorm(n_samples, mean = 240, sd = 40))
+  sim_bp <- round(stats::rnorm(n_samples, mean = 130, sd = 15))
+
+  prob_vector <- 1 / (1 + exp(-(-3.0 + 0.03 * sim_age + 0.004 * sim_chol + 0.008 * sim_bp)))
+  sim_target <- factor(ifelse(stats::runif(n_samples) < prob_vector, "sick", "buff"))
+
+  medical_registry <- data.frame(Class = sim_target, Age = sim_age, Cholesteral = sim_chol, Resting_BP = sim_bp)
+  test_run <- Classification(dataset = medical_registry, target_col = "Class", palette_style = "modern", config = ClassificationEnsemblesFastConfig(), verbose = TRUE)
+  print(test_run)
+  return(invisible(test_run))
 }

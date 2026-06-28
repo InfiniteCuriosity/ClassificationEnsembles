@@ -1,0 +1,96 @@
+---
+title: "Executive Operational Scoring on Unseen Production Data"
+output: rmarkdown::html_vignette
+vignette: >
+  %\VignetteIndexEntry{Executive Operational Scoring on Unseen Production Data}
+  %\VignetteEngine{knitr::rmarkdown}
+  %\VignetteEncoding{UTF-8}
+---
+
+```{r initial settings}
+knitr::opts_chunk$set(
+  collapse = TRUE,
+  comment = "#>",
+  warning = FALSE,
+  message = FALSE
+)
+```
+
+## Introduction
+
+From a manager's perspective, the true value of a predictive modeling asset isn't the underlying mathematics, but its operational utility: how fast and reliably it can score fresh incoming spreadsheets to guide business decisions.
+
+This vignette demonstrates how a manager uses the `ClassificationEnsembles` package within a strict production firewall. We split a dataset externally to simulate an enterprise data stream, optimize an ensemble array using our historical development records, and dispatch executive-ready projections onto unseen production rows using the high-velocity `predict_production()` scoring endpoint.
+
+## 1. Simulating the Production Firewall
+
+To simulate a real-world corporate deployment, we isolate the first 600 rows of our data to represent our historical baseline training data, completely air-gapping the remaining records to represent a fresh incoming production stream.
+
+```{r Simulating a Production Firewall}
+library(ClassificationEnsembles)
+library(caret)
+
+# Load a standard classification dataset domain
+clean_data <- na.omit(Maternal_Health_Risk)
+
+# Establish the holdout enterprise firewall partition
+historical_training_data <- clean_data[1:700, ]
+unseen_production_rows   <- clean_data[701:nrow(clean_data), ]
+
+message(sprintf("Historical Corporate Training Rows: %d", nrow(historical_training_data)))
+message(sprintf("Unseen Production Holdout Rows: %d", nrow(unseen_production_rows)))
+```
+
+## 2. Model Optimization & Pipeline Training
+
+We run the core ensemble framework on our historical data to evaluate base architectures, stack meta-learners, and construct blended options. To maintain rapid compilation cycles during automated checking, we leverage the fast-track parameters matrix configuration.
+
+```{r Model Opimization and Pipeline Training}
+# Pass the data domain into the high-velocity optimization engine
+Classification_pipeline <- Classification(
+  dataset         = historical_training_data,
+  target_col      = "RiskLevel",
+  cv_folds        = 3,
+  train_pct       = 0.70,
+  vif_threshold   = 5,
+  sampling_method = "none",
+  palette_style   = "modern",
+  config          = ClassificationFastConfig(),
+  verbose         = FALSE
+)
+```
+
+## 3. Dispatched Predictive Inference (The Executive View)
+
+Managers require clean, actionable data. Rather than digging through raw listing outputs, we feed the unseen production data rows directly into the package's business intelligence endpoint: `predict_production()`.
+
+This function extracts the top three champion models discovered by the leaderboard, enforces programmatic factor level safeguards to protect against dummy variable collapse, and outputs consensus class predictions alongside their explicit assignment probabilities.
+
+```{r Dispatched Predictive Inference The Executive View}
+# Generate a clean executive projection spreadsheet automatically
+executive_projections <- predict_production(
+  object  = Classification_pipeline,
+  newdata = unseen_production_rows
+)
+
+# Render a side-by-side view of the first 10 production outputs for management
+knitr::kable(head(executive_projections, 10), row.names = FALSE)
+```
+
+## 4. Evaluation and Performance Audit
+
+Behind the scenes, your default printing layout automatically renders all five comprehensive reports when evaluated. We can verify our operational accuracy on the unseen holdout data stream by crossing the Rank-1 champion predictions against our ground-truth data:
+
+```{r Evaluation and Performance Audit}
+# Extract the name of the top-performing model variant
+champion_model <- Classification_pipeline$performance_report$Model[1]
+clean_m_label  <- gsub("\\+", "_and_", champion_model)
+pred_col_name  <- sprintf("Rank_1_%s_Class", clean_m_label)
+
+# Calculate final operational accuracy on the production stream
+final_predictions <- executive_projections[[pred_col_name]]
+holdout_accuracy  <- mean(final_predictions == unseen_production_rows$RiskLevel)
+
+message(sprintf("Operational Leaderboard Champion: %s", champion_model))
+message(sprintf("Final Out-of-Sample Production Accuracy: %.2f%%", holdout_accuracy * 100))
+```

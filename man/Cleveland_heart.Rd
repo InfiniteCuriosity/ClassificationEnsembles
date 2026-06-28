@@ -23,18 +23,18 @@ removed three columns due to very high number of missing cells (noted as '?' in 
 columns are 'Number_of_vessels_colored', 'Thal', and 'Resting_ECG'.
 
 \describe{
-\item{Age}{Age of the subject}
-\item{Sex}{Sex of the subject, either male or female}
-\item{Chest_pain_type}{One of angina, abnang, notang, or asympt}
-\item{Resting_blood_pressure}{The resting blood pressure for the subject}
-\item{Cholesteral}{The patient's cholesterol}
-\item{Fasting_blood_sugar}{Binary, whether the fasting blood sugar is <120}
-\item{Max_heart_rate}{The maximum measured heart rate for the patient}
-\item{Exercise_induced_angina}{Binary, whether angina was induced due to exercise}
-\item{Old_peak}{Numeric value}
-\item{Slope}{Three levels: Down, flat, up}
-\item{Sick_or_buff}{Binary, is the patient sick or buff}
-\item{Class}{0 is healthy, 1,2,3,4 is sick.}
+ \item{Age}{Age of the subject}
+ \item{Sex}{Sex of the subject, either male or female}
+ \item{Chest_pain_type}{One of angina, abnang, notang, or asympt}
+ \item{Resting_blood_pressure}{The resting blood pressure for the subject}
+ \item{Cholesteral}{The patient's cholesterol}
+ \item{Fasting_blood_sugar}{Binary, whether the fasting blood sugar is <120}
+ \item{Max_heart_rate}{The maximum measured heart rate for the patient}
+ \item{Exercise_induced_angina}{Binary, whether angina was induced due to exercise}
+ \item{Old_peak}{Numeric value}
+ \item{Slope}{Three levels: Down, flat, up}
+ \item{Sick_or_buff}{Binary, is the patient sick or buff}
+ \item{Class}{0 is healthy, 1,2,3,4 is sick.}
 }
 }
 \usage{

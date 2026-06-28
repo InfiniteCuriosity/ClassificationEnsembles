@@ -1,0 +1,97 @@
+---
+title: "Getting Started with ClassificationEnsembles"
+output: rmarkdown::html_vignette
+vignette: >
+  %\VignetteIndexEntry{Getting Started with ClassificationEnsembles}
+  %\VignetteEngine{knitr::rmarkdown}
+  %\VignetteEncoding{UTF-8}
+---
+
+```{r include=FALSE}
+knitr::opts_chunk$set(
+  collapse = TRUE,
+  comment = "#>",
+  fig.width = 7,
+  fig.height = 5,
+  fig.align = "center"
+)
+```
+
+```{r Code snippett}
+library(ClassificationEnsembles)
+library(caret)
+```
+
+## Introduction
+
+The `ClassificationEnsembles` package provides an automated, high-velocity machine learning pipeline engineered to explore, optimize, and combine heterogeneous classification models. Operating across binary and multi-class target domains, the engine automatically handles categorical feature dummy-encoding, multicollinearity screening via Variance Inflation Factor (VIF) reduction, internal probability calibration, stacking meta-learner optimization, and pairwise architectural blending.
+
+## Production Readiness: Dependency Safety & Lifecycle Safeguards
+
+A core design pillar of the `ClassificationEnsembles` suite is **strict dependency lifecycle management**. Modern enterprise data environments frequently suffer from package dependency rot, where automated production builds break because an orphaned or archived dependency vanishes from active repositories.
+
+To immunize your production workflows, `ClassificationEnsembles` enforces the following principles:
+
+- **Exclusive CRAN Reliance:** The package relies entirely on modern, actively maintained packages hosted on the official Comprehensive R Archive Network (CRAN).
+
+- **Zero Orphaned Footprints:** Outdated, archived baseline wrappers (such as the legacy `DMwR` library) have been structurally eliminated from the source code.
+
+- **Modern Sampling Infrastructure:** Imbalance remapping techniques natively leverage the modern, robust `themis`ecosystem within cross-validation folds.
+
+- **Long-Term Maintainability:** By anchoring our dependencies to core, actively audited repositories (like `caret`, `themis`, and `arm`), your production pipelines remain insulated against upstream breaking changes and compilation failures when R updates its core engine.
+
+## Core Execution Walkthrough
+
+To demonstrate the high-velocity capabilities of the dispatch engine, we initialize a classification run using a quick-check fast-track configuration matrix layer via `ClassificationFastConfig()`. This trims tuning grids and cross-validation windows to guarantee rapid execution during testing while assessing your data.
+
+### 1. Execute the Ensemble Pipeline
+
+We initiate the core integrated pipeline by defining the dataset, continuous predictor space adjustments, and performance diagnostics space:
+
+```{r Load a classification test domain}
+# Load a classification test domain (e.g., using caret's internal data mapping or a local copy)
+df <- iris # Used as a generic multi-class example
+library(ClassificationEnsembles)
+
+# Fire up the pipeline using the modern color palette and fast configuration track
+iris_pipeline <- Classification(dataset = df, target_col = 'Species', palette_style = "standard", config = ClassificationEnsemblesFastConfig(), verbose = TRUE)
+```
+
+### 2. Inspecting the Auto-Generated Reports
+
+Your trained pipeline returns an object embedding five comprehensive reports directly available via standard S3 method routing:
+
+```{r Inspecting the Auto-Generated Reports}
+# Evaluate the comprehensive five-horizon diagnostic report directly in the console
+print(iris_pipeline, report_type = "all")
+```
+
+## Model Performance & Visual Diagnostics
+
+The package includes deep visualization matrices built to evaluate generalization risks, structural error controls, and predictive boundaries.
+
+### Faceted One-vs-All ROC Canvas
+
+For multi-class data spaces, traditional binary receiver operating characteristics collapse. `ClassificationEnsembles`programmatically splits the multi-class horizon into separate binary sub-problems using a **One-vs-All (OVA)** framework, calculating unique class-specific curves and averaging their scores into a clean **Macro-Averaged AUC** metric page:
+
+```{r Faceted One-vs_All ROC Canvas}
+# Renders feature distributions, KPIs, reliability calibration, and the OVA ROC faceted grid
+plot(iris_pipeline, pace_output = FALSE)
+```
+
+## Production Deployment & Executive Scoring
+
+Once a champion architecture selection has been determined by the leaderboard, you can leverage the business intelligence scoring endpoint `predict_production()` to score un-indexed production data sheets clean and fast.
+
+This endpoint automatically extracts the top three model choices discovered during training, aligns factor levels defensively to avoid dummy variable collapse, and maps prediction assignments backed by explicit class probabilities for the chosen winning assignment:
+
+```{r Production Deployment and Executive Scoring}
+# Simulate fresh production spreadsheets
+production_samples <- iris[1:5, colnames(iris) != "Species"]
+
+# Generate executive production arrays
+executive_projections <- predict_production(object = iris_pipeline, newdata = production_samples)
+
+# Display production results
+knitr::kable(executive_projections)
+```

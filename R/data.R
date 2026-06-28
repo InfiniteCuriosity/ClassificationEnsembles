@@ -22,12 +22,12 @@
 
 
 
-#' Dry Beans small
+#' Dry Beans
 #'
-#' This is a stratified version of the full dry beans data set. This is about 7 percent of the full data set
+#' A data set of dry beans
 #'
-#' @format dry_beans_small
-#' A reduced version with 813 rows and 17 columns of the full data set available on UCI: https://archive.ics.uci.edu/dataset/602/dry+bean+dataset
+#' @format Dry_Beans
+#' @source The full data set is on UCI: https://archive.ics.uci.edu/dataset/602/dry+bean+dataset
 #' \describe{
 #'  \item{Area}{The area of a bean zone and the number of pixels within its boundaries}
 #'  \item{Perimeter}{Bean circumference is defined as the length of its border}
@@ -46,9 +46,8 @@
 #'  \item{ShapeFactor3}{Continuous value}
 #'  \item{ShapeFactor4}{Continuous value}
 #'  \item{Class}{(Seker, Barbunya, Bombay, Cali, Dermosan, Horoz and Sira)}
-#'  }
-#'  @source https://archive.ics.uci.edu/dataset/602/dry+bean+dataset
-"dry_beans_small"
+#' }
+"Dry_Beans"
 
 
 
@@ -58,6 +57,8 @@
 #'
 #' @format Maternal_Health_Risk
 #' Age, Systolic Blood Pressure as SystolicBP, Diastolic BP as DiastolicBP, Blood Sugar as BS, Body Temperature as BodyTemp, HeartRate and RiskLevel. All these are the responsible and significant risk factors for maternal mortality, that is one of the main concern of SDG of UN.
+#'
+#' @source https://archive.ics.uci.edu/dataset/602/dry+bean+dataset
 #'
 #' \describe{
 #'  \item{Age}{Any ages in years when a women during pregnant.}

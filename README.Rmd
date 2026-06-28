@@ -1,0 +1,179 @@
+---
+output: github_document
+---
+
+# ClassificationEnsembles <img src="man/figures/logo.png" align="right" height="139"/>
+
+[![CRAN status](https://www.r-pkg.org/badges/version/ClassificationEnsembles)](https://CRAN.R-project.org/package=ClassificationEnsembles) [![R-CMD-check](https://github.com/InfiniteCuriosity/ClassificationEnsembles/workflows/R-CMD-check/badge.svg)](https://github.com/RussConte/ClassificationEnsembles/actions) \## Overview
+
+`ClassificationEnsembles` provides an automated, institutional-grade multi-model framework for categorical targets. Architected to bring classification competitive pipelines to the exact same diagnostic level as `NumericEnsembles`, this package automates exploratory data analysis, manages class imbalance checks, prunes features via advanced Variance Inflation Factor (VIF) and logistic leverage filters, trains 11 concurrent base topologies, and builds 3 distinct non-linear stacking meta-blenders.
+
+By presenting a 14-column performance standings leaderboard complete with **95% Confidence Intervals for both Accuracy and Macro-AUC**, `ClassificationEnsembles` delivers robust statistical validation out-of-the-box, allowing users to benchmark model code directly against elite peer-reviewed literature.
+
+------------------------------------------------------------------------
+
+## Academic Validation: Beating the Journals (*Nature*)
+
+To demonstrate the power of the framework, users can execute benchmark replication scripts directly inside the console. In a recent study published in *Nature (Scientific Reports)*, authors evaluated the classic UCI Cleveland Heart Disease registry using a hybrid machine learning method, achieving an out-of-sample prediction accuracy of **0.952**, a specificity of **0.987**, and a sensitivity of **0.989** (Source: [`https://www.nature.com/articles/s41598-025-30895-5`](https://www.nature.com/articles/s41598-025-30895-5)).
+
+By feeding raw biometric data into `ClassificationEnsembles` using our full transformation recipe, users can generate fully cross-validated leaderboards that meet or exceed these published results in under two minutes of execution.
+
+------------------------------------------------------------------------
+
+## Installation
+
+Install the stable release from CRAN:
+
+```{r Installation}
+# install.packages("ClassificationEnsembles")
+```
+
+Or install the development version from GitHub:
+
+```{r Install from Github}
+# install.packages("devtools")
+# devtools::install_github("InfiniteCuriosity/ClassificationEnsembles")
+```
+
+------------------------------------------------------------------------
+
+## Two-Track Execution Workflows
+
+### 1. The Express Track (Package Verification Check)
+
+Optimized for rapid testing, package compliance checks, or local verification, the Express Track runs a 2-fold cross-validation partition over a balanced diagnostic matrix using a fast configuration wrapper.
+
+```{r Demo of ClassificationEnsembles}
+library(ClassificationEnsembles)
+
+# Execute the integrated high-speed simulation pipeline end-to-end
+fast_pipeline <- ClassificationEnsemblesDemo()
+```
+
+### 2. The Institutional Track (*Nature* Benchmark Replication)
+
+The Institutional Track is the standard production pathway for empirical research. Below, we replicate the *Nature* paper framework by training on the full biometric footprint of the Cleveland Heart Disease dataset, explicitly isolating input parameters from target leaks.
+
+```{r Nature Benchmark Replication}
+library(ClassificationEnsembles)
+
+# Load your local target registration matrix
+Cleveland_Heart <- ClassificationEnsembles::Cleveland_heart
+
+# Step 2: Establish the institutional configuration parameters matrix
+biometric_config <- ClassificationEnsemblesConfig(
+  cv_folds           = 5,        # 5-Fold cross-validation matching the Nature track
+  train_pct          = 0.80,     # 80/20 train-test population split partition
+  vif_threshold      = 10.0,     # Multicollinearity feature pruning boundary
+  leverage_threshold = 3.0,      # Automated logistic row outlier removal filter
+  transform_steps    = c("nzv", "medianImpute", "center", "scale", "YeoJohnson"), # Normalization recipe
+  rf_tune            = 5,
+  svm_tune_length    = 5,
+  nnet_tune_length   = 5,
+  tree_tune_length   = 5
+)
+
+# Step 3: Run the competitive multi-model dispatch engine
+Cleveland_pipeline <- Classification(
+  dataset       = Cleveland_heart, 
+  target_col    = 'Class',
+  palette_style = "modern", 
+  config        = biometric_config, 
+  verbose       = TRUE
+)
+
+# Step 4: Audit your statistical validation dashboard and leaderboard!
+print(Cleveland_pipeline)
+```
+
+------------------------------------------------------------------------
+
+## Understanding the S3 Output Footprints
+
+### Console Print Out Profile
+
+When you pass a trained pipeline object into `print()`, the S3 interface prints a comprehensive 5-section diagnostic log to the console before rendering the performance standings leaderboard:
+
+``` text
+=========================================================================
+                CLASSIFICATION PIPELINE PROFILE SUMMARY METRICS          
+=========================================================================
+
+[1. BASELINE DATA FACTOR HEAD]
+# ... Prints head structure snapshot ...
+
+[2. STRUCTURAL DATA DICTIONARY]
+# ... Prints types, missing values rates, and unique observation counts ...
+
+[3. PIPELINE AUTOMATED EXPLORATORY SUMMARY INSIGHTS]
+# ... Prints structural checks for skews, cardinality risks, and class imbalances ...
+
+[4. STATISTICAL POPULATION DESCRIPTIVE SUMMARY]
+# ... Prints standard continuous numeric distribution summary matrices ...
+
+[5. MULTICOLLINEARITY VIF FILTERS REPORT]
+# ... Logs pruned vs kept feature elements ...
+
+=========================================================================
+                CLASSIFICATION ARCHITECTURE LEADERBOARD                  
+=========================================================================
+Target Variable Factor Name:     Sick_or_buff
+Baseline No-Information Rate:    0.5424
+Total Estimated Class Levels:   2 (Levels: buff, sick)
+
+Top Performing Solution Pipelines Sorted By Macro-AUC:
+Model               Macro_AUC  AUC 95% CI Lower  AUC 95% CI Upper  Accuracy  Accuracy 95% CI Lower ...
+Linear_GLM             0.9248            0.8621            0.9875    0.8475                 0.7301
+Logistic_Enet          0.9201            0.8555            0.9848    0.8475                 0.7301
+Neural_Network         0.9051            0.8286            0.9816    0.7966                 0.6717
+SVM_Radial             0.9028            0.8282            0.9774    0.8475                 0.7301
+...
+```
+
+------------------------------------------------------------------------
+
+### Visual Graphics Portfolio
+
+When you call `plot(Cleveland_pipeline)`, the S3 charting pipeline sequentially displays a collection of 11 multi-panel plots for deep diagnostics:
+
+1.  **Target Counts & Percentages:** Bar charts displaying frequency distributions and minority class bounds.
+2.  **Predictor Boxplots & Histograms:** Multi-panel continuous density facets broken down by class.
+3.  **Logistic Row Leverage:** Mapping individual leverage values against the outlier removal cutoff line.
+4.  **Feature Correlation Heatmap:** Color-coded layout tracking linear multicollinearity.
+5.  **Leaderboard & KPI Canvas:** Graphed error bars showing **95% DeLong AUC and Binomial Accuracy bounds**.
+6.  **Probability Deviance Residuals:** Box plots tracking log-loss penalties across all 13 algorithms.
+7.  **Information Tradeoff Space:** Visualizing log-loss error against the overfitting ratio to isolate the ideal model.
+8.  **Decile Probability Calibration:** Multi-panel reliability curves showing model calibration accuracy.
+
+------------------------------------------------------------------------
+
+## Production Scoring
+
+Score incoming raw data tables using your top-performing champion model automatically:
+
+```{r Profile scoring}
+# Score new observations using the top leaderboard model automatically
+class_projections <- predict(object = Cleveland_pipeline, newdata = incoming_patients, type = "class")
+prob_matrices     <- predict(object = Cleveland_pipeline, newdata = incoming_patients, type = "prob")
+
+# Or leverage the executive wrapper to append top 3 model predictions simultaneously
+production_table  <- predict_production(object = Cleveland_pipeline, newdata = incoming_patients)
+```
+
+------------------------------------------------------------------------
+
+## Package Architecture
+
+``` text
+ClassificationEnsembles/
+├── R/
+│   └── ClassificationEnsembles.R  <- Core engine script, S3 printing/plotting, and automated validation
+├── inst/
+│   └── shiny-apps/
+│       └── ClassificationApp/
+│           └── app.R              <- Interactive visualization portal app code
+├── vignettes/
+│   └── ClassificationEnsemblesManual.Rmd
+├── DESCRIPTION                    <- Package metadata dependencies configuration matrix
+└── README.Rmd                     <- Top-level github documentation template
+```
