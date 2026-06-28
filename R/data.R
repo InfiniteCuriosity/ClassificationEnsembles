@@ -58,7 +58,7 @@
 #' @format Maternal_Health_Risk
 #' Age, Systolic Blood Pressure as SystolicBP, Diastolic BP as DiastolicBP, Blood Sugar as BS, Body Temperature as BodyTemp, HeartRate and RiskLevel. All these are the responsible and significant risk factors for maternal mortality, that is one of the main concern of SDG of UN.
 #'
-#' @source https://archive.ics.uci.edu/dataset/602/dry+bean+dataset
+#' @source https://archive.ics.uci.edu/dataset/863/maternal+health+risk
 #'
 #' \describe{
 #'  \item{Age}{Any ages in years when a women during pregnant.}
